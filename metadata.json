@@ -1,0 +1,6 @@
+{
+  "name": "Romantic Love Surprise",
+  "description": "Interactive romantic web app with heart intro, cute cat proposal, Polaroid photo gallery, vinyl music player, and animated love letter.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
