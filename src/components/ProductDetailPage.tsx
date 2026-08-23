@@ -16,6 +16,7 @@ import {
 interface ProductDetailPageProps {
   onBackHome: () => void;
   onPreview: () => void;
+  onPersonalize: () => void;
 }
 
 const includedFeatures = [
@@ -58,6 +59,7 @@ export const ProductDetailPage: React.FC<
 > = ({
   onBackHome,
   onPreview,
+  onPersonalize,
 }) => {
   return (
     <div className="min-h-[100svh] w-full bg-[#fff9fb] text-slate-800">
@@ -293,19 +295,16 @@ export const ProductDetailPage: React.FC<
 
                 <button
                   type="button"
-                  disabled
-                  className="inline-flex flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-3.5 text-sm font-bold text-slate-400"
-                  title="Sẽ làm ở bước tiếp theo"
+                  onClick={onPersonalize}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-rose-200 bg-white px-6 py-3.5 text-sm font-bold text-rose-500 transition hover:-translate-y-0.5 hover:bg-rose-50"
                 >
                   Cá nhân hoá
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] uppercase tracking-[0.12em]">
-                    Next
-                  </span>
+                  <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
 
               <p className="mt-3 text-center text-[11px] leading-5 text-slate-400 sm:text-left">
-                Bước tiếp theo sẽ nối nút Cá nhân hoá sang trang tạo món quà riêng.
+                Cá nhân hoá ảnh, nhạc, tên và nội dung thư trước khi tạo link riêng.
               </p>
             </motion.div>
           </div>
@@ -463,17 +462,28 @@ export const ProductDetailPage: React.FC<
             </h2>
 
             <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-white/55">
-              Demo hiện tại đã có đầy đủ YES / NO, Memories, Music và Letter. Bước sau chúng ta sẽ làm trang cá nhân hoá.
+              Xem demo trước hoặc bắt đầu thay ảnh, nhạc, tên và bức thư để tạo phiên bản của riêng bạn.
             </p>
 
-            <button
-              type="button"
-              onClick={onPreview}
-              className="mt-7 inline-flex items-center gap-2 rounded-full bg-rose-500 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-rose-400"
-            >
-              Mở Love Story 01
-              <ArrowRight className="h-4 w-4" />
-            </button>
+            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={onPreview}
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-white/15"
+              >
+                Xem demo
+                <Play className="h-4 w-4 fill-current" />
+              </button>
+
+              <button
+                type="button"
+                onClick={onPersonalize}
+                className="inline-flex items-center gap-2 rounded-full bg-rose-500 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-rose-400"
+              >
+                Cá nhân hoá ngay
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </section>
       </main>

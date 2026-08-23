@@ -3,6 +3,14 @@
     {
       "source": "/templates/:path*",
       "destination": "/index.html"
+    },
+    {
+      "source": "/products/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/create/:path*",
+      "destination": "/index.html"
     }
   ]
 }
