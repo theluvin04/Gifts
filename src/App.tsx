@@ -22,6 +22,7 @@ import { PolaroidGallery } from './components/gifts/PolaroidGallery';
 import { VinylMusicPlayer } from './components/gifts/VinylMusicPlayer';
 import { LoveLetter } from './components/gifts/LoveLetter';
 import { AudioPlayer } from './components/AudioPlayer';
+import { ProductDetailPage } from './components/ProductDetailPage';
 
 import {
   ArrowRight,
@@ -48,6 +49,9 @@ const TEMPLATE_BASE =
 const ROUTES = {
   home: '/',
 
+  product:
+    '/products/love-01',
+
   proposal:
     TEMPLATE_BASE,
 
@@ -73,6 +77,7 @@ type TemplateRoute =
 
 type AppRoute =
   | 'home'
+  | 'product'
   | TemplateRoute;
 
 /* =========================================================
@@ -100,6 +105,10 @@ const getRouteFromPath = (
 
   if (path === ROUTES.home) {
     return 'home';
+  }
+
+  if (path === ROUTES.product) {
+    return 'product';
   }
 
   if (path === ROUTES.proposal) {
@@ -2029,6 +2038,27 @@ export default function App() {
     return (
       <HomePage
         onOpenTemplate={() =>
+          navigateTo(
+            'product'
+          )
+        }
+      />
+    );
+  }
+
+  /* =======================================================
+     PRODUCT ROUTE /products/love-01
+  ======================================================= */
+
+  if (route === 'product') {
+    return (
+      <ProductDetailPage
+        onBackHome={() =>
+          navigateTo(
+            'home'
+          )
+        }
+        onPreview={() =>
           navigateTo(
             'proposal'
           )
