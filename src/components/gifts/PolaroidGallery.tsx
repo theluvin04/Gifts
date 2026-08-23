@@ -1,263 +1,352 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Camera, Heart, Sparkles, MapPin, Calendar, X, ChevronLeft, ChevronRight, Shuffle, LayoutGrid, Layers } from 'lucide-react';
-import { PhotoMemory } from '../../types';
+import React from 'react';
+import { motion } from 'motion/react';
+import { ChevronLeft } from 'lucide-react';
 import { sfx } from '../../utils/soundEffects';
 
+interface PhotoItem {
+  id: string;
+  url: string;
+  caption?: string;
+  date?: string;
+  rotation?: number;
+  location?: string;
+}
+
 interface PolaroidGalleryProps {
-  photos: PhotoMemory[];
+  photos: PhotoItem[];
   onBack: () => void;
 }
 
-export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({ photos, onBack }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<'stack' | 'grid'>('stack');
-  const [selectedPhoto, setSelectedPhoto] = useState<PhotoMemory | null>(null);
+const sparklePositions = [
+  { top: '18%', left: '31%', delay: 0.2 },
+  { top: '28%', left: '33%', delay: 0.8 },
+  { top: '55%', left: '34%', delay: 0.4 },
+  { top: '26%', right: '31%', delay: 1.1 },
+  { top: '48%', right: '33%', delay: 0.6 },
+  { top: '58%', left: '63%', delay: 1.4 },
+];
 
-  const handleNext = () => {
-    sfx.playPop();
-    setCurrentIndex((prev) => (prev + 1) % photos.length);
+const Sparkle = ({
+  top,
+  left,
+  right,
+  delay,
+}: {
+  top: string;
+  left?: string;
+  right?: string;
+  delay: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.6 }}
+    animate={{
+      opacity: [0.2, 1, 0.2],
+      scale: [0.7, 1.1, 0.7],
+    }}
+    transition={{
+      duration: 1.8,
+      repeat: Infinity,
+      delay,
+      ease: 'easeInOut',
+    }}
+    className="absolute z-0 text-pink-300"
+    style={{ top, left, right }}
+  >
+    ✦
+  </motion.div>
+);
+
+const PolaroidCard: React.FC<{
+  photo: PhotoItem;
+  rotateClass: string;
+  caption?: string;
+  animationFrom: {
+    x?: number;
+    y?: number;
+    rotate?: number;
+    scale?: number;
   };
-
-  const handlePrev = () => {
-    sfx.playPop();
-    setCurrentIndex((prev) => (prev - 1 + photos.length) % photos.length);
-  };
-
-  const handleShuffle = () => {
-    sfx.playPop();
-    const nextRandom = Math.floor(Math.random() * photos.length);
-    setCurrentIndex(nextRandom);
-  };
-
-  const currentPhoto = photos[currentIndex];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      className="relative z-10 w-full max-w-4xl mx-auto px-4 py-6 flex flex-col items-center min-h-[85vh]"
-      id="polaroid-gallery"
-    >
-      {/* Top Navigation & Header */}
-      <div className="w-full flex items-center justify-between mb-6">
-        <button
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-rose-700 bg-white/80 backdrop-blur-md rounded-full shadow-sm border border-rose-200 hover:bg-rose-50 transition cursor-pointer"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          <span>Quay lại 3 món quà</span>
-        </button>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewMode(viewMode === 'stack' ? 'grid' : 'stack')}
-            className="p-2 text-rose-700 bg-white/80 backdrop-blur-md rounded-full border border-rose-200 shadow-sm hover:bg-rose-50 transition cursor-pointer"
-            title={viewMode === 'stack' ? "Xem dạng lưới" : "Xem dạng xếp chồng"}
-          >
-            {viewMode === 'stack' ? <LayoutGrid className="w-4 h-4" /> : <Layers className="w-4 h-4" />}
-          </button>
-        </div>
+  delay: number;
+}> = ({
+  photo,
+  rotateClass,
+  caption,
+  animationFrom,
+  delay,
+}) => (
+  <motion.div
+    initial={{
+      opacity: 0,
+      ...animationFrom,
+    }}
+    animate={{
+      opacity: 1,
+      x: 0,
+      y: 0,
+      rotate: 0,
+      scale: 1,
+    }}
+    transition={{
+      type: 'spring',
+      stiffness: 180,
+      damping: 18,
+      delay,
+    }}
+    whileHover={{
+      y: -5,
+      rotate: 0,
+      scale: 1.02,
+    }}
+    className={rotateClass}
+  >
+    <div className="bg-white p-3 shadow-xl">
+      <div className="aspect-square w-full overflow-hidden bg-pink-50">
+        <img
+          src={photo.url}
+          alt={photo.caption || 'memory'}
+          className="h-full w-full object-cover"
+        />
       </div>
 
-      {/* Title Section */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 text-xs font-bold text-rose-600 bg-rose-100/90 rounded-full border border-rose-200 mb-2">
-          <Camera className="w-3.5 h-3.5" />
-          <span>MÓN QUÀ SỐ 1</span>
-        </div>
-        <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-800 font-heading">
-          Khoảnh Khắc Của Chúng Mình 📸
-        </h2>
-        <p className="text-sm text-slate-600 mt-1 max-w-md mx-auto">
-          Mỗi bức ảnh Polaroid là một mảnh ghép kỷ niệm ngọt ngào được lưu giữ.
+      <div className="pt-3 text-center">
+        <p className="text-[11px] italic text-rose-700 sm:text-xs">
+          {caption || photo.caption || 'memory'}
         </p>
       </div>
+    </div>
+  </motion.div>
+);
 
-      {/* Main Display: STACK VIEW */}
-      {viewMode === 'stack' ? (
-        <div className="flex flex-col items-center w-full max-w-md">
-          {/* Polaroid Stack Area */}
-          <div className="relative w-72 sm:w-80 h-96 sm:h-[420px] flex items-center justify-center mb-6">
-            {/* Background stacked polaroid shadows */}
-            <div className="absolute w-full h-full bg-white/60 rounded-xl shadow-md rotate-6 scale-95 pointer-events-none border border-slate-200" />
-            <div className="absolute w-full h-full bg-white/70 rounded-xl shadow-md -rotate-3 scale-98 pointer-events-none border border-slate-200" />
-
-            {/* Active Polaroid Card */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentPhoto.id}
-                initial={{ opacity: 0, scale: 0.8, rotate: -8, y: 30 }}
-                animate={{
-                  opacity: 1,
-                  scale: 1,
-                  rotate: currentPhoto.rotation || 0,
-                  y: 0,
-                }}
-                exit={{ opacity: 0, scale: 0.8, rotate: 12, y: -40 }}
-                transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                onClick={() => {
-                  sfx.playPop();
-                  setSelectedPhoto(currentPhoto);
-                }}
-                className="absolute inset-0 bg-white p-3.5 sm:p-4 rounded-xl shadow-2xl border border-slate-200 flex flex-col cursor-pointer group hover:scale-[1.03] transition-transform duration-300 select-none"
-              >
-                {/* Washi Tape Accent */}
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-20 h-6 bg-rose-200/80 backdrop-blur-sm border-t border-b border-rose-300/60 rotate-[-2deg] shadow-sm z-20" />
-
-                {/* Photo Image Frame */}
-                <div className="relative w-full aspect-[4/3] bg-slate-100 rounded-lg overflow-hidden border border-slate-200/60 shadow-inner">
-                  <img
-                    src={currentPhoto.url}
-                    alt={currentPhoto.caption}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-sm text-white px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1">
-                    <Sparkles className="w-2.5 h-2.5 text-amber-300" />
-                    <span>Nhấn để xem kỹ</span>
-                  </div>
-                </div>
-
-                {/* Polaroid Bottom Caption Area */}
-                <div className="flex-1 flex flex-col justify-between pt-3 pb-1 px-1">
-                  <p className="font-handwriting text-xl sm:text-2xl text-slate-800 leading-snug line-clamp-2">
-                    "{currentPhoto.caption}"
-                  </p>
-
-                  <div className="flex items-center justify-between text-xs text-rose-700 font-semibold border-t border-rose-100 pt-2 mt-2">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-rose-500" />
-                      {currentPhoto.date || "Kỷ niệm"}
-                    </span>
-                    {currentPhoto.location && (
-                      <span className="flex items-center gap-1 text-slate-500 text-[11px]">
-                        <MapPin className="w-3 h-3 text-rose-400" />
-                        {currentPhoto.location}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Stack Navigation Controls */}
-          <div className="flex items-center gap-4 mt-2">
-            <button
-              onClick={handlePrev}
-              className="p-3 bg-white text-rose-600 rounded-full shadow-md hover:bg-rose-50 active:scale-95 transition border border-rose-200 cursor-pointer"
-              title="Ảnh trước"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-
-            <span className="text-xs font-bold text-slate-600 bg-white/80 px-3 py-1.5 rounded-full border border-slate-200">
-              {currentIndex + 1} / {photos.length}
-            </span>
-
-            <button
-              onClick={handleShuffle}
-              className="p-3 bg-white text-rose-600 rounded-full shadow-md hover:bg-rose-50 active:scale-95 transition border border-rose-200 cursor-pointer"
-              title="Ngẫu nhiên"
-            >
-              <Shuffle className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={handleNext}
-              className="p-3 bg-white text-rose-600 rounded-full shadow-md hover:bg-rose-50 active:scale-95 transition border border-rose-200 cursor-pointer"
-              title="Ảnh tiếp theo"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+const FilmStrip: React.FC<{
+  photos: PhotoItem[];
+  delay: number;
+}> = ({ photos, delay }) => (
+  <motion.div
+    initial={{ opacity: 0, y: -22, scale: 0.94 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    transition={{
+      type: 'spring',
+      stiffness: 170,
+      damping: 18,
+      delay,
+    }}
+    className="w-[110px] overflow-hidden border border-pink-200 bg-pink-100/80 shadow-sm"
+  >
+    {photos.map((photo, idx) => (
+      <div
+        key={`${photo.id}-${idx}`}
+        className="border-b border-pink-200/70 bg-white p-2 last:border-b-0"
+      >
+        <div className="aspect-square overflow-hidden bg-pink-50">
+          <img
+            src={photo.url}
+            alt={photo.caption || 'memory'}
+            className="h-full w-full object-cover"
+          />
         </div>
-      ) : (
-        /* GRID VIEW */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl">
-          {photos.map((p, idx) => (
-            <motion.div
-              key={p.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.08 }}
-              onClick={() => {
-                sfx.playPop();
-                setSelectedPhoto(p);
-              }}
-              className="bg-white p-4 rounded-xl shadow-lg border border-slate-200 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition duration-300 flex flex-col"
-              style={{ transform: `rotate(${p.rotation ? p.rotation * 0.7 : 0}deg)` }}
-            >
-              <div className="w-full aspect-[4/3] rounded-lg overflow-hidden mb-3 bg-slate-100">
-                <img
-                  src={p.url}
-                  alt={p.caption}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover hover:scale-105 transition duration-300"
-                />
-              </div>
-              <p className="font-handwriting text-lg text-slate-800 line-clamp-2">
-                "{p.caption}"
-              </p>
-              <div className="flex items-center justify-between text-xs text-slate-500 mt-2 pt-2 border-t border-slate-100">
-                <span>{p.date}</span>
-                <span>{p.location}</span>
-              </div>
-            </motion.div>
+      </div>
+    ))}
+  </motion.div>
+);
+
+export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
+  photos,
+  onBack,
+}) => {
+  const safePhotos = photos.length ? photos : [];
+
+  const leftTop = safePhotos[0];
+  const leftBottom = safePhotos[1] || safePhotos[0];
+  const rightTop = safePhotos[2] || safePhotos[0];
+  const rightBottom = safePhotos[3] || safePhotos[0];
+
+  const stripLeft = Array.from(
+    { length: 4 },
+    (_, i) => safePhotos[i % safePhotos.length]
+  );
+
+  const stripRight = Array.from(
+    { length: 4 },
+    (_, i) => safePhotos[(i + 2) % safePhotos.length]
+  );
+
+  if (!safePhotos.length) return null;
+
+  return (
+    <motion.section
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="relative min-h-[100svh] w-full overflow-hidden px-4 py-8"
+    >
+      {/* DESKTOP */}
+      <div className="mx-auto hidden max-w-6xl sm:block">
+        <div className="relative overflow-hidden rounded-[28px] bg-pink-50 px-10 py-10">
+          {sparklePositions.map((item, index) => (
+            <Sparkle key={index} {...item} />
           ))}
-        </div>
-      )}
 
-      {/* Expanded Modal for Photo Detail */}
-      <AnimatePresence>
-        {selectedPhoto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="relative bg-white max-w-lg w-full rounded-2xl p-5 shadow-2xl border-4 border-white overflow-hidden"
-            >
-              <button
-                onClick={() => setSelectedPhoto(null)}
-                className="absolute top-3 right-3 z-10 p-2 bg-black/50 hover:bg-black/80 text-white rounded-full transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="w-full aspect-[4/3] rounded-xl overflow-hidden mb-4 bg-slate-100 shadow-md">
-                <img
-                  src={selectedPhoto.url}
-                  alt={selectedPhoto.caption}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover"
+          <div className="relative z-10 grid grid-cols-[1.1fr_0.9fr_1.1fr] items-start gap-10">
+            <div className="flex flex-col gap-6">
+              <div className="w-[220px]">
+                <PolaroidCard
+                  photo={leftTop}
+                  caption="memories with you"
+                  rotateClass="-rotate-6"
+                  animationFrom={{
+                    x: -90,
+                    y: -18,
+                    rotate: -12,
+                    scale: 0.92,
+                  }}
+                  delay={0.45}
                 />
               </div>
 
-              <div className="px-2">
-                <p className="font-handwriting text-2xl sm:text-3xl text-slate-800 mb-3 leading-relaxed">
-                  "{selectedPhoto.caption}"
-                </p>
-
-                <div className="flex items-center justify-between text-sm text-rose-600 font-semibold bg-rose-50 p-3 rounded-xl border border-rose-100">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4" />
-                    <span>{selectedPhoto.date}</span>
-                  </div>
-                  {selectedPhoto.location && (
-                    <div className="flex items-center gap-1.5 text-slate-600">
-                      <MapPin className="w-4 h-4 text-rose-500" />
-                      <span>{selectedPhoto.location}</span>
-                    </div>
-                  )}
-                </div>
+              <div className="ml-5 w-[210px]">
+                <PolaroidCard
+                  photo={leftBottom}
+                  caption="our little moments"
+                  rotateClass="rotate-2"
+                  animationFrom={{
+                    x: -70,
+                    y: 22,
+                    rotate: 8,
+                    scale: 0.92,
+                  }}
+                  delay={0.62}
+                />
               </div>
-            </motion.div>
+            </div>
+
+            <div className="flex justify-center gap-4">
+              <FilmStrip photos={stripLeft} delay={0.1} />
+              <FilmStrip photos={stripRight} delay={0.22} />
+            </div>
+
+            <div className="flex flex-col items-end gap-6">
+              <div className="w-[220px]">
+                <PolaroidCard
+                  photo={rightTop}
+                  caption="you make me smile"
+                  rotateClass="rotate-6"
+                  animationFrom={{
+                    x: 90,
+                    y: -18,
+                    rotate: 12,
+                    scale: 0.92,
+                  }}
+                  delay={0.54}
+                />
+              </div>
+
+              <div className="mr-4 w-[210px]">
+                <PolaroidCard
+                  photo={rightBottom}
+                  caption="us, in frames"
+                  rotateClass="-rotate-2"
+                  animationFrom={{
+                    x: 70,
+                    y: 20,
+                    rotate: -8,
+                    scale: 0.92,
+                  }}
+                  delay={0.7}
+                />
+              </div>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.82 }}
+            className="relative z-10 mt-8 text-center text-[34px] font-semibold italic text-rose-700"
+          >
+            Captured memories
+          </motion.p>
+        </div>
+      </div>
+
+      {/* MOBILE */}
+      <div className="mx-auto max-w-[390px] sm:hidden">
+        <div className="relative overflow-hidden rounded-[26px] bg-pink-50 px-4 py-6">
+          <p className="mb-5 text-center text-2xl font-semibold italic text-rose-700">
+            Captured memories
+          </p>
+
+          <div className="mb-5 flex justify-center gap-3">
+            <FilmStrip photos={stripLeft} delay={0.1} />
+            <FilmStrip photos={stripRight} delay={0.22} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <PolaroidCard
+              photo={leftTop}
+              caption="memories with you"
+              rotateClass="-rotate-3"
+              animationFrom={{ x: -40, scale: 0.94 }}
+              delay={0.42}
+            />
+
+            <PolaroidCard
+              photo={rightTop}
+              caption="you make me smile"
+              rotateClass="rotate-3"
+              animationFrom={{ x: 40, scale: 0.94 }}
+              delay={0.52}
+            />
+
+            <PolaroidCard
+              photo={leftBottom}
+              caption="our little moments"
+              rotateClass="rotate-2"
+              animationFrom={{ x: -35, scale: 0.94 }}
+              delay={0.62}
+            />
+
+            <PolaroidCard
+              photo={rightBottom}
+              caption="us, in frames"
+              rotateClass="-rotate-2"
+              animationFrom={{ x: 35, scale: 0.94 }}
+              delay={0.72}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* BACK - LUÔN Ở CUỐI */}
+      <motion.button
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.1 }}
+        onClick={() => {
+          sfx.playPop();
+          onBack();
+        }}
+        className="
+          mx-auto
+          mt-10
+          flex
+          items-center
+          justify-center
+          gap-1.5
+          rounded-full
+          border
+          border-rose-200
+          bg-white/80
+          px-5
+          py-2.5
+          text-xs
+          font-semibold
+          text-rose-600
+          shadow-sm
+        "
+      >
+        <ChevronLeft className="h-4 w-4" />
+        <span>Quay lại 3 món quà</span>
+      </motion.button>
+    </motion.section>
   );
 };
