@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
-  ChevronLeft,
-  Heart,
-  Sparkles,
-} from 'lucide-react';
+  AnimatePresence,
+  motion,
+} from 'motion/react';
+import { ChevronLeft } from 'lucide-react';
 
 import { LoveConfig } from '../../types';
 import { sfx } from '../../utils/soundEffects';
@@ -19,13 +22,148 @@ interface LoveLetterProps {
 const ENVELOPE_IMAGE =
   '/images/letter/envelope-cover.png';
 
-export const LoveLetter: React.FC<LoveLetterProps> = ({
+const TYPING_SPEED = 24;
+const PARAGRAPH_GAP = 180;
+
+/* =========================
+   VIETNAMESE SAFE TYPEWRITER
+========================= */
+
+const splitVietnameseText = (
+  input: string
+): string[] => {
+  const text = input.normalize('NFC');
+
+  try {
+    const Segmenter = (Intl as any).Segmenter;
+
+    if (Segmenter) {
+      const segmenter = new Segmenter('vi', {
+        granularity: 'grapheme',
+      });
+
+      return Array.from(
+        segmenter.segment(text),
+        (item: any) => item.segment
+      );
+    }
+  } catch {
+    // fallback below
+  }
+
+  return Array.from(text);
+};
+
+interface TypewriterTextProps {
+  text: string;
+  delay?: number;
+  speed?: number;
+  className?: string;
+  style?: React.CSSProperties;
+  as?: React.ElementType;
+  showCursor?: boolean;
+}
+
+const TypewriterText: React.FC<
+  TypewriterTextProps
+> = ({
+  text,
+  delay = 0,
+  speed = TYPING_SPEED,
+  className = '',
+  style,
+  as: Tag = 'p',
+  showCursor = true,
+}) => {
+  const characters = useMemo(
+    () => splitVietnameseText(text),
+    [text]
+  );
+
+  const [count, setCount] = useState(0);
+  const [started, setStarted] =
+    useState(false);
+
+  useEffect(() => {
+    setCount(0);
+    setStarted(false);
+
+    if (!characters.length) return;
+
+    let interval:
+      | ReturnType<typeof setInterval>
+      | undefined;
+
+    const timeout = setTimeout(() => {
+      setStarted(true);
+
+      let current = 0;
+
+      interval = setInterval(() => {
+        current += 1;
+
+        setCount(current);
+
+        if (current >= characters.length) {
+          if (interval) {
+            clearInterval(interval);
+          }
+        }
+      }, speed);
+    }, delay);
+
+    return () => {
+      clearTimeout(timeout);
+
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [characters, delay, speed]);
+
+  const finished =
+    count >= characters.length;
+
+  return (
+    <Tag
+      className={className}
+      style={style}
+    >
+      {characters.slice(0, count).join('')}
+
+      {showCursor &&
+        started &&
+        !finished && (
+          <span
+            className="
+              ml-[2px]
+              inline-block
+              h-[0.95em]
+              w-[1.5px]
+              animate-pulse
+              bg-current
+              align-middle
+            "
+          />
+        )}
+    </Tag>
+  );
+};
+
+/* =========================
+   LETTER
+========================= */
+
+export const LoveLetter: React.FC<
+  LoveLetterProps
+> = ({
   letterData,
   senderName,
   receiverName,
   onBack,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] =
+    useState(false);
 
   const handleOpen = () => {
     if (isOpen) return;
@@ -39,11 +177,74 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
     onBack();
   };
 
+  const salutation = (
+    letterData.salutation ||
+    `Gửi ${receiverName},`
+  ).normalize('NFC');
+
+  const paragraphs =
+    letterData.paragraphs.map((paragraph) =>
+      paragraph.normalize('NFC')
+    );
+
+  const closing = (
+    letterData.closing || ''
+  ).normalize('NFC');
+
+  const signature = (
+    senderName ||
+    letterData.signature ||
+    ''
+  ).normalize('NFC');
+
+  /* =========================
+     TYPEWRITER TIMING
+  ========================= */
+
+  let nextDelay = 180;
+
+  const salutationDelay = nextDelay;
+
+  nextDelay +=
+    splitVietnameseText(salutation).length *
+      TYPING_SPEED +
+    220;
+
+  const paragraphSchedule =
+    paragraphs.map((paragraph) => {
+      const delay = nextDelay;
+
+      nextDelay +=
+        splitVietnameseText(paragraph).length *
+          TYPING_SPEED +
+        PARAGRAPH_GAP;
+
+      return {
+        paragraph,
+        delay,
+      };
+    });
+
+  const closingDelay = nextDelay;
+
+  nextDelay +=
+    splitVietnameseText(closing).length *
+      TYPING_SPEED +
+    120;
+
+  const signatureDelay = nextDelay;
+
   return (
     <motion.section
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{
+        opacity: 0,
+      }}
+      animate={{
+        opacity: 1,
+      }}
+      exit={{
+        opacity: 0,
+      }}
       className="
         relative
         mx-auto
@@ -54,7 +255,6 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
         flex-col
         items-center
         justify-center
-        overflow-hidden
         px-4
         py-12
         sm:px-6
@@ -62,12 +262,16 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
     >
       <AnimatePresence mode="wait">
         {!isOpen ? (
+          /* =====================
+             CLOSED ENVELOPE
+          ===================== */
+
           <motion.div
             key="closed"
             initial={{
               opacity: 0,
-              y: 30,
-              scale: 0.95,
+              y: 25,
+              scale: 0.96,
             }}
             animate={{
               opacity: 1,
@@ -76,8 +280,8 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
             }}
             exit={{
               opacity: 0,
-              y: 20,
-              scale: 0.94,
+              y: 15,
+              scale: 0.97,
             }}
             transition={{
               type: 'spring',
@@ -91,18 +295,14 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
               items-center
             "
           >
-            {/* TITLE */}
             <motion.div
               initial={{
                 opacity: 0,
-                y: -10,
+                y: -8,
               }}
               animate={{
                 opacity: 1,
                 y: 0,
-              }}
-              transition={{
-                delay: 0.1,
               }}
               className="
                 mb-7
@@ -112,38 +312,57 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
             >
               <h1
                 className="
-                  font-handwriting
                   text-[30px]
-                  font-bold
+                  font-semibold
                   text-rose-600
-                  sm:text-[42px]
+                  sm:text-[40px]
                 "
+                style={{
+                  fontFamily:
+                    "'Dancing Script', cursive",
+                }}
               >
                 A little letter for you ♡
               </h1>
 
               <p
                 className="
-                  mt-1.5
+                  mt-2
+                  font-body
                   text-xs
-                  text-slate-500
+                  text-slate-400
                   sm:text-sm
                 "
               >
-                Tap the heart to open
+                Tap the envelope to open
               </p>
             </motion.div>
 
-            {/* ENVELOPE IMAGE */}
-            <motion.div
+            <motion.button
+              type="button"
+              onClick={handleOpen}
               whileHover={{
-                y: -5,
+                y: -6,
+                scale: 1.012,
+              }}
+              whileTap={{
+                scale: 0.98,
+              }}
+              transition={{
+                type: 'spring',
+                stiffness: 260,
+                damping: 20,
               }}
               className="
-                relative
+                block
                 w-full
                 max-w-[620px]
+                cursor-pointer
+                border-0
+                bg-transparent
+                p-0
               "
+              aria-label="Open letter"
             >
               <img
                 src={ENVELOPE_IMAGE}
@@ -159,171 +378,19 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
                   drop-shadow-[0_22px_30px_rgba(190,70,110,0.15)]
                 "
               />
-
-              {/* RECEIVER */}
-              <motion.div
-                initial={{
-                  opacity: 0,
-                }}
-                animate={{
-                  opacity: 1,
-                }}
-                transition={{
-                  delay: 0.35,
-                }}
-                className="
-                  pointer-events-none
-                  absolute
-                  left-1/2
-                  top-[45%]
-                  z-10
-                  w-[65%]
-                  -translate-x-1/2
-                  -translate-y-1/2
-                  text-center
-                "
-              >
-                <p
-                  className="
-                    text-[8px]
-                    font-bold
-                    uppercase
-                    tracking-[0.25em]
-                    text-rose-400
-                    sm:text-[10px]
-                  "
-                >
-                  FOR
-                </p>
-
-                <p
-                  className="
-                    mt-1
-                    truncate
-                    font-handwriting
-                    text-xl
-                    font-bold
-                    text-slate-700
-                    sm:text-3xl
-                  "
-                >
-                  {receiverName}
-                </p>
-              </motion.div>
-
-              {/* OPEN HEART */}
-              <motion.button
-                type="button"
-                onClick={handleOpen}
-                whileHover={{
-                  scale: 1.1,
-                }}
-                whileTap={{
-                  scale: 0.9,
-                }}
-                animate={{
-                  scale: [1, 1.08, 1],
-                  boxShadow: [
-                    '0 0 0 0 rgba(244,63,94,0.25)',
-                    '0 0 0 18px rgba(244,63,94,0)',
-                    '0 0 0 0 rgba(244,63,94,0)',
-                  ],
-                }}
-                transition={{
-                  scale: {
-                    duration: 1.8,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  },
-                  boxShadow: {
-                    duration: 1.8,
-                    repeat: Infinity,
-                  },
-                }}
-                className="
-                  absolute
-                  bottom-[13%]
-                  left-1/2
-                  z-20
-                  flex
-                  h-13
-                  w-13
-                  -translate-x-1/2
-                  items-center
-                  justify-center
-                  rounded-full
-                  bg-rose-500
-                  text-white
-                  shadow-lg
-                  sm:h-16
-                  sm:w-16
-                "
-                aria-label="Open letter"
-              >
-                <Heart
-                  className="
-                    h-5
-                    w-5
-                    fill-white
-                    text-white
-                    sm:h-7
-                    sm:w-7
-                  "
-                />
-              </motion.button>
-
-              {/* SPARKLES */}
-              <motion.span
-                animate={{
-                  opacity: [0.2, 1, 0.2],
-                  scale: [0.8, 1.15, 0.8],
-                }}
-                transition={{
-                  duration: 1.8,
-                  repeat: Infinity,
-                }}
-                className="
-                  pointer-events-none
-                  absolute
-                  right-[12%]
-                  top-[17%]
-                  text-lg
-                  text-rose-300
-                "
-              >
-                ✦
-              </motion.span>
-
-              <motion.span
-                animate={{
-                  opacity: [1, 0.2, 1],
-                  scale: [1, 0.8, 1],
-                }}
-                transition={{
-                  duration: 2.1,
-                  repeat: Infinity,
-                }}
-                className="
-                  pointer-events-none
-                  absolute
-                  bottom-[24%]
-                  left-[13%]
-                  text-sm
-                  text-rose-300
-                "
-              >
-                ✦
-              </motion.span>
-            </motion.div>
+            </motion.button>
           </motion.div>
         ) : (
-          /* OPEN LETTER */
+          /* =====================
+             OPEN LETTER
+          ===================== */
+
           <motion.article
             key="opened"
             initial={{
               opacity: 0,
-              y: 50,
-              scale: 0.94,
+              y: 40,
+              scale: 0.96,
             }}
             animate={{
               opacity: 1,
@@ -332,8 +399,8 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
             }}
             exit={{
               opacity: 0,
-              y: 30,
-              scale: 0.96,
+              y: 20,
+              scale: 0.98,
             }}
             transition={{
               type: 'spring',
@@ -343,17 +410,16 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
             className="
               relative
               w-full
-              max-w-[680px]
-              overflow-hidden
-              rounded-[26px]
+              max-w-[720px]
+              rounded-[28px]
               border
-              border-[#eadbc4]
-              bg-[#fffdf8]
-              px-6
-              py-8
-              shadow-[0_24px_65px_rgba(100,70,40,0.12)]
-              sm:px-12
-              sm:py-12
+              border-[#eadfce]
+              bg-[#fffdf9]
+              px-7
+              py-9
+              shadow-[0_25px_70px_rgba(100,70,40,0.10)]
+              sm:px-14
+              sm:py-14
             "
           >
             {/* DECORATION */}
@@ -361,8 +427,8 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
               className="
                 absolute
                 left-5
-                top-5
-                text-xl
+                top-4
+                text-lg
                 text-rose-200
               "
             >
@@ -373,8 +439,8 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
               className="
                 absolute
                 right-5
-                top-5
-                text-xl
+                top-4
+                text-lg
                 text-rose-200
               "
             >
@@ -382,83 +448,60 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
             </span>
 
             {/* SALUTATION */}
-            <motion.h2
-              initial={{
-                opacity: 0,
-                x: -14,
-              }}
-              animate={{
-                opacity: 1,
-                x: 0,
-              }}
-              transition={{
-                delay: 0.15,
-              }}
+            <TypewriterText
+              as="h2"
+              text={salutation}
+              delay={salutationDelay}
               className="
-                mb-7
-                font-handwriting
-                text-3xl
-                font-bold
-                text-rose-700
-                sm:text-4xl
+                mb-8
+                text-[28px]
+                font-semibold
+                leading-[1.4]
+                text-rose-600
+                sm:text-[36px]
               "
-            >
-              {letterData.salutation ||
-                `Gửi ${receiverName},`}
-            </motion.h2>
+              style={{
+                fontFamily:
+                  "'Dancing Script', cursive",
+              }}
+            />
 
-            {/* LETTER CONTENT */}
+            {/* BODY */}
             <div
               className="
-                space-y-5
-                font-handwriting
-                text-[21px]
-                leading-[1.65]
+                space-y-6
+                font-body
                 text-slate-700
-                sm:text-[26px]
-                sm:leading-[1.7]
               "
             >
-              {letterData.paragraphs.map(
-                (paragraph, index) => (
-                  <motion.p
-                    key={index}
-                    initial={{
-                      opacity: 0,
-                      y: 14,
+              {paragraphSchedule.map(
+                ({
+                  paragraph,
+                  delay,
+                }) => (
+                  <TypewriterText
+                    key={`${delay}-${paragraph}`}
+                    text={paragraph}
+                    delay={delay}
+                    className="
+                      text-[15px]
+                      font-medium
+                      leading-[1.9]
+                      tracking-[-0.01em]
+                      sm:text-[17px]
+                      sm:leading-[2]
+                    "
+                    style={{
+                      fontFamily:
+                        "'Quicksand', sans-serif",
                     }}
-                    animate={{
-                      opacity: 1,
-                      y: 0,
-                    }}
-                    transition={{
-                      delay:
-                        0.25 +
-                        index * 0.12,
-                    }}
-                  >
-                    {paragraph}
-                  </motion.p>
+                  />
                 )
               )}
             </div>
 
             {/* SIGNATURE */}
-            <motion.div
-              initial={{
-                opacity: 0,
-                y: 15,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay:
-                  0.4 +
-                  letterData.paragraphs.length *
-                    0.12,
-              }}
+            <div
               className="
                 mt-10
                 border-t
@@ -467,77 +510,38 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
                 text-right
               "
             >
-              <p
+              <TypewriterText
+                text={closing}
+                delay={closingDelay}
                 className="
-                  font-handwriting
-                  text-xl
-                  text-slate-500
-                  sm:text-2xl
+                  text-[14px]
+                  font-medium
+                  text-slate-400
+                  sm:text-[15px]
                 "
-              >
-                {letterData.closing}
-              </p>
+                style={{
+                  fontFamily:
+                    "'Quicksand', sans-serif",
+                }}
+              />
 
-              <p
+              <TypewriterText
+                text={signature}
+                delay={signatureDelay}
+                showCursor={false}
                 className="
                   mt-1
-                  font-handwriting
-                  text-3xl
-                  font-bold
-                  text-rose-700
-                  sm:text-4xl
-                "
-              >
-                {senderName ||
-                  letterData.signature}
-              </p>
-
-              <div
-                className="
-                  mt-3
-                  flex
-                  items-center
-                  justify-end
-                  gap-1
-                  text-xs
-                  text-rose-400
-                "
-              >
-                <Sparkles className="h-3 w-3" />
-
-                <span>
-                  {letterData.date}
-                </span>
-              </div>
-            </motion.div>
-
-            {/* CLOSE */}
-            <div
-              className="
-                mt-9
-                flex
-                justify-center
-              "
-            >
-              <button
-                type="button"
-                onClick={() =>
-                  setIsOpen(false)
-                }
-                className="
-                  rounded-full
-                  bg-rose-50
-                  px-5
-                  py-2.5
-                  text-xs
+                  text-[30px]
                   font-semibold
-                  text-rose-500
-                  transition
-                  hover:bg-rose-100
+                  leading-none
+                  text-rose-600
+                  sm:text-[38px]
                 "
-              >
-                Đóng thư lại
-              </button>
+                style={{
+                  fontFamily:
+                    "'Dancing Script', cursive",
+                }}
+              />
             </div>
           </motion.article>
         )}
@@ -554,7 +558,7 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
           y: 0,
         }}
         transition={{
-          delay: 0.8,
+          delay: 0.7,
         }}
         onClick={handleBack}
         className="
@@ -568,6 +572,7 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
           bg-white/75
           px-5
           py-2.5
+          font-body
           text-xs
           font-semibold
           text-rose-500
@@ -575,7 +580,10 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
         "
       >
         <ChevronLeft className="h-4 w-4" />
-        <span>Quay lại 3 món quà</span>
+
+        <span>
+          Quay lại 3 món quà
+        </span>
       </motion.button>
     </motion.section>
   );
