@@ -1,8 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
+import {
+  AnimatePresence,
+  motion,
+} from 'motion/react';
 
-import { loveConfig as initialConfig } from './config/loveConfig';
-import { AppStage, LoveConfig } from './types';
+import {
+  loveConfig as initialConfig,
+} from './config/loveConfig';
+
+import {
+  AppStage,
+  LoveConfig,
+} from './types';
 
 import { ProposalScreen } from './components/ProposalScreen';
 import { GiftSelector } from './components/GiftSelector';
@@ -20,176 +32,383 @@ import {
 
 import { sfx } from './utils/soundEffects';
 
-/*
-|--------------------------------------------------------------------------
-| TEMPLATE ROUTE
-|--------------------------------------------------------------------------
-|
-| Template hiện tại:
-| /templates/love-01
-|
-| Sau này thêm template mới chỉ cần mở rộng hệ thống route/config.
-|
-*/
+/* =========================================================
+   TEMPLATE ROUTES
+========================================================= */
 
-const TEMPLATE_PATH = '/templates/love-01';
+const TEMPLATE_BASE =
+  '/templates/love-01';
+
+const ROUTES = {
+  proposal: TEMPLATE_BASE,
+
+  gifts:
+    `${TEMPLATE_BASE}/gifts`,
+
+  gift1:
+    `${TEMPLATE_BASE}/gifts/memories`,
+
+  gift2:
+    `${TEMPLATE_BASE}/gifts/music`,
+
+  gift3:
+    `${TEMPLATE_BASE}/gifts/letter`,
+} as const;
+
+type RoutedStage =
+  | 'proposal'
+  | 'gifts'
+  | 'gift1'
+  | 'gift2'
+  | 'gift3';
+
+/* =========================================================
+   PATH HELPERS
+========================================================= */
+
+const cleanPath = (
+  pathname: string
+) => {
+  if (
+    pathname.length > 1 &&
+    pathname.endsWith('/')
+  ) {
+    return pathname.slice(0, -1);
+  }
+
+  return pathname;
+};
+
+const getStageFromPath = (
+  pathname: string
+): RoutedStage | null => {
+  const path =
+    cleanPath(pathname);
+
+  if (path === ROUTES.proposal) {
+    return 'proposal';
+  }
+
+  if (path === ROUTES.gifts) {
+    return 'gifts';
+  }
+
+  if (path === ROUTES.gift1) {
+    return 'gift1';
+  }
+
+  if (path === ROUTES.gift2) {
+    return 'gift2';
+  }
+
+  if (path === ROUTES.gift3) {
+    return 'gift3';
+  }
+
+  return null;
+};
+
+/* =========================================================
+   APP
+========================================================= */
 
 export default function App() {
-  /*
-   * Bỏ IntroScreen hoàn toàn.
-   * Khi vào template sẽ bắt đầu ngay tại Proposal.
-   */
-  const [stage, setStage] =
-    useState<AppStage>('proposal');
+  /* =======================================================
+     INITIAL ROUTE
+  ======================================================= */
 
-  const [config, setConfig] =
-    useState<LoveConfig>(initialConfig);
+  const getInitialStage =
+    (): RoutedStage => {
+      const pathname =
+        window.location.pathname;
 
-  const [isConfigOpen, setIsConfigOpen] =
-    useState(false);
+      /*
+       * Domain gốc
+       * /
+       *
+       * tự chuyển thành
+       * /templates/love-01
+       */
+      if (pathname === '/') {
+        window.history.replaceState(
+          {},
+          '',
+          ROUTES.proposal
+        );
 
-  /*
-  |--------------------------------------------------------------------------
-   | URL TEMPLATE
-   |--------------------------------------------------------------------------
-   */
+        return 'proposal';
+      }
 
-  const [isValidTemplate, setIsValidTemplate] =
-    useState(true);
+      const stage =
+        getStageFromPath(pathname);
 
-  useEffect(() => {
-    const pathname = window.location.pathname;
+      return stage || 'proposal';
+    };
 
-    /*
-     * Nếu người dùng vào domain gốc:
-     *
-     * https://domain.com/
-     *
-     * tự chuyển sang:
-     *
-     * https://domain.com/templates/love-01
-     */
+  const initialStage =
+    getInitialStage();
+
+  const [
+    stage,
+    setStage,
+  ] =
+    useState<AppStage>(
+      initialStage
+    );
+
+  const [
+    invalidRoute,
+    setInvalidRoute,
+  ] = useState(() => {
+    const pathname =
+      window.location.pathname;
+
     if (pathname === '/') {
+      return false;
+    }
+
+    return (
+      getStageFromPath(
+        pathname
+      ) === null
+    );
+  });
+
+  const [
+    config,
+    setConfig,
+  ] =
+    useState<LoveConfig>(
+      initialConfig
+    );
+
+  const [
+    isConfigOpen,
+    setIsConfigOpen,
+  ] = useState(false);
+
+  /* =======================================================
+     QUICK EDIT STATE
+  ======================================================= */
+
+  const [
+    editSender,
+    setEditSender,
+  ] = useState(
+    config.couple.senderName
+  );
+
+  const [
+    editReceiver,
+    setEditReceiver,
+  ] = useState(
+    config.couple.receiverName
+  );
+
+  const [
+    editQuestion,
+    setEditQuestion,
+  ] = useState(
+    config.proposal.question
+  );
+
+  const [
+    editYesBtn,
+    setEditYesBtn,
+  ] = useState(
+    config.proposal.yesBtnText
+  );
+
+  /* =======================================================
+     NAVIGATION
+  ======================================================= */
+
+  const navigateTo = (
+    nextStage: RoutedStage,
+    replace = false
+  ) => {
+    const nextPath =
+      ROUTES[nextStage];
+
+    const currentPath =
+      cleanPath(
+        window.location.pathname
+      );
+
+    setInvalidRoute(false);
+    setStage(nextStage);
+
+    /*
+     * Không tạo history trùng.
+     */
+    if (
+      currentPath === nextPath
+    ) {
+      return;
+    }
+
+    if (replace) {
       window.history.replaceState(
         {},
         '',
-        TEMPLATE_PATH
+        nextPath
       );
-
-      setIsValidTemplate(true);
-      return;
-    }
-
-    /*
-     * Template hiện tại.
-     */
-    if (pathname === TEMPLATE_PATH) {
-      setIsValidTemplate(true);
-      return;
-    }
-
-    /*
-     * Cho phép URL có slash cuối:
-     *
-     * /templates/love-01/
-     */
-    if (pathname === `${TEMPLATE_PATH}/`) {
-      window.history.replaceState(
+    } else {
+      window.history.pushState(
         {},
         '',
-        TEMPLATE_PATH
+        nextPath
       );
-
-      setIsValidTemplate(true);
-      return;
     }
 
-    setIsValidTemplate(false);
-  }, []);
-
-  /*
-  |--------------------------------------------------------------------------
-   | QUICK EDIT
-   |--------------------------------------------------------------------------
-   */
-
-  const [editSender, setEditSender] =
-    useState(config.couple.senderName);
-
-  const [editReceiver, setEditReceiver] =
-    useState(config.couple.receiverName);
-
-  const [editQuestion, setEditQuestion] =
-    useState(config.proposal.question);
-
-  const [editYesBtn, setEditYesBtn] =
-    useState(config.proposal.yesBtnText);
-
-  const handleSaveConfig = () => {
-    setConfig((prev) => ({
-      ...prev,
-
-      couple: {
-        ...prev.couple,
-        senderName: editSender,
-        receiverName: editReceiver,
-      },
-
-      proposal: {
-        ...prev.proposal,
-        question: editQuestion,
-        yesBtnText: editYesBtn,
-      },
-
-      gifts: {
-        ...prev.gifts,
-
-        gift3: {
-          ...prev.gifts.gift3,
-
-          letter: {
-            ...prev.gifts.gift3.letter,
-            salutation: `Gửi ${editReceiver},`,
-            signature: editSender,
-          },
-        },
-      },
-    }));
-
-    sfx.playSuccessChime();
-
-    setIsConfigOpen(false);
+    window.scrollTo({
+      top: 0,
+      behavior: 'instant',
+    });
   };
 
-  /*
-  |--------------------------------------------------------------------------
-   | RESET TEMPLATE
-   |--------------------------------------------------------------------------
-   */
+  /* =======================================================
+     BROWSER BACK / FORWARD
+  ======================================================= */
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const pathname =
+        window.location.pathname;
+
+      const nextStage =
+        getStageFromPath(
+          pathname
+        );
+
+      if (!nextStage) {
+        setInvalidRoute(true);
+        return;
+      }
+
+      setInvalidRoute(false);
+      setStage(nextStage);
+
+      window.scrollTo({
+        top: 0,
+        behavior: 'instant',
+      });
+    };
+
+    window.addEventListener(
+      'popstate',
+      handlePopState
+    );
+
+    return () => {
+      window.removeEventListener(
+        'popstate',
+        handlePopState
+      );
+    };
+  }, []);
+
+  /* =======================================================
+     NORMALIZE TRAILING SLASH
+  ======================================================= */
+
+  useEffect(() => {
+    const pathname =
+      window.location.pathname;
+
+    const cleaned =
+      cleanPath(pathname);
+
+    if (
+      pathname !== cleaned &&
+      getStageFromPath(cleaned)
+    ) {
+      window.history.replaceState(
+        {},
+        '',
+        cleaned
+      );
+    }
+  }, []);
+
+  /* =======================================================
+     SAVE QUICK CONFIG
+  ======================================================= */
+
+  const handleSaveConfig =
+    () => {
+      setConfig((prev) => ({
+        ...prev,
+
+        couple: {
+          ...prev.couple,
+
+          senderName:
+            editSender,
+
+          receiverName:
+            editReceiver,
+        },
+
+        proposal: {
+          ...prev.proposal,
+
+          question:
+            editQuestion,
+
+          yesBtnText:
+            editYesBtn,
+        },
+
+        gifts: {
+          ...prev.gifts,
+
+          gift3: {
+            ...prev.gifts
+              .gift3,
+
+            letter: {
+              ...prev.gifts
+                .gift3
+                .letter,
+
+              salutation:
+                `Gửi ${editReceiver},`,
+
+              signature:
+                editSender,
+            },
+          },
+        },
+      }));
+
+      sfx.playSuccessChime();
+
+      setIsConfigOpen(false);
+    };
+
+  /* =======================================================
+     RESET
+  ======================================================= */
 
   const handleReset = () => {
     sfx.playPop();
 
-    /*
-     * Không còn Intro.
-     * Reset quay về màn YES / NO.
-     */
-    setStage('proposal');
+    navigateTo(
+      'proposal'
+    );
   };
 
-  /*
-  |--------------------------------------------------------------------------
-   | INVALID TEMPLATE
-   |--------------------------------------------------------------------------
-   */
+  /* =======================================================
+     INVALID URL
+  ======================================================= */
 
-  if (!isValidTemplate) {
+  if (invalidRoute) {
     return (
       <main
         className="
           flex
           min-h-[100svh]
-          w-full
           items-center
           justify-center
           bg-gradient-to-b
@@ -203,17 +422,22 @@ export default function App() {
           className="
             w-full
             max-w-sm
-            rounded-3xl
+            rounded-[28px]
             border
             border-rose-200
-            bg-white/80
+            bg-white/85
             p-7
             text-center
             shadow-xl
-            backdrop-blur
+            backdrop-blur-md
           "
         >
-          <div className="mb-3 text-4xl">
+          <div
+            className="
+              mb-3
+              text-4xl
+            "
+          >
             💌
           </div>
 
@@ -224,26 +448,27 @@ export default function App() {
               text-slate-800
             "
           >
-            Template không tồn tại
+            Trang này không tồn tại
           </h1>
 
           <p
             className="
               mt-2
               text-sm
-              leading-relaxed
               text-slate-500
             "
           >
-            Đường dẫn template này chưa được
-            tạo.
+            Đường dẫn này không thuộc
+            template hiện tại.
           </p>
 
           <button
             type="button"
             onClick={() => {
-              window.location.href =
-                TEMPLATE_PATH;
+              navigateTo(
+                'proposal',
+                true
+              );
             }}
             className="
               mt-5
@@ -258,12 +483,16 @@ export default function App() {
               shadow-rose-500/20
             "
           >
-            Mở Love Template
+            Về template
           </button>
         </div>
       </main>
     );
   }
+
+  /* =======================================================
+     MAIN
+  ======================================================= */
 
   return (
     <main
@@ -274,26 +503,33 @@ export default function App() {
         flex-col
         justify-between
         overflow-x-hidden
+
         bg-gradient-to-b
         from-pink-50
         via-rose-50
         to-pink-100
+
         text-slate-800
+
         selection:bg-pink-300
         selection:text-pink-900
       "
     >
       {/* BACKGROUND MUSIC */}
+
       <AudioPlayer
         musicUrl={
-          config.audio.backgroundMusicUrl
+          config.audio
+            .backgroundMusicUrl
         }
         musicTitle={
-          config.audio.backgroundMusicTitle
+          config.audio
+            .backgroundMusicTitle
         }
       />
 
       {/* QUICK CONFIG */}
+
       <div
         className="
           fixed
@@ -305,136 +541,234 @@ export default function App() {
         <button
           type="button"
           onClick={() =>
-            setIsConfigOpen(true)
+            setIsConfigOpen(
+              true
+            )
           }
           className="
             flex
             cursor-pointer
             items-center
             gap-1.5
+
             rounded-full
             border
             border-rose-200
+
             bg-white/80
+
             px-3
             py-2
+
             text-xs
             font-bold
             text-rose-700
+
             shadow-sm
             backdrop-blur-md
+
             transition
+
             hover:bg-white
           "
-          title="Tùy chỉnh nhanh"
         >
-          <Settings className="h-3.5 w-3.5" />
+          <Settings
+            className="
+              h-3.5
+              w-3.5
+            "
+          />
 
-          <span className="hidden sm:inline">
+          <span
+            className="
+              hidden
+              sm:inline
+            "
+          >
             Chỉnh sửa nhanh
           </span>
         </button>
       </div>
 
-      {/* TEMPLATE CONTENT */}
+      {/* =================================================
+          PAGE CONTENT
+      ================================================= */}
+
       <div
         className="
           relative
           z-10
+
           flex
           flex-1
           flex-col
+
           items-center
           justify-center
+
           p-2
           sm:p-4
         "
       >
-        <AnimatePresence mode="wait">
-          {/* YES / NO */}
-          {stage === 'proposal' && (
+        <AnimatePresence
+          mode="wait"
+        >
+          {/* =============================================
+              /templates/love-01
+          ============================================= */}
+
+          {stage ===
+            'proposal' && (
             <ProposalScreen
               key="proposal-stage"
               config={config}
               onYesAccepted={() =>
-                setStage('gifts')
+                navigateTo(
+                  'gifts'
+                )
               }
             />
           )}
 
-          {/* 3 GIFTS */}
-          {stage === 'gifts' && (
+          {/* =============================================
+              /templates/love-01/gifts
+          ============================================= */}
+
+          {stage ===
+            'gifts' && (
             <GiftSelector
               key="gifts-stage"
               config={config}
               onSelectGift={(
                 selectedStage
-              ) =>
-                setStage(selectedStage)
+              ) => {
+                if (
+                  selectedStage ===
+                  'gift1'
+                ) {
+                  navigateTo(
+                    'gift1'
+                  );
+                  return;
+                }
+
+                if (
+                  selectedStage ===
+                  'gift2'
+                ) {
+                  navigateTo(
+                    'gift2'
+                  );
+                  return;
+                }
+
+                if (
+                  selectedStage ===
+                  'gift3'
+                ) {
+                  navigateTo(
+                    'gift3'
+                  );
+                }
+              }}
+              onReset={
+                handleReset
               }
-              onReset={handleReset}
             />
           )}
 
-          {/* GIFT 1 */}
-          {stage === 'gift1' && (
+          {/* =============================================
+              /templates/love-01/gifts/memories
+          ============================================= */}
+
+          {stage ===
+            'gift1' && (
             <PolaroidGallery
               key="gift1-stage"
               photos={
-                config.gifts.gift1.photos
+                config.gifts
+                  .gift1
+                  .photos
               }
               onBack={() =>
-                setStage('gifts')
+                navigateTo(
+                  'gifts'
+                )
               }
             />
           )}
 
-          {/* GIFT 2 */}
-          {stage === 'gift2' && (
+          {/* =============================================
+              /templates/love-01/gifts/music
+          ============================================= */}
+
+          {stage ===
+            'gift2' && (
             <VinylMusicPlayer
               key="gift2-stage"
               playlist={
-                config.gifts.gift2
+                config.gifts
+                  .gift2
                   .playlist
               }
               onBack={() =>
-                setStage('gifts')
+                navigateTo(
+                  'gifts'
+                )
               }
             />
           )}
 
-          {/* GIFT 3 */}
-          {stage === 'gift3' && (
+          {/* =============================================
+              /templates/love-01/gifts/letter
+          ============================================= */}
+
+          {stage ===
+            'gift3' && (
             <LoveLetter
               key="gift3-stage"
+
               letterData={
-                config.gifts.gift3
+                config.gifts
+                  .gift3
                   .letter
               }
+
               senderName={
-                config.couple.senderName
+                config.couple
+                  .senderName
               }
+
               receiverName={
                 config.couple
                   .receiverName
               }
+
               onBack={() =>
-                setStage('gifts')
+                navigateTo(
+                  'gifts'
+                )
               }
             />
           )}
         </AnimatePresence>
       </div>
 
-      {/* FOOTER */}
+      {/* =================================================
+          FOOTER
+      ================================================= */}
+
       <footer
         className="
           relative
           z-10
+
           py-4
+
           text-center
           text-xs
           font-medium
+
           text-rose-800/60
         "
       >
@@ -446,13 +780,16 @@ export default function App() {
             gap-1
           "
         >
-          <span>Made with</span>
+          <span>
+            Made with
+          </span>
 
           <Heart
             className="
               inline
               h-3.5
               w-3.5
+
               fill-rose-500
               text-rose-500
             "
@@ -464,7 +801,10 @@ export default function App() {
         </p>
       </footer>
 
-      {/* CONFIG MODAL */}
+      {/* =================================================
+          CONFIG MODAL
+      ================================================= */}
+
       <AnimatePresence>
         {isConfigOpen && (
           <div
@@ -472,11 +812,15 @@ export default function App() {
               fixed
               inset-0
               z-50
+
               flex
               items-center
               justify-center
+
               bg-black/60
+
               p-4
+
               backdrop-blur-sm
             "
           >
@@ -496,23 +840,32 @@ export default function App() {
               className="
                 w-full
                 max-w-md
+
                 rounded-3xl
+
                 border-2
                 border-rose-200
+
                 bg-white
+
                 p-6
+
                 shadow-2xl
               "
             >
-              {/* MODAL HEADER */}
+              {/* HEADER */}
+
               <div
                 className="
                   mb-4
+
                   flex
                   items-center
                   justify-between
+
                   border-b
                   border-slate-100
+
                   pb-2
                 "
               >
@@ -539,46 +892,61 @@ export default function App() {
                     "
                   >
                     Tùy Chỉnh Nhanh
-                    Website
                   </h3>
                 </div>
 
                 <button
                   type="button"
                   onClick={() =>
-                    setIsConfigOpen(false)
+                    setIsConfigOpen(
+                      false
+                    )
                   }
                   className="
                     rounded-full
                     p-1.5
+
                     text-slate-400
+
                     transition
+
                     hover:bg-slate-100
                     hover:text-slate-600
                   "
                 >
-                  <X className="h-4 w-4" />
+                  <X
+                    className="
+                      h-4
+                      w-4
+                    "
+                  />
                 </button>
               </div>
 
               <p
                 className="
                   mb-4
+
                   text-xs
                   leading-relaxed
                   text-slate-500
                 "
               >
-                Hình ảnh, GIF, bài hát và
-                nội dung chính nằm trong{' '}
+                Hình ảnh, GIF, bài hát
+                và nội dung nằm trong{' '}
+
                 <code
                   className="
                     rounded
+
                     bg-rose-50
+
                     px-1.5
                     py-0.5
+
                     font-mono
                     font-bold
+
                     text-rose-600
                   "
                 >
@@ -587,6 +955,7 @@ export default function App() {
               </p>
 
               {/* FORM */}
+
               <div
                 className="
                   mb-6
@@ -594,6 +963,8 @@ export default function App() {
                   text-left
                 "
               >
+                {/* RECEIVER */}
+
                 <div>
                   <label
                     className="
@@ -609,20 +980,30 @@ export default function App() {
 
                   <input
                     type="text"
-                    value={editReceiver}
-                    onChange={(e) =>
+                    value={
+                      editReceiver
+                    }
+                    onChange={(
+                      e
+                    ) =>
                       setEditReceiver(
-                        e.target.value
+                        e.target
+                          .value
                       )
                     }
                     className="
                       w-full
+
                       rounded-xl
+
                       border
                       border-slate-200
+
                       px-3.5
                       py-2
+
                       text-sm
+
                       focus:border-rose-500
                       focus:outline-none
                       focus:ring-2
@@ -630,6 +1011,8 @@ export default function App() {
                     "
                   />
                 </div>
+
+                {/* SENDER */}
 
                 <div>
                   <label
@@ -646,20 +1029,30 @@ export default function App() {
 
                   <input
                     type="text"
-                    value={editSender}
-                    onChange={(e) =>
+                    value={
+                      editSender
+                    }
+                    onChange={(
+                      e
+                    ) =>
                       setEditSender(
-                        e.target.value
+                        e.target
+                          .value
                       )
                     }
                     className="
                       w-full
+
                       rounded-xl
+
                       border
                       border-slate-200
+
                       px-3.5
                       py-2
+
                       text-sm
+
                       focus:border-rose-500
                       focus:outline-none
                       focus:ring-2
@@ -667,6 +1060,8 @@ export default function App() {
                     "
                   />
                 </div>
+
+                {/* QUESTION */}
 
                 <div>
                   <label
@@ -683,20 +1078,30 @@ export default function App() {
 
                   <input
                     type="text"
-                    value={editQuestion}
-                    onChange={(e) =>
+                    value={
+                      editQuestion
+                    }
+                    onChange={(
+                      e
+                    ) =>
                       setEditQuestion(
-                        e.target.value
+                        e.target
+                          .value
                       )
                     }
                     className="
                       w-full
+
                       rounded-xl
+
                       border
                       border-slate-200
+
                       px-3.5
                       py-2
+
                       text-sm
+
                       focus:border-rose-500
                       focus:outline-none
                       focus:ring-2
@@ -704,6 +1109,8 @@ export default function App() {
                     "
                   />
                 </div>
+
+                {/* YES */}
 
                 <div>
                   <label
@@ -720,20 +1127,30 @@ export default function App() {
 
                   <input
                     type="text"
-                    value={editYesBtn}
-                    onChange={(e) =>
+                    value={
+                      editYesBtn
+                    }
+                    onChange={(
+                      e
+                    ) =>
                       setEditYesBtn(
-                        e.target.value
+                        e.target
+                          .value
                       )
                     }
                     className="
                       w-full
+
                       rounded-xl
+
                       border
                       border-slate-200
+
                       px-3.5
                       py-2
+
                       text-sm
+
                       focus:border-rose-500
                       focus:outline-none
                       focus:ring-2
@@ -743,41 +1160,57 @@ export default function App() {
                 </div>
               </div>
 
-              {/* ACTIONS */}
-              <div className="flex gap-2">
+              {/* BUTTONS */}
+
+              <div
+                className="
+                  flex
+                  gap-2
+                "
+              >
                 <button
                   type="button"
                   onClick={() => {
                     setEditSender(
-                      initialConfig.couple
+                      initialConfig
+                        .couple
                         .senderName
                     );
 
                     setEditReceiver(
-                      initialConfig.couple
+                      initialConfig
+                        .couple
                         .receiverName
                     );
 
                     setEditQuestion(
-                      initialConfig.proposal
+                      initialConfig
+                        .proposal
                         .question
                     );
 
                     setEditYesBtn(
-                      initialConfig.proposal
+                      initialConfig
+                        .proposal
                         .yesBtnText
                     );
                   }}
                   className="
                     cursor-pointer
+
                     rounded-xl
+
                     bg-slate-100
+
                     px-4
                     py-2.5
+
                     text-xs
                     font-bold
                     text-slate-600
+
                     transition
+
                     hover:bg-slate-200
                   "
                 >
@@ -786,19 +1219,29 @@ export default function App() {
 
                 <button
                   type="button"
-                  onClick={handleSaveConfig}
+                  onClick={
+                    handleSaveConfig
+                  }
                   className="
                     flex-1
+
                     cursor-pointer
+
                     rounded-xl
+
                     bg-rose-500
+
                     py-2.5
+
                     text-sm
                     font-bold
                     text-white
+
                     shadow-lg
                     shadow-rose-500/30
+
                     transition
+
                     hover:bg-rose-600
                   "
                 >
