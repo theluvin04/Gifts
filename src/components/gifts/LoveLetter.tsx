@@ -1,16 +1,11 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
-  motion,
-  AnimatePresence,
-} from 'motion/react';
-import {
-  Mail,
-  Heart,
   ChevronLeft,
+  Heart,
   Sparkles,
-  Stamp,
-  CheckCircle2,
 } from 'lucide-react';
+
 import { LoveConfig } from '../../types';
 import { sfx } from '../../utils/soundEffects';
 
@@ -21,36 +16,22 @@ interface LoveLetterProps {
   onBack: () => void;
 }
 
-export const LoveLetter: React.FC<
-  LoveLetterProps
-> = ({
+const ENVELOPE_IMAGE =
+  '/images/letter/envelope-cover.png';
+
+export const LoveLetter: React.FC<LoveLetterProps> = ({
   letterData,
   senderName,
   receiverName,
   onBack,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [kissCount, setKissCount] =
-    useState(0);
-  const [showKissToast, setShowKissToast] =
-    useState(false);
 
-  const handleOpenEnvelope = () => {
+  const handleOpen = () => {
     if (isOpen) return;
 
     sfx.playLetterOpen();
     setIsOpen(true);
-  };
-
-  const handleSendKiss = () => {
-    sfx.playSuccessChime();
-
-    setKissCount((prev) => prev + 1);
-    setShowKissToast(true);
-
-    setTimeout(() => {
-      setShowKissToast(false);
-    }, 2500);
   };
 
   const handleBack = () => {
@@ -59,541 +40,34 @@ export const LoveLetter: React.FC<
   };
 
   return (
-    <motion.div
-      initial={{
-        opacity: 0,
-        y: 20,
-      }}
-      animate={{
-        opacity: 1,
-        y: 0,
-      }}
-      exit={{
-        opacity: 0,
-        y: 20,
-      }}
+    <motion.section
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       className="
-        relative z-10
+        relative
+        mx-auto
         flex
-        min-h-[85vh]
+        min-h-[100svh]
         w-full
-        max-w-3xl
+        max-w-5xl
         flex-col
         items-center
-        mx-auto
+        justify-center
+        overflow-hidden
         px-4
-        py-6
+        py-12
+        sm:px-6
       "
-      id="love-letter-view"
     >
-      {/* ĐÓNG THƯ - CHỈ HIỆN KHI ĐÃ MỞ */}
-      {isOpen && (
-        <div className="mb-6 flex w-full justify-end">
-          <button
-            onClick={() => setIsOpen(false)}
-            className="
-              rounded-full
-              border
-              border-rose-200
-              bg-white/80
-              px-3
-              py-1.5
-              text-xs
-              font-semibold
-              text-rose-600
-            "
-          >
-            Đóng thư lại
-          </button>
-        </div>
-      )}
-
-      {/* TITLE */}
-      <div className="mb-6 text-center">
-        <div
-          className="
-            mb-2
-            inline-flex
-            items-center
-            gap-2
-            rounded-full
-            border
-            border-rose-200
-            bg-rose-100/90
-            px-3.5
-            py-1
-            text-xs
-            font-bold
-            text-rose-600
-          "
-        >
-          <Mail className="h-3.5 w-3.5" />
-
-          <span>MÓN QUÀ SỐ 3</span>
-        </div>
-
-        <h2
-          className="
-            text-2xl
-            font-extrabold
-            text-slate-800
-            font-heading
-            sm:text-4xl
-          "
-        >
-          Bức Thư Tay Gửi Cậu 💌
-        </h2>
-
-        <p className="mt-1 text-sm text-slate-600">
-          {isOpen
-            ? 'Những lời tâm sự từ tận đáy trái tim'
-            : 'Chạm vào dấu niêm phong để mở bức thư bí mật'}
-        </p>
-      </div>
-
-      {/* LETTER CONTAINER */}
-      <div className="relative flex w-full max-w-xl flex-col items-center">
-        <AnimatePresence mode="wait">
-          {!isOpen ? (
-            /* CLOSED */
-            <motion.div
-              key="closed-envelope"
-              initial={{
-                scale: 0.9,
-                opacity: 0,
-              }}
-              animate={{
-                scale: 1,
-                opacity: 1,
-              }}
-              exit={{
-                scale: 0.9,
-                opacity: 0,
-              }}
-              onClick={handleOpenEnvelope}
-              className="
-                group
-                relative
-                flex
-                aspect-[16/11]
-                w-full
-                max-w-md
-                cursor-pointer
-                select-none
-                flex-col
-                items-center
-                justify-center
-                overflow-hidden
-                rounded-2xl
-                border-2
-                border-rose-300
-                bg-gradient-to-br
-                from-rose-100
-                via-pink-100
-                to-rose-200
-                p-6
-                shadow-2xl
-                transition-transform
-                duration-300
-                hover:scale-[1.02]
-              "
-            >
-              {/* ENVELOPE LINES */}
-              <div className="pointer-events-none absolute inset-0">
-                <svg
-                  className="h-full w-full"
-                  preserveAspectRatio="none"
-                  viewBox="0 0 100 100"
-                >
-                  <polygon
-                    points="0,0 50,48 100,0"
-                    fill="rgba(244,63,94,0.08)"
-                    stroke="rgba(244,63,94,0.25)"
-                    strokeWidth="0.8"
-                  />
-
-                  <polygon
-                    points="0,100 50,50 100,100"
-                    fill="rgba(244,63,94,0.05)"
-                    stroke="rgba(244,63,94,0.2)"
-                    strokeWidth="0.8"
-                  />
-                </svg>
-              </div>
-
-              {/* STAMP */}
-              <div
-                className="
-                  absolute
-                  right-4
-                  top-4
-                  flex
-                  h-14
-                  w-12
-                  rotate-3
-                  flex-col
-                  items-center
-                  justify-center
-                  rounded-md
-                  border-2
-                  border-dashed
-                  border-rose-400
-                  bg-white/90
-                  p-1
-                  shadow-sm
-                "
-              >
-                <Stamp className="mb-0.5 h-4 w-4 text-rose-500" />
-
-                <span className="text-[9px] font-bold text-rose-600">
-                  LOVE
-                </span>
-              </div>
-
-              {/* RECEIVER */}
-              <div
-                className="
-                  relative z-10
-                  max-w-[220px]
-                  rounded-xl
-                  border
-                  border-rose-200
-                  bg-white/80
-                  px-4
-                  py-2
-                  text-center
-                  shadow-sm
-                  backdrop-blur-sm
-                "
-              >
-                <p className="text-[11px] font-bold uppercase tracking-wider text-rose-500">
-                  Người nhận
-                </p>
-
-                <p className="truncate font-handwriting text-2xl font-bold text-slate-800">
-                  {receiverName}
-                </p>
-              </div>
-
-              {/* WAX SEAL */}
-              <motion.div
-                whileHover={{
-                  scale: 1.15,
-                }}
-                whileTap={{
-                  scale: 0.9,
-                }}
-                animate={{
-                  boxShadow: [
-                    '0 0 0 0 rgba(225,29,72,0.4)',
-                    '0 0 0 14px rgba(225,29,72,0)',
-                  ],
-                }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 1.8,
-                }}
-                className="
-                  relative z-20
-                  mt-4
-                  flex
-                  h-16
-                  w-16
-                  items-center
-                  justify-center
-                  rounded-full
-                  border-2
-                  border-rose-400/60
-                  bg-gradient-to-br
-                  from-rose-600
-                  via-red-600
-                  to-rose-800
-                  text-white
-                  shadow-xl
-                "
-              >
-                <Heart className="h-8 w-8 fill-rose-100 text-rose-100 drop-shadow" />
-              </motion.div>
-
-              <p
-                className="
-                  mt-4
-                  flex
-                  items-center
-                  gap-1
-                  text-xs
-                  font-semibold
-                  tracking-wide
-                  text-rose-600
-                "
-              >
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-
-                <span>Nhấn để mở thư</span>
-              </p>
-            </motion.div>
-          ) : (
-            /* OPENED */
-            <motion.div
-              key="opened-letter"
-              initial={{
-                scale: 0.8,
-                y: 50,
-                opacity: 0,
-              }}
-              animate={{
-                scale: 1,
-                y: 0,
-                opacity: 1,
-              }}
-              transition={{
-                type: 'spring',
-                stiffness: 220,
-                damping: 20,
-              }}
-              className="
-                relative
-                w-full
-                overflow-hidden
-                rounded-2xl
-                border-2
-                border-amber-200/80
-                bg-[#fdfbf7]
-                p-6
-                shadow-2xl
-                sm:p-10
-              "
-              style={{
-                backgroundImage:
-                  'radial-gradient(#f0e6d2 1px, transparent 0)',
-                backgroundSize: '24px 24px',
-              }}
-            >
-              {/* ORNAMENTS */}
-              <div className="absolute left-3 top-3 font-serif text-xl text-rose-300/40">
-                ❦
-              </div>
-
-              <div className="absolute right-3 top-3 font-serif text-xl text-rose-300/40">
-                ❦
-              </div>
-
-              <div className="absolute bottom-3 left-3 font-serif text-xl text-rose-300/40">
-                ❦
-              </div>
-
-              <div className="absolute bottom-3 right-3 font-serif text-xl text-rose-300/40">
-                ❦
-              </div>
-
-              {/* SALUTATION */}
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  x: -20,
-                }}
-                animate={{
-                  opacity: 1,
-                  x: 0,
-                }}
-                transition={{
-                  delay: 0.2,
-                }}
-                className="
-                  mb-6
-                  border-b
-                  border-rose-200/60
-                  pb-3
-                "
-              >
-                <h3
-                  className="
-                    font-handwriting
-                    text-3xl
-                    font-bold
-                    text-rose-800
-                    sm:text-4xl
-                  "
-                >
-                  {letterData.salutation ||
-                    `Gửi ${receiverName},`}
-                </h3>
-              </motion.div>
-
-              {/* PARAGRAPHS */}
-              <div
-                className="
-                  space-y-4
-                  font-handwriting
-                  text-2xl
-                  leading-relaxed
-                  text-slate-800
-                  sm:text-3xl
-                  sm:leading-loose
-                "
-              >
-                {letterData.paragraphs.map(
-                  (paragraph, idx) => (
-                    <motion.p
-                      key={idx}
-                      initial={{
-                        opacity: 0,
-                        y: 15,
-                      }}
-                      animate={{
-                        opacity: 1,
-                        y: 0,
-                      }}
-                      transition={{
-                        delay:
-                          0.3 +
-                          idx * 0.15,
-                      }}
-                    >
-                      {paragraph}
-                    </motion.p>
-                  )
-                )}
-              </div>
-
-              {/* SIGNATURE */}
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  y: 20,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                transition={{
-                  delay: 0.9,
-                }}
-                className="
-                  mt-8
-                  flex
-                  flex-col
-                  items-end
-                  border-t
-                  border-rose-200/60
-                  pt-6
-                  text-right
-                "
-              >
-                <p className="font-handwriting text-2xl text-slate-600">
-                  {letterData.closing}
-                </p>
-
-                <p
-                  className="
-                    mt-1
-                    font-handwriting
-                    text-3xl
-                    font-bold
-                    text-rose-700
-                    sm:text-4xl
-                  "
-                >
-                  {senderName ||
-                    letterData.signature}
-                </p>
-
-                <p
-                  className="
-                    mt-2
-                    flex
-                    items-center
-                    gap-1
-                    text-xs
-                    font-semibold
-                    text-rose-500
-                  "
-                >
-                  <Sparkles className="h-3 w-3" />
-
-                  <span>
-                    {letterData.date}
-                  </span>
-                </p>
-              </motion.div>
-
-              {/* KISS */}
-              <motion.div
-                initial={{
-                  opacity: 0,
-                }}
-                animate={{
-                  opacity: 1,
-                }}
-                transition={{
-                  delay: 1.1,
-                }}
-                className="
-                  mt-8
-                  flex
-                  flex-col
-                  items-center
-                  justify-between
-                  gap-4
-                  border-t
-                  border-rose-200/60
-                  pt-6
-                  sm:flex-row
-                "
-              >
-                <p className="text-xs font-medium text-slate-500">
-                  Đã gửi:{' '}
-                  <span className="font-bold text-rose-600">
-                    {kissCount}
-                  </span>{' '}
-                  nụ hôn yêu thương
-                </p>
-
-                <motion.button
-                  whileHover={{
-                    scale: 1.05,
-                  }}
-                  whileTap={{
-                    scale: 0.95,
-                  }}
-                  onClick={handleSendKiss}
-                  className="
-                    flex
-                    items-center
-                    gap-2
-                    rounded-full
-                    bg-gradient-to-r
-                    from-rose-500
-                    to-pink-500
-                    px-5
-                    py-2.5
-                    text-sm
-                    font-bold
-                    text-white
-                    shadow-lg
-                    shadow-rose-500/30
-                  "
-                >
-                  <Heart className="h-4 w-4 fill-white" />
-
-                  <span>
-                    Gửi thêm nụ hôn 💋
-                  </span>
-                </motion.button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* TOAST */}
-      <AnimatePresence>
-        {showKissToast && (
+      <AnimatePresence mode="wait">
+        {!isOpen ? (
           <motion.div
+            key="closed"
             initial={{
               opacity: 0,
-              y: 20,
-              scale: 0.9,
+              y: 30,
+              scale: 0.95,
             }}
             animate={{
               opacity: 1,
@@ -602,73 +76,507 @@ export const LoveLetter: React.FC<
             }}
             exit={{
               opacity: 0,
-              y: -20,
-              scale: 0.9,
+              y: 20,
+              scale: 0.94,
+            }}
+            transition={{
+              type: 'spring',
+              stiffness: 170,
+              damping: 20,
             }}
             className="
-              fixed
-              bottom-6
-              z-50
               flex
+              w-full
+              flex-col
               items-center
-              gap-2
-              rounded-full
-              border
-              border-rose-400
-              bg-rose-600
-              px-5
-              py-2.5
-              text-sm
-              font-bold
-              text-white
-              shadow-2xl
             "
           >
-            <CheckCircle2 className="h-4 w-4 text-rose-200" />
+            {/* TITLE */}
+            <motion.div
+              initial={{
+                opacity: 0,
+                y: -10,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                delay: 0.1,
+              }}
+              className="
+                mb-7
+                text-center
+                sm:mb-9
+              "
+            >
+              <h1
+                className="
+                  font-handwriting
+                  text-[30px]
+                  font-bold
+                  text-rose-600
+                  sm:text-[42px]
+                "
+              >
+                A little letter for you ♡
+              </h1>
 
-            <span>
-              Đã gửi ngàn nụ hôn ngọt ngào đến
-              cậu! 💕
-            </span>
+              <p
+                className="
+                  mt-1.5
+                  text-xs
+                  text-slate-500
+                  sm:text-sm
+                "
+              >
+                Tap the heart to open
+              </p>
+            </motion.div>
+
+            {/* ENVELOPE IMAGE */}
+            <motion.div
+              whileHover={{
+                y: -5,
+              }}
+              className="
+                relative
+                w-full
+                max-w-[620px]
+              "
+            >
+              <img
+                src={ENVELOPE_IMAGE}
+                alt="Love letter envelope"
+                draggable={false}
+                className="
+                  block
+                  h-auto
+                  max-h-[430px]
+                  w-full
+                  select-none
+                  object-contain
+                  drop-shadow-[0_22px_30px_rgba(190,70,110,0.15)]
+                "
+              />
+
+              {/* RECEIVER */}
+              <motion.div
+                initial={{
+                  opacity: 0,
+                }}
+                animate={{
+                  opacity: 1,
+                }}
+                transition={{
+                  delay: 0.35,
+                }}
+                className="
+                  pointer-events-none
+                  absolute
+                  left-1/2
+                  top-[45%]
+                  z-10
+                  w-[65%]
+                  -translate-x-1/2
+                  -translate-y-1/2
+                  text-center
+                "
+              >
+                <p
+                  className="
+                    text-[8px]
+                    font-bold
+                    uppercase
+                    tracking-[0.25em]
+                    text-rose-400
+                    sm:text-[10px]
+                  "
+                >
+                  FOR
+                </p>
+
+                <p
+                  className="
+                    mt-1
+                    truncate
+                    font-handwriting
+                    text-xl
+                    font-bold
+                    text-slate-700
+                    sm:text-3xl
+                  "
+                >
+                  {receiverName}
+                </p>
+              </motion.div>
+
+              {/* OPEN HEART */}
+              <motion.button
+                type="button"
+                onClick={handleOpen}
+                whileHover={{
+                  scale: 1.1,
+                }}
+                whileTap={{
+                  scale: 0.9,
+                }}
+                animate={{
+                  scale: [1, 1.08, 1],
+                  boxShadow: [
+                    '0 0 0 0 rgba(244,63,94,0.25)',
+                    '0 0 0 18px rgba(244,63,94,0)',
+                    '0 0 0 0 rgba(244,63,94,0)',
+                  ],
+                }}
+                transition={{
+                  scale: {
+                    duration: 1.8,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  },
+                  boxShadow: {
+                    duration: 1.8,
+                    repeat: Infinity,
+                  },
+                }}
+                className="
+                  absolute
+                  bottom-[13%]
+                  left-1/2
+                  z-20
+                  flex
+                  h-13
+                  w-13
+                  -translate-x-1/2
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-rose-500
+                  text-white
+                  shadow-lg
+                  sm:h-16
+                  sm:w-16
+                "
+                aria-label="Open letter"
+              >
+                <Heart
+                  className="
+                    h-5
+                    w-5
+                    fill-white
+                    text-white
+                    sm:h-7
+                    sm:w-7
+                  "
+                />
+              </motion.button>
+
+              {/* SPARKLES */}
+              <motion.span
+                animate={{
+                  opacity: [0.2, 1, 0.2],
+                  scale: [0.8, 1.15, 0.8],
+                }}
+                transition={{
+                  duration: 1.8,
+                  repeat: Infinity,
+                }}
+                className="
+                  pointer-events-none
+                  absolute
+                  right-[12%]
+                  top-[17%]
+                  text-lg
+                  text-rose-300
+                "
+              >
+                ✦
+              </motion.span>
+
+              <motion.span
+                animate={{
+                  opacity: [1, 0.2, 1],
+                  scale: [1, 0.8, 1],
+                }}
+                transition={{
+                  duration: 2.1,
+                  repeat: Infinity,
+                }}
+                className="
+                  pointer-events-none
+                  absolute
+                  bottom-[24%]
+                  left-[13%]
+                  text-sm
+                  text-rose-300
+                "
+              >
+                ✦
+              </motion.span>
+            </motion.div>
           </motion.div>
+        ) : (
+          /* OPEN LETTER */
+          <motion.article
+            key="opened"
+            initial={{
+              opacity: 0,
+              y: 50,
+              scale: 0.94,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              scale: 1,
+            }}
+            exit={{
+              opacity: 0,
+              y: 30,
+              scale: 0.96,
+            }}
+            transition={{
+              type: 'spring',
+              stiffness: 160,
+              damping: 20,
+            }}
+            className="
+              relative
+              w-full
+              max-w-[680px]
+              overflow-hidden
+              rounded-[26px]
+              border
+              border-[#eadbc4]
+              bg-[#fffdf8]
+              px-6
+              py-8
+              shadow-[0_24px_65px_rgba(100,70,40,0.12)]
+              sm:px-12
+              sm:py-12
+            "
+          >
+            {/* DECORATION */}
+            <span
+              className="
+                absolute
+                left-5
+                top-5
+                text-xl
+                text-rose-200
+              "
+            >
+              ❦
+            </span>
+
+            <span
+              className="
+                absolute
+                right-5
+                top-5
+                text-xl
+                text-rose-200
+              "
+            >
+              ❦
+            </span>
+
+            {/* SALUTATION */}
+            <motion.h2
+              initial={{
+                opacity: 0,
+                x: -14,
+              }}
+              animate={{
+                opacity: 1,
+                x: 0,
+              }}
+              transition={{
+                delay: 0.15,
+              }}
+              className="
+                mb-7
+                font-handwriting
+                text-3xl
+                font-bold
+                text-rose-700
+                sm:text-4xl
+              "
+            >
+              {letterData.salutation ||
+                `Gửi ${receiverName},`}
+            </motion.h2>
+
+            {/* LETTER CONTENT */}
+            <div
+              className="
+                space-y-5
+                font-handwriting
+                text-[21px]
+                leading-[1.65]
+                text-slate-700
+                sm:text-[26px]
+                sm:leading-[1.7]
+              "
+            >
+              {letterData.paragraphs.map(
+                (paragraph, index) => (
+                  <motion.p
+                    key={index}
+                    initial={{
+                      opacity: 0,
+                      y: 14,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    transition={{
+                      delay:
+                        0.25 +
+                        index * 0.12,
+                    }}
+                  >
+                    {paragraph}
+                  </motion.p>
+                )
+              )}
+            </div>
+
+            {/* SIGNATURE */}
+            <motion.div
+              initial={{
+                opacity: 0,
+                y: 15,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                delay:
+                  0.4 +
+                  letterData.paragraphs.length *
+                    0.12,
+              }}
+              className="
+                mt-10
+                border-t
+                border-rose-100
+                pt-7
+                text-right
+              "
+            >
+              <p
+                className="
+                  font-handwriting
+                  text-xl
+                  text-slate-500
+                  sm:text-2xl
+                "
+              >
+                {letterData.closing}
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  font-handwriting
+                  text-3xl
+                  font-bold
+                  text-rose-700
+                  sm:text-4xl
+                "
+              >
+                {senderName ||
+                  letterData.signature}
+              </p>
+
+              <div
+                className="
+                  mt-3
+                  flex
+                  items-center
+                  justify-end
+                  gap-1
+                  text-xs
+                  text-rose-400
+                "
+              >
+                <Sparkles className="h-3 w-3" />
+
+                <span>
+                  {letterData.date}
+                </span>
+              </div>
+            </motion.div>
+
+            {/* CLOSE */}
+            <div
+              className="
+                mt-9
+                flex
+                justify-center
+              "
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setIsOpen(false)
+                }
+                className="
+                  rounded-full
+                  bg-rose-50
+                  px-5
+                  py-2.5
+                  text-xs
+                  font-semibold
+                  text-rose-500
+                  transition
+                  hover:bg-rose-100
+                "
+              >
+                Đóng thư lại
+              </button>
+            </div>
+          </motion.article>
         )}
       </AnimatePresence>
 
-      {/* BACK - CUỐI CÙNG */}
+      {/* BACK */}
       <motion.button
         initial={{
           opacity: 0,
-          y: 12,
+          y: 10,
         }}
         animate={{
           opacity: 1,
           y: 0,
         }}
         transition={{
-          delay: 1.2,
+          delay: 0.8,
         }}
         onClick={handleBack}
         className="
-          mt-10
+          mt-9
           inline-flex
           items-center
           gap-1.5
           rounded-full
           border
           border-rose-200
-          bg-white/80
+          bg-white/75
           px-5
           py-2.5
           text-xs
           font-semibold
-          text-rose-600
+          text-rose-500
           shadow-sm
         "
       >
         <ChevronLeft className="h-4 w-4" />
-
         <span>Quay lại 3 món quà</span>
       </motion.button>
-    </motion.div>
+    </motion.section>
   );
 };

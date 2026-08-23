@@ -139,25 +139,13 @@ export const GiftSelector: React.FC<GiftSelectorProps> = ({
           >
             <img
               src={gift.image}
-              alt={gift.label}
+              alt="Gift box"
               className="
-                h-[68%]
-                w-[68%]
+                h-[82%]
+                w-[82%]
                 object-contain
               "
             />
-
-            <span
-              className="
-                mt-1
-                text-[11px]
-                font-bold
-                text-rose-500
-                sm:text-lg
-              "
-            >
-              {gift.label}
-            </span>
           </motion.button>
         ))}
       </div>
