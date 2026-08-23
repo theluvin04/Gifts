@@ -12,27 +12,6 @@
   }
 }
 
-@keyframes floatHeart {
-  0% {
-    transform: translateY(0) scale(0.8) rotate(0deg);
-    opacity: 0;
-  }
-  20% {
-    opacity: 0.8;
-  }
-  80% {
-    opacity: 0.8;
-  }
-  100% {
-    transform: translateY(-100vh) scale(1.2) rotate(360deg);
-    opacity: 0;
-  }
-}
-
-.animate-float-heart {
-  animation: floatHeart 6s linear infinite;
-}
-
 @keyframes pulseGlow {
   0%, 100% {
     transform: scale(1);

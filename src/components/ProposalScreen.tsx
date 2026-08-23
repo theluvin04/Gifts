@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Sparkles, AlertCircle, ArrowRight } from 'lucide-react';
+import { Heart, ArrowRight } from 'lucide-react';
 import { LoveConfig } from '../types';
 import { sfx } from '../utils/soundEffects';
-import { triggerLoveConfetti, triggerHeartRain } from '../utils/confetti';
 
 interface ProposalScreenProps {
   config: LoveConfig;
@@ -23,6 +22,11 @@ export const ProposalScreen: React.FC<ProposalScreenProps> = ({ config, onYesAcc
   const currentStageIndex = Math.min(rejectCount, stages.length - 1);
   const currentStage = stages[currentStageIndex];
 
+  // Dynamic heading: replaces "Do you love me?" with cute pleading phrases when NO is clicked
+  const currentHeading = rejectCount === 0
+    ? config.proposal.question
+    : (currentStage.hint || currentStage.text || config.proposal.question);
+
   // Dynamic Cat GIF based on reject count and success state
   const currentGif = isAccepted
     ? config.proposal.successGif
@@ -30,7 +34,7 @@ export const ProposalScreen: React.FC<ProposalScreenProps> = ({ config, onYesAcc
     ? config.proposal.initialGif
     : currentStage.gifUrl;
 
-  // Move the NO button randomly when hovered or touched
+  // Move the NO button randomly ONLY when user clicks/taps it
   const handleDodge = (e?: React.MouseEvent | React.TouchEvent) => {
     if (isAccepted) return;
     if (e) {
@@ -65,8 +69,6 @@ export const ProposalScreen: React.FC<ProposalScreenProps> = ({ config, onYesAcc
     if (isAccepted) return;
     setIsAccepted(true);
     sfx.playSuccessChime();
-    triggerLoveConfetti();
-    triggerHeartRain();
   };
 
   // Reset NO button position on window resize for safety
@@ -89,16 +91,6 @@ export const ProposalScreen: React.FC<ProposalScreenProps> = ({ config, onYesAcc
       ref={containerRef}
       id="proposal-screen"
     >
-      {/* Top Cute Pill */}
-      <motion.div
-        initial={{ y: -10, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="inline-flex items-center gap-2 px-4 py-1 mb-4 text-xs sm:text-sm font-bold text-pink-600 bg-pink-100/90 rounded-full border border-pink-200 shadow-sm"
-      >
-        <Sparkles className="w-3.5 h-3.5 text-pink-500 animate-spin-slow" />
-        <span>Câu hỏi quan trọng nhất nè ✨</span>
-      </motion.div>
-
       {/* Cat GIF with Card Frame */}
       <motion.div
         key={currentGif}
@@ -130,21 +122,15 @@ export const ProposalScreen: React.FC<ProposalScreenProps> = ({ config, onYesAcc
             exit={{ opacity: 0, y: -10 }}
             className="w-full"
           >
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-800 font-heading mb-2">
-              {config.proposal.question}
-            </h2>
-
-            {/* Hint message when they try to click NO */}
-            {rejectCount > 0 && (
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 mt-1 mb-4 text-xs sm:text-sm font-medium text-rose-600 bg-rose-50 rounded-lg border border-rose-200"
-              >
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{currentStage.hint || "Đừng bấm mà :("}</span>
-              </motion.div>
-            )}
+            <motion.h2
+              key={currentHeading}
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="text-2xl sm:text-4xl font-extrabold text-slate-800 font-heading mb-3 px-2 min-h-[44px] flex items-center justify-center"
+            >
+              {currentHeading}
+            </motion.h2>
 
             {/* Action Buttons: YES / NO */}
             <div className="relative flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-6 min-h-[120px] w-full">
@@ -165,12 +151,10 @@ export const ProposalScreen: React.FC<ProposalScreenProps> = ({ config, onYesAcc
                 <span>{config.proposal.yesBtnText}</span>
               </motion.button>
 
-              {/* NO Runaway Button */}
+              {/* NO Runaway Button: moves only when clicked */}
               <motion.button
                 id="proposal-no-btn"
                 ref={noBtnRef}
-                onMouseEnter={handleDodge}
-                onTouchStart={handleDodge}
                 onClick={handleDodge}
                 animate={
                   noButtonPos
@@ -191,12 +175,6 @@ export const ProposalScreen: React.FC<ProposalScreenProps> = ({ config, onYesAcc
                 <span>{rejectCount === 0 ? "Không nha 😜" : currentStage.text}</span>
               </motion.button>
             </div>
-
-            {dodgeCount > 3 && (
-              <p className="text-xs text-slate-400 mt-4 italic">
-                (Bí mật: Nút NO không thể bấm được đâu, hãy bấm nút YES nha 😉)
-              </p>
-            )}
           </motion.div>
         ) : (
           /* Success Screen after clicking YES */

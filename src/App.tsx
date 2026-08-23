@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { loveConfig as initialConfig } from './config/loveConfig';
 import { AppStage, LoveConfig } from './types';
-import { FloatingHearts } from './components/FloatingHearts';
 import { IntroScreen } from './components/IntroScreen';
 import { ProposalScreen } from './components/ProposalScreen';
 import { GiftSelector } from './components/GiftSelector';
@@ -60,9 +59,6 @@ export default function App() {
 
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-pink-50 via-rose-50 to-pink-100 text-slate-800 overflow-x-hidden flex flex-col justify-between selection:bg-pink-300 selection:text-pink-900">
-      {/* Floating Ambient Hearts */}
-      <FloatingHearts />
-
       {/* Floating Ambient Audio Player */}
       <AudioPlayer
         musicUrl={config.audio.backgroundMusicUrl}

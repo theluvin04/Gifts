@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Heart, ChevronLeft, Sparkles, Send, Stamp, CheckCircle2 } from 'lucide-react';
 import { LoveConfig } from '../../types';
 import { sfx } from '../../utils/soundEffects';
-import { triggerLoveConfetti } from '../../utils/confetti';
 
 interface LoveLetterProps {
   letterData: LoveConfig['gifts']['gift3']['letter'];
@@ -26,12 +25,10 @@ export const LoveLetter: React.FC<LoveLetterProps> = ({
     if (isOpen) return;
     sfx.playLetterOpen();
     setIsOpen(true);
-    triggerLoveConfetti();
   };
 
   const handleSendKiss = () => {
     sfx.playSuccessChime();
-    triggerLoveConfetti();
     setKissCount((prev) => prev + 1);
     setShowKissToast(true);
     setTimeout(() => setShowKissToast(false), 2500);
