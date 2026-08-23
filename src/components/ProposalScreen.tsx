@@ -177,9 +177,13 @@ export const ProposalScreen: React.FC<ProposalScreenProps> = ({ config, onYesAcc
                     ? {
                         x: noButtonPos.x,
                         y: noButtonPos.y,
-                        rotate: [0, -8, 8, -4, 0],
+                        rotate: rejectCount % 2 === 0 ? 8 : -8,
                       }
-                    : {}
+                    : {
+                        x: 0,
+                        y: 0,
+                        rotate: 0,
+                      }
                 }
                 transition={{ type: "spring", stiffness: 450, damping: 20 }}
                 className="z-10 px-5 sm:px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm sm:text-base rounded-full shadow-md border border-slate-300 transition-colors cursor-pointer select-none active:scale-90"
