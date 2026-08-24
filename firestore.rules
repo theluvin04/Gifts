@@ -4,71 +4,88 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function isGoogleUser() {
       return request.auth != null
-        && request.auth.token.email != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.firebase.sign_in_provider == 'google.com';
+        && request.auth.token.email != null;
     }
 
     function isAdmin() {
-      return isGoogleUser()
-        && exists(
-          /databases/$(database)/documents/admins/$(request.auth.token.email)
-        )
-        && get(
-          /databases/$(database)/documents/admins/$(request.auth.token.email)
-        ).data.enabled == true;
+      return request.auth != null
+        && (
+          (
+            request.auth.token.email != null
+            && (
+              (
+                exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+                && get(/databases/$(database)/documents/admins/$(request.auth.token.email)).data.get('enabled', false) == true
+              )
+              || (
+                exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()))
+                && get(/databases/$(database)/documents/admins/$(request.auth.token.email.lower())).data.get('enabled', false) == true
+              )
+            )
+          )
+          || (
+            exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+            && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.get('enabled', false) == true
+          )
+        );
     }
 
-    match /admins/{adminEmail} {
-      // Google user chỉ được đọc record mang đúng Gmail của mình.
-      allow get: if isGoogleUser()
-        && request.auth.token.email == adminEmail;
+    match /admins/{adminKey} {
+      // Cho user đọc document admin của chính email/UID mình
+      allow get: if request.auth != null
+        && (
+          (
+            request.auth.token.email != null
+            && (
+              request.auth.token.email == adminKey
+              || request.auth.token.email.lower() == adminKey.lower()
+            )
+          )
+          || request.auth.uid == adminKey
+          || isAdmin()
+        );
 
-      // Admin records chỉ tạo/sửa trực tiếp từ Firebase Console.
-      allow list: if false;
+      allow list: if isAdmin();
       allow create, update, delete: if false;
     }
 
     match /gifts/{giftId} {
       function isOwner() {
         return request.auth != null
-          && resource.data.creatorId == request.auth.uid;
+          && resource != null
+          && resource.data.get('creatorId', '') == request.auth.uid;
       }
 
       function isPublished() {
-        return resource.data.status == 'published'
-          || resource.data.isPublished == true;
+        return resource != null
+          && (
+            resource.data.get('status', '') == 'published'
+            || resource.data.get('isPublished', false) == true
+          );
       }
 
       function validWrite() {
         return request.auth != null
           && request.resource.data.config != null
-          && request.resource.data.creatorId == request.auth.uid
           && (
-            request.resource.data.status == 'draft'
-            || request.resource.data.status == 'published'
-          )
-          && request.resource.data.isPublished
-            == (
-              request.resource.data.status == 'published'
-            );
+            request.resource.data.creatorId == request.auth.uid
+            || isAdmin()
+          );
       }
 
-      // Public chỉ get gift published.
-      // Creator đọc gift của mình.
-      // Google Admin đọc được tất cả.
-      allow get: if isPublished()
+      // Cho phép get nếu document chưa tồn tại (trả về snapshot.exists = false),
+      // hoặc đã published, hoặc người tạo đang xem, hoặc admin đang xem.
+      allow get: if resource == null
+        || isPublished()
         || isOwner()
         || isAdmin();
 
-      // Chỉ Google Admin query toàn bộ collection gifts.
+      // Chỉ admin được list/query danh sách gifts
       allow list: if isAdmin();
 
       allow create: if validWrite();
 
-      allow update: if isOwner()
-        && request.resource.data.creatorId
-          == resource.data.creatorId
+      allow update: if (isOwner() || isAdmin())
         && validWrite();
 
       allow delete: if isOwner()
@@ -76,3 +93,4 @@ service cloud.firestore {
     }
   }
 }
+

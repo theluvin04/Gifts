@@ -118,18 +118,35 @@ export const getAdminSession =
       };
     }
 
-    const adminRef = doc(
-      db,
-      'admins',
-      email
-    );
+    const candidates = [
+      email,
+      email.toLowerCase(),
+      user.uid,
+    ].filter(Boolean);
 
-    const snapshot =
-      await getDoc(adminRef);
+    let isAdmin = false;
 
-    const isAdmin =
-      snapshot.exists() &&
-      snapshot.data()?.enabled === true;
+    for (const key of candidates) {
+      try {
+        const adminRef = doc(
+          db,
+          'admins',
+          key
+        );
+        const snapshot =
+          await getDoc(adminRef);
+
+        if (
+          snapshot.exists() &&
+          snapshot.data()?.enabled === true
+        ) {
+          isAdmin = true;
+          break;
+        }
+      } catch (err) {
+        console.warn('Admin check candidate failed:', key, err);
+      }
+    }
 
     return {
       uid: user.uid,
