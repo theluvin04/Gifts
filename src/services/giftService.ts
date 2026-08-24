@@ -142,78 +142,38 @@ export const generateSecureGiftId = (
 };
 
 const generateOrderNumber = () => {
+  const bytes =
+    new Uint32Array(1);
+
+  crypto.getRandomValues(
+    bytes
+  );
+
   return String(
     1000 +
-      Math.floor(
-        Math.random() * 9000
+      (
+        bytes[0] %
+        9000
       )
   );
 };
 
 export const createCheckoutIdentity =
   async (): Promise<CheckoutIdentity> => {
-    const creatorId =
-      await getAuthenticatedCreatorId();
+    await getAuthenticatedCreatorId();
 
     const giftId =
       generateSecureGiftId();
 
-    for (
-      let attempt = 0;
-      attempt < 50;
-      attempt++
-    ) {
-      const orderNumber =
-        generateOrderNumber();
+    const orderNumber =
+      generateOrderNumber();
 
-      const orderCode =
-        `Dearly${orderNumber}`;
-
-      try {
-        // /orderCodes/{4 số} chỉ cho phép CREATE.
-        // Nếu mã đã tồn tại, Firestore sẽ từ chối update
-        // và vòng lặp sẽ thử mã khác.
-        await setDoc(
-          doc(
-            db,
-            'orderCodes',
-            orderNumber
-          ),
-          {
-            orderNumber,
-            orderCode,
-            giftId,
-            creatorId,
-            createdAt:
-              serverTimestamp(),
-          }
-        );
-
-        return {
-          giftId,
-          orderNumber,
-          orderCode,
-        };
-      } catch (error: any) {
-        const code =
-          error?.code || '';
-
-        if (
-          code ===
-            'permission-denied' ||
-          code ===
-            'firestore/permission-denied'
-        ) {
-          continue;
-        }
-
-        throw error;
-      }
-    }
-
-    throw new Error(
-      'Không thể tạo mã đơn 4 số mới. Hãy thử lại.'
-    );
+    return {
+      giftId,
+      orderNumber,
+      orderCode:
+        `Dearly${orderNumber}`,
+    };
   };
 
 const buildShareUrl = (

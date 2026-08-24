@@ -621,7 +621,7 @@ const MemoriesSection: React.FC<
   <div>
     <SectionHeader
       title="Ảnh kỷ niệm"
-      description="Thay từng ảnh và caption trong Polaroid Gallery."
+      description="Thay từng ảnh xuất hiện trong Polaroid Gallery."
     />
 
     <div className="mt-7 space-y-5">
@@ -668,37 +668,6 @@ const MemoriesSection: React.FC<
                 }
               />
 
-              <InputField
-                label="Caption"
-                value={photo.caption}
-                onChange={(value) =>
-                  updatePhoto(index, {
-                    caption: value,
-                  })
-                }
-              />
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <InputField
-                  label="Ngày"
-                  value={photo.date ?? ''}
-                  onChange={(value) =>
-                    updatePhoto(index, {
-                      date: value,
-                    })
-                  }
-                />
-
-                <InputField
-                  label="Địa điểm"
-                  value={photo.location ?? ''}
-                  onChange={(value) =>
-                    updatePhoto(index, {
-                      location: value,
-                    })
-                  }
-                />
-              </div>
             </div>
           </div>
         )

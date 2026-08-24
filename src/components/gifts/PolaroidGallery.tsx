@@ -1,293 +1,421 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
+import { sfx } from '../../utils/soundEffects';
 
-import type { PhotoMemory } from '../../types';
+interface PhotoItem {
+  id: string;
+  url: string;
+  caption?: string;
+  date?: string;
+  rotation?: number;
+  location?: string;
+}
 
 interface PolaroidGalleryProps {
-  photos: PhotoMemory[];
+  photos: PhotoItem[];
   onBack: () => void;
 }
 
-const fallbackCaptions = [
-  'memories with you',
-  'little happy moments',
-  'our sweetest chapter',
-  'you make me smile',
-  'us, in frames',
-  'forever feels soft',
-  'just you and me',
-  'captured with love',
+const sparklePositions = [
+  { top: '18%', left: '31%', delay: 0.2 },
+  { top: '28%', left: '33%', delay: 0.8 },
+  { top: '55%', left: '34%', delay: 0.4 },
+  { top: '26%', right: '31%', delay: 1.1 },
+  { top: '48%', right: '33%', delay: 0.6 },
+  { top: '58%', left: '63%', delay: 1.4 },
 ];
 
-const desktopCardClasses = [
-  'left-[6%] top-[7%] w-[28%] rotate-[-6deg]',
-  'left-[10%] top-[50%] w-[25%] rotate-[2deg]',
-  'right-[9%] top-[8%] w-[28%] rotate-[5deg]',
-  'right-[10%] top-[52%] w-[25%] rotate-[-3deg]',
-];
-
-const stripRotations = ['rotate-[-4deg]', 'rotate-[4deg]'];
-
-function buildDisplayPhotos(photos: PhotoMemory[]) {
-  const safePhotos =
-    photos.length > 0
-      ? photos
-      : [
-          {
-            id: 'fallback-1',
-            url: 'https://images.unsplash.com/photo-1516589091380-5d8e87df6999?auto=format&fit=crop&w=900&q=80',
-            caption: 'memories with you',
-          },
-          {
-            id: 'fallback-2',
-            url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80',
-            caption: 'our little moments',
-          },
-          {
-            id: 'fallback-3',
-            url: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=900&q=80',
-            caption: 'you make me smile',
-          },
-          {
-            id: 'fallback-4',
-            url: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=900&q=80',
-            caption: 'us, in frames',
-          },
-        ];
-
-  const needed = 8;
-  return Array.from({ length: needed }, (_, index) => {
-    const source = safePhotos[index % safePhotos.length];
-    return {
-      ...source,
-      caption:
-        source.caption?.trim() ||
-        fallbackCaptions[index % fallbackCaptions.length],
-    };
-  });
-}
-
-function PolaroidCard({
-  photo,
-  className,
-  delay,
-}: {
-  photo: PhotoMemory;
-  className: string;
+const Sparkle: React.FC<{
+  top: string;
+  left?: string;
+  right?: string;
   delay: number;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 22, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.45, delay }}
-      className={`absolute ${className}`}
-    >
-      <div className="rounded-[2px] bg-white p-4 pb-6 shadow-[0_20px_45px_rgba(86,48,68,0.15)]">
-        <div className="aspect-[1/1] overflow-hidden bg-[#f4dfe6]">
+}> = ({ top, left, right, delay }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.6 }}
+    animate={{
+      opacity: [0.2, 1, 0.2],
+      scale: [0.7, 1.1, 0.7],
+    }}
+    transition={{
+      duration: 1.8,
+      repeat: Infinity,
+      delay,
+      ease: 'easeInOut',
+    }}
+    className="absolute z-0 text-pink-300"
+    style={{ top, left, right }}
+  >
+    ✦
+  </motion.div>
+);
+
+const PolaroidCard: React.FC<{
+  photo: PhotoItem;
+  rotateClass: string;
+  caption?: string;
+  animationFrom: {
+    x?: number;
+    y?: number;
+    rotate?: number;
+    scale?: number;
+  };
+  delay: number;
+}> = ({
+  photo,
+  rotateClass,
+  caption,
+  animationFrom,
+  delay,
+}) => (
+  <motion.div
+    initial={{
+      opacity: 0,
+      ...animationFrom,
+    }}
+    animate={{
+      opacity: 1,
+      x: 0,
+      y: 0,
+      rotate: 0,
+      scale: 1,
+    }}
+    transition={{
+      type: 'spring',
+      stiffness: 180,
+      damping: 18,
+      delay,
+    }}
+    whileHover={{
+      y: -5,
+      rotate: 0,
+      scale: 1.02,
+    }}
+    className={rotateClass}
+  >
+    <div className="bg-white p-3 shadow-xl">
+      <div className="aspect-square w-full overflow-hidden bg-pink-50">
+        <img
+          src={photo.url}
+          alt={photo.caption || 'memory'}
+          className="h-full w-full object-cover"
+        />
+      </div>
+
+      <div className="pt-3 text-center">
+        <p className="text-[11px] italic text-rose-700 sm:text-xs">
+          {caption || photo.caption || 'memory'}
+        </p>
+      </div>
+    </div>
+  </motion.div>
+);
+
+const FilmStrip: React.FC<{
+  photos: PhotoItem[];
+  delay: number;
+  rotation: number;
+  className?: string;
+}> = ({
+  photos,
+  delay,
+  rotation,
+  className = '',
+}) => (
+  <motion.div
+    initial={{
+      opacity: 0,
+      y: -22,
+      scale: 0.94,
+      rotate:
+        rotation * 1.35,
+    }}
+    animate={{
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      rotate: rotation,
+    }}
+    transition={{
+      type: 'spring',
+      stiffness: 170,
+      damping: 18,
+      delay,
+    }}
+    style={{
+      transformOrigin:
+        '50% 0%',
+    }}
+    className={[
+      'absolute top-0 w-[150px] overflow-hidden border border-pink-200 bg-white shadow-[0_14px_30px_rgba(120,70,90,0.11)]',
+      className,
+    ].join(' ')}
+  >
+    {photos.map((photo, idx) => (
+      <div
+        key={`${photo.id}-${idx}`}
+        className="border-b border-pink-200/70 bg-white p-2 last:border-b-0"
+      >
+        <div className="aspect-square overflow-hidden bg-pink-50">
           <img
             src={photo.url}
-            alt={photo.caption}
+            alt={photo.caption || 'memory'}
             className="h-full w-full object-cover"
           />
         </div>
-
-        <p className="mt-4 text-center font-['DM_Serif_Text'] text-[14px] italic tracking-[0.03em] text-[#cf4569]">
-          {photo.caption}
-        </p>
       </div>
-    </motion.div>
-  );
-}
+    ))}
+  </motion.div>
+);
 
-function PhotoStrip({
-  photos,
-  className,
-  delay,
-}: {
-  photos: PhotoMemory[];
-  className: string;
-  delay: number;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, delay }}
-      className={`absolute ${className}`}
-    >
-      <div className="rounded-[2px] border border-[#efbfd0] bg-white px-3 py-4 shadow-[0_18px_35px_rgba(86,48,68,0.12)]">
-        <div className="grid gap-3">
-          {photos.map((photo) => (
-            <div
-              key={photo.id}
-              className="aspect-[1/1] overflow-hidden border border-[#f5dde5] bg-[#f6e4ea]"
-            >
-              <img
-                src={photo.url}
-                alt={photo.caption}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
+const CrossedFilmStrips: React.FC<{
+  leftPhotos: PhotoItem[];
+  rightPhotos: PhotoItem[];
+  compact?: boolean;
+}> = ({
+  leftPhotos,
+  rightPhotos,
+  compact = false,
+}) => (
+  <div
+    className={
+      compact
+        ? 'relative mx-auto h-[430px] w-[306px]'
+        : 'relative left-1/2 h-[590px] w-[364px] -translate-x-1/2'
+    }
+  >
+    <FilmStrip
+      photos={leftPhotos}
+      delay={0.1}
+      rotation={
+        compact ? -2.4 : -3.6
+      }
+      className={
+        compact
+          ? 'left-0'
+          : 'left-0'
+      }
+    />
+
+    <FilmStrip
+      photos={rightPhotos}
+      delay={0.22}
+      rotation={
+        compact ? 2.4 : 3.6
+      }
+      className={
+        compact
+          ? 'right-0'
+          : 'right-0'
+      }
+    />
+  </div>
+);
 
 export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
   photos,
   onBack,
 }) => {
-  const galleryPhotos = useMemo(
-    () => buildDisplayPhotos(photos),
-    [photos]
+  const safePhotos = photos.length ? photos : [];
+
+  const leftTop = safePhotos[0];
+  const leftBottom = safePhotos[1] || safePhotos[0];
+  const rightTop = safePhotos[2] || safePhotos[0];
+  const rightBottom = safePhotos[3] || safePhotos[0];
+
+  const stripLeft = Array.from(
+    { length: 4 },
+    (_, i) => safePhotos[i % safePhotos.length]
   );
 
-  const largeCards = galleryPhotos.slice(0, 4);
-  const stripOne = galleryPhotos.slice(4, 6);
-  const stripTwo = galleryPhotos.slice(6, 8);
+  const stripRight = Array.from(
+    { length: 4 },
+    (_, i) => safePhotos[(i + 2) % safePhotos.length]
+  );
+
+  if (!safePhotos.length) return null;
 
   return (
-    <div className="min-h-[100svh] bg-[#fff8fb] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-[1280px]">
-        <div className="mb-5 flex items-start justify-between gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-2 rounded-[20px] border border-[#edd9e1] bg-white px-5 py-3 text-sm font-semibold text-slate-600 shadow-[0_8px_20px_rgba(86,48,68,0.10)] transition hover:-translate-y-0.5"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Tạo quà tương tự
-          </button>
+    <motion.section
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="relative min-h-[100svh] w-full overflow-hidden px-4 py-8"
+    >
+      {/* DESKTOP */}
+      <div className="mx-auto hidden max-w-6xl sm:block">
+        <div className="relative overflow-hidden rounded-[28px] bg-pink-50 px-10 py-10">
+          {sparklePositions.map((item, index) => (
+            <Sparkle key={index} {...item} />
+          ))}
 
-          <div className="hidden sm:block rounded-[20px] border border-[#edd9e1] bg-white px-5 py-3 text-sm font-semibold text-slate-600 shadow-[0_8px_20px_rgba(86,48,68,0.10)]">
-            Bật nhạc nền 🎵
-          </div>
-        </div>
+          <div className="relative z-10 grid grid-cols-[1fr_1fr_1fr] items-start gap-8">
+            <div className="flex flex-col gap-6">
+              <div className="w-[220px]">
+                <PolaroidCard
+                  photo={leftTop}
+                  caption="memories with you"
+                  rotateClass="-rotate-6"
+                  animationFrom={{
+                    x: -90,
+                    y: -18,
+                    rotate: -12,
+                    scale: 0.92,
+                  }}
+                  delay={0.45}
+                />
+              </div>
 
-        <div className="rounded-[38px] bg-[#fbf1f5] px-4 py-8 shadow-[0_18px_50px_rgba(86,48,68,0.08)] sm:px-8 sm:py-10 lg:px-10 lg:py-8">
-          {/* mobile */}
-          <div className="grid gap-4 lg:hidden">
-            <div className="grid grid-cols-2 gap-4">
-              {largeCards.map((photo, index) => (
-                <motion.div
-                  key={photo.id}
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.06 }}
-                  className={index % 2 === 0 ? '-rotate-[4deg]' : 'rotate-[4deg]'}
-                >
-                  <div className="rounded-[2px] bg-white p-3 pb-5 shadow-[0_12px_26px_rgba(86,48,68,0.14)]">
-                    <div className="aspect-square overflow-hidden bg-[#f4dfe6]">
-                      <img
-                        src={photo.url}
-                        alt={photo.caption}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-
-                    <p className="mt-3 text-center font-['DM_Serif_Text'] text-[12px] italic text-[#cf4569]">
-                      {photo.caption}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
+              <div className="ml-5 w-[210px]">
+                <PolaroidCard
+                  photo={leftBottom}
+                  caption="our little moments"
+                  rotateClass="rotate-2"
+                  animationFrom={{
+                    x: -70,
+                    y: 22,
+                    rotate: 8,
+                    scale: 0.92,
+                  }}
+                  delay={0.62}
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {[stripOne, stripTwo].map((stripPhotos, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.22 + index * 0.08 }}
-                  className={index === 0 ? '-rotate-[2deg]' : 'rotate-[2deg]'}
-                >
-                  <div className="rounded-[2px] border border-[#efbfd0] bg-white px-2.5 py-3 shadow-[0_12px_26px_rgba(86,48,68,0.12)]">
-                    <div className="grid gap-2.5">
-                      {stripPhotos.map((photo) => (
-                        <div
-                          key={photo.id}
-                          className="aspect-square overflow-hidden border border-[#f5dde5] bg-[#f6e4ea]"
-                        >
-                          <img
-                            src={photo.url}
-                            alt={photo.caption}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            <motion.h2
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.32 }}
-              className="pt-2 text-center font-['Pacifico'] text-[30px] leading-none text-[#c81654]"
-            >
-              Captured memories
-            </motion.h2>
-          </div>
-
-          {/* desktop */}
-          <div className="relative hidden h-[860px] lg:block xl:h-[920px]">
-            <div className="pointer-events-none absolute inset-0">
-              <span className="absolute left-[35%] top-[18%] text-[#f3abc6]">✦</span>
-              <span className="absolute left-[39%] top-[48%] text-[#f3abc6]">✦</span>
-              <span className="absolute right-[34%] top-[23%] text-[#f3abc6]">✦</span>
-              <span className="absolute right-[29%] top-[51%] text-[#f3abc6]">✦</span>
-            </div>
-
-            {largeCards.map((photo, index) => (
-              <PolaroidCard
-                key={photo.id}
-                photo={photo}
-                delay={index * 0.06}
-                className={desktopCardClasses[index]}
+            <div className="flex w-full justify-center">
+              <CrossedFilmStrips
+                leftPhotos={stripLeft}
+                rightPhotos={stripRight}
               />
-            ))}
+            </div>
 
-            <PhotoStrip
-              photos={stripOne}
-              className={`left-1/2 top-[9%] w-[13%] -translate-x-[108%] ${stripRotations[0]}`}
-              delay={0.16}
-            />
+            <div className="flex flex-col items-end gap-6">
+              <div className="w-[220px]">
+                <PolaroidCard
+                  photo={rightTop}
+                  caption="you make me smile"
+                  rotateClass="rotate-6"
+                  animationFrom={{
+                    x: 90,
+                    y: -18,
+                    rotate: 12,
+                    scale: 0.92,
+                  }}
+                  delay={0.54}
+                />
+              </div>
 
-            <PhotoStrip
-              photos={stripTwo}
-              className={`left-1/2 top-[9%] w-[13%] translate-x-[8%] ${stripRotations[1]}`}
-              delay={0.22}
-            />
-
-            <motion.h2
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.3 }}
-              className="absolute bottom-[4%] left-1/2 -translate-x-1/2 text-center font-['Pacifico'] text-[64px] leading-none text-[#c81654]"
-            >
-              Captured memories
-            </motion.h2>
+              <div className="mr-4 w-[210px]">
+                <PolaroidCard
+                  photo={rightBottom}
+                  caption="us, in frames"
+                  rotateClass="-rotate-2"
+                  animationFrom={{
+                    x: 70,
+                    y: 20,
+                    rotate: -8,
+                    scale: 0.92,
+                  }}
+                  delay={0.7}
+                />
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-8 flex justify-center">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-2 rounded-full border border-[#efd2dc] bg-white px-8 py-4 text-lg font-semibold text-[#e1386a] shadow-[0_12px_24px_rgba(86,48,68,0.08)] transition hover:-translate-y-0.5"
+          <motion.p
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.82 }}
+            className="relative z-10 mt-8 text-center text-[34px] font-semibold italic text-rose-700"
           >
-            <ArrowLeft className="h-5 w-5" />
-            Quay lại 3 món quà
-          </button>
+            Captured memories
+          </motion.p>
         </div>
       </div>
-    </div>
+
+      {/* MOBILE */}
+      <div className="mx-auto max-w-[390px] sm:hidden">
+        <div className="relative overflow-hidden rounded-[26px] bg-pink-50 px-4 py-6">
+          <p className="mb-5 text-center text-2xl font-semibold italic text-rose-700">
+            Captured memories
+          </p>
+
+          <div className="mb-5 flex justify-center">
+            <CrossedFilmStrips
+              leftPhotos={stripLeft}
+              rightPhotos={stripRight}
+              compact
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <PolaroidCard
+              photo={leftTop}
+              caption="memories with you"
+              rotateClass="-rotate-3"
+              animationFrom={{ x: -40, scale: 0.94 }}
+              delay={0.42}
+            />
+
+            <PolaroidCard
+              photo={rightTop}
+              caption="you make me smile"
+              rotateClass="rotate-3"
+              animationFrom={{ x: 40, scale: 0.94 }}
+              delay={0.52}
+            />
+
+            <PolaroidCard
+              photo={leftBottom}
+              caption="our little moments"
+              rotateClass="rotate-2"
+              animationFrom={{ x: -35, scale: 0.94 }}
+              delay={0.62}
+            />
+
+            <PolaroidCard
+              photo={rightBottom}
+              caption="us, in frames"
+              rotateClass="-rotate-2"
+              animationFrom={{ x: 35, scale: 0.94 }}
+              delay={0.72}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* BACK - LUÔN Ở CUỐI */}
+      <motion.button
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.1 }}
+        onClick={() => {
+          sfx.playPop();
+          onBack();
+        }}
+        className="
+          mx-auto
+          mt-10
+          flex
+          items-center
+          justify-center
+          gap-1.5
+          rounded-full
+          border
+          border-rose-200
+          bg-white/80
+          px-5
+          py-2.5
+          text-xs
+          font-semibold
+          text-rose-600
+          shadow-sm
+        "
+      >
+        <ChevronLeft className="h-4 w-4" />
+        <span>Quay lại 3 món quà</span>
+      </motion.button>
+    </motion.section>
   );
 };
