@@ -232,6 +232,8 @@ React.FC<
                   : style.textTransform,
               fontStyle:
                 style.fontStyle,
+              textDecoration:
+                style.textDecoration,
               whiteSpace:
                 style.whiteSpace ||
                 'pre-line',
@@ -275,8 +277,94 @@ React.FC<
                 style.boxShadow,
               background:
                 style.background,
+              borderColor:
+                style.borderColor,
+              borderWidth:
+                style.borderWidth,
+              borderStyle:
+                style.borderWidth
+                  ? 'solid'
+                  : undefined,
             }}
             className="h-full w-full select-none"
+          />
+        );
+      }
+
+      if (
+        element.type ===
+        'shape'
+      ) {
+        const style =
+          element.shapeStyle ||
+          {};
+
+        const kind =
+          style.kind ||
+          'rectangle';
+
+        if (
+          kind ===
+          'line'
+        ) {
+          return (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <div
+                style={{
+                  width: '100%',
+                  borderTopColor:
+                    style.borderColor ||
+                    style.fill ||
+                    '#111827',
+                  borderTopWidth:
+                    Math.max(
+                      1,
+                      style.borderWidth ||
+                        2
+                    ),
+                  borderTopStyle:
+                    style.lineStyle ||
+                    'solid',
+                  boxShadow:
+                    style.boxShadow,
+                }}
+              />
+            </div>
+          );
+        }
+
+        return (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              background:
+                style.fill ||
+                '#f4b8c4',
+              borderColor:
+                style.borderColor,
+              borderWidth:
+                style.borderWidth,
+              borderStyle:
+                style.borderWidth
+                  ? style.lineStyle ||
+                    'solid'
+                  : undefined,
+              borderRadius:
+                kind ===
+                'circle'
+                  ? '9999px'
+                  : style.borderRadius,
+              boxShadow:
+                style.boxShadow,
+            }}
           />
         );
       }

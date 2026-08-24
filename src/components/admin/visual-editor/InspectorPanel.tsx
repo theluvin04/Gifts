@@ -34,9 +34,8 @@ interface Props {
   scene:
     SceneCanvasDefinition;
 
-  element:
-    SceneElement |
-    null;
+  elements:
+    SceneElement[];
 
   device:
     DeviceMode;
@@ -52,15 +51,16 @@ interface Props {
   ) => void;
 
   onElementChange: (
-    updater:
-      (
-        element:
-          SceneElement
-      ) =>
+    elementId: string,
+    updater: (
+      element:
         SceneElement
+    ) =>
+      SceneElement
   ) => void;
 
   onFrameChange: (
+    elementId: string,
     frame:
       SceneElementFrame
   ) => void;
@@ -76,12 +76,15 @@ interface Props {
 
   onLayerDown:
     () => void;
+
+  onToggleLock:
+    () => void;
 }
 
 export const InspectorPanel:
 React.FC<Props> = ({
   scene,
-  element,
+  elements,
   device,
   scenes,
   onSceneChange,
@@ -91,9 +94,61 @@ React.FC<Props> = ({
   onDelete,
   onLayerUp,
   onLayerDown,
-}) => (
-  <aside className="min-w-0 rounded-[14px] border border-black/8 bg-white p-3.5">
-    {element ? (
+  onToggleLock,
+}) => {
+  if (
+    elements.length ===
+    0
+  ) {
+    return (
+      <aside className="max-h-[calc(100svh-330px)] min-w-0 overflow-y-auto rounded-[11px] border border-black/8 bg-white p-3">
+        <SceneInspector
+          scene={
+            scene
+          }
+          onChange={
+            onSceneChange
+          }
+        />
+      </aside>
+    );
+  }
+
+  if (
+    elements.length >
+    1
+  ) {
+    return (
+      <aside className="max-h-[calc(100svh-330px)] min-w-0 overflow-y-auto rounded-[11px] border border-black/8 bg-white p-3">
+        <MultiInspector
+          elements={
+            elements
+          }
+          onDuplicate={
+            onDuplicate
+          }
+          onDelete={
+            onDelete
+          }
+          onLayerUp={
+            onLayerUp
+          }
+          onLayerDown={
+            onLayerDown
+          }
+          onToggleLock={
+            onToggleLock
+          }
+        />
+      </aside>
+    );
+  }
+
+  const element =
+    elements[0];
+
+  return (
+    <aside className="max-h-[calc(100svh-330px)] min-w-0 overflow-y-auto rounded-[11px] border border-black/8 bg-white p-3">
       <ElementInspector
         element={
           element
@@ -101,14 +156,27 @@ React.FC<Props> = ({
         device={
           device
         }
+        scene={
+          scene
+        }
         scenes={
           scenes
         }
-        onChange={
-          onElementChange
+        onChange={(
+          updater
+        ) =>
+          onElementChange(
+            element.id,
+            updater
+          )
         }
-        onFrameChange={
-          onFrameChange
+        onFrameChange={(
+          frame
+        ) =>
+          onFrameChange(
+            element.id,
+            frame
+          )
         }
         onDuplicate={
           onDuplicate
@@ -122,19 +190,13 @@ React.FC<Props> = ({
         onLayerDown={
           onLayerDown
         }
-      />
-    ) : (
-      <SceneInspector
-        scene={
-          scene
-        }
-        onChange={
-          onSceneChange
+        onToggleLock={
+          onToggleLock
         }
       />
-    )}
-  </aside>
-);
+    </aside>
+  );
+};
 
 const SceneInspector:
 React.FC<{
@@ -159,7 +221,7 @@ React.FC<{
     <div>
       <InspectorTitle
         title="Scene"
-        description="Click element để chỉnh element."
+        description="Không chọn element nào — đang chỉnh canvas."
       />
 
       <div className="mt-4 space-y-3">
@@ -174,6 +236,66 @@ React.FC<{
           ) =>
             onChange({
               title,
+            })
+          }
+        />
+
+        <SelectInput
+          label="Tỉ lệ canvas desktop"
+          value={
+            String(
+              scene.aspectRatio ||
+              16 / 9
+            )
+          }
+          options={[
+            {
+              value:
+                String(
+                  16 / 9
+                ),
+              label:
+                '16:9 · Landscape',
+            },
+            {
+              value:
+                String(
+                  4 / 3
+                ),
+              label:
+                '4:3',
+            },
+            {
+              value:
+                '1',
+              label:
+                '1:1 · Square',
+            },
+            {
+              value:
+                String(
+                  4 / 5
+                ),
+              label:
+                '4:5 · Social',
+            },
+            {
+              value:
+                String(
+                  9 / 16
+                ),
+              label:
+                '9:16 · Story',
+            },
+          ]}
+          onChange={(
+            value
+          ) =>
+            onChange({
+              aspectRatio:
+                Number(
+                  value
+                ),
             })
           }
         />
@@ -210,7 +332,7 @@ React.FC<{
         />
 
         <NumberInput
-          label="Transition ms"
+          label="Transition"
           value={
             scene.transition
               ?.durationMs ||
@@ -219,6 +341,7 @@ React.FC<{
           min={0}
           max={5000}
           step={20}
+          suffix="ms"
           onChange={(
             durationMs
           ) =>
@@ -258,7 +381,7 @@ React.FC<{
         />
 
         <TextInput
-          label="Ảnh nền URL"
+          label="Ảnh nền URL / path"
           value={
             background
               .imageUrl ||
@@ -271,7 +394,45 @@ React.FC<{
             onChange({
               background: {
                 ...background,
-                imageUrl,
+                imageUrl:
+                  imageUrl ||
+                  undefined,
+              },
+            })
+          }
+        />
+
+        <SelectInput
+          label="Ảnh nền fit"
+          value={
+            background
+              .imageFit ||
+            'cover'
+          }
+          options={[
+            {
+              value:
+                'cover',
+              label:
+                'Cover',
+            },
+            {
+              value:
+                'contain',
+              label:
+                'Contain',
+            },
+          ]}
+          onChange={(
+            imageFit
+          ) =>
+            onChange({
+              background: {
+                ...background,
+                imageFit:
+                  imageFit as
+                    'cover' |
+                    'contain',
               },
             })
           }
@@ -345,7 +506,7 @@ React.FC<{
           label="Brightness"
           value={
             background
-              .brightness ||
+              .brightness ??
             1
           }
           min={0.2}
@@ -362,35 +523,47 @@ React.FC<{
             })
           }
         />
+
+        <SelectInput
+          label="Overflow"
+          value={
+            scene.overflow ||
+            'hidden'
+          }
+          options={[
+            {
+              value:
+                'hidden',
+              label:
+                'Ẩn phần tràn',
+            },
+            {
+              value:
+                'visible',
+              label:
+                'Cho phép tràn',
+            },
+          ]}
+          onChange={(
+            overflow
+          ) =>
+            onChange({
+              overflow:
+                overflow as
+                  'hidden' |
+                  'visible',
+            })
+          }
+        />
       </div>
     </div>
   );
 };
 
-const ElementInspector:
+const MultiInspector:
 React.FC<{
-  element:
-    SceneElement;
-
-  device:
-    DeviceMode;
-
-  scenes:
-    SceneCanvasDefinition[];
-
-  onChange: (
-    updater:
-      (
-        element:
-          SceneElement
-      ) =>
-        SceneElement
-  ) => void;
-
-  onFrameChange: (
-    frame:
-      SceneElementFrame
-  ) => void;
+  elements:
+    SceneElement[];
 
   onDuplicate:
     () => void;
@@ -403,64 +576,46 @@ React.FC<{
 
   onLayerDown:
     () => void;
+
+  onToggleLock:
+    () => void;
 }> = ({
-  element,
-  device,
-  scenes,
-  onChange,
-  onFrameChange,
+  elements,
   onDuplicate,
   onDelete,
   onLayerUp,
   onLayerDown,
+  onToggleLock,
 }) => {
-  const frame =
-    getEffectiveFrame(
-      element,
-      device
+  const grouped =
+    elements.some(
+      (element) =>
+        element.groupId
     );
-
-  const firstAction =
-    element.actions?.[
-      0
-    ];
-
-  const setAction = (
-    action:
-      SceneElementAction |
-      null
-  ) => {
-    onChange(
-      (current) => ({
-        ...current,
-
-        actions:
-          action
-            ? [
-                action,
-              ]
-            : [],
-      } as
-        SceneElement)
-    );
-  };
 
   return (
     <div>
       <InspectorTitle
-        title={
-          getElementLabel(
-            element
-          )
+        title={`${elements.length} elements`}
+        description={
+          grouped
+            ? 'Đang chọn group / multi-selection.'
+            : 'Multi-selection.'
         }
-        description={`${element.type} · ${device}`}
       />
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2">
         <SmallButton
           label="Nhân bản"
           onClick={
             onDuplicate
+          }
+        />
+
+        <SmallButton
+          label="Khóa/mở"
+          onClick={
+            onToggleLock
           }
         />
 
@@ -487,272 +642,277 @@ React.FC<{
         />
       </div>
 
+      <div className="mt-4 rounded-[12px] bg-[#faf7f6] p-3 text-[10px] leading-5 text-black/40">
+        Dùng toolbar phía trên để Group/Ungroup, căn trái-phải-giữa, chia đều, đưa lên/xuống layer. Kéo một element đang được chọn để di chuyển cả selection.
+      </div>
+
+      <div className="mt-4 space-y-1">
+        {elements
+          .slice(
+            0,
+            12
+          )
+          .map(
+            (element) => (
+              <div
+                key={
+                  element.id
+                }
+                className="flex items-center justify-between gap-3 rounded-[8px] border border-black/6 px-2.5 py-2"
+              >
+                <span className="truncate text-[9px] font-bold text-black/50">
+                  {getElementLabel(
+                    element
+                  )}
+                </span>
+
+                <span className="shrink-0 text-[8px] uppercase text-black/25">
+                  {element.type}
+                </span>
+              </div>
+            )
+          )}
+      </div>
+    </div>
+  );
+};
+
+const ElementInspector:
+React.FC<{
+  element:
+    SceneElement;
+
+  device:
+    DeviceMode;
+
+  scene:
+    SceneCanvasDefinition;
+
+  scenes:
+    SceneCanvasDefinition[];
+
+  onChange: (
+    updater: (
+      element:
+        SceneElement
+    ) =>
+      SceneElement
+  ) => void;
+
+  onFrameChange: (
+    frame:
+      SceneElementFrame
+  ) => void;
+
+  onDuplicate:
+    () => void;
+
+  onDelete:
+    () => void;
+
+  onLayerUp:
+    () => void;
+
+  onLayerDown:
+    () => void;
+
+  onToggleLock:
+    () => void;
+}> = ({
+  element,
+  device,
+  scene,
+  scenes,
+  onChange,
+  onFrameChange,
+  onDuplicate,
+  onDelete,
+  onLayerUp,
+  onLayerDown,
+  onToggleLock,
+}) => {
+  const frame =
+    getEffectiveFrame(
+      element,
+      device
+    );
+
+  const firstAction =
+    element.actions?.[
+      0
+    ];
+
+  const setAction = (
+    action:
+      SceneElementAction |
+      null
+  ) => {
+    onChange(
+      (current) => ({
+        ...current,
+        actions:
+          action
+            ? [
+                action,
+              ]
+            : [],
+      } as
+        SceneElement)
+    );
+  };
+
+  const actionTargets =
+    scene.elements
+      .filter(
+        (item) =>
+          item.id !==
+          element.id
+      )
+      .map(
+        (item) => ({
+          value:
+            item.id,
+          label:
+            getElementLabel(
+              item
+            ),
+        })
+      );
+
+  return (
+    <div>
+      <InspectorTitle
+        title={
+          getElementLabel(
+            element
+          )
+        }
+        description={`${element.type} · ${device}${element.groupId ? ' · grouped' : ''}`}
+      />
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <SmallButton
+          label="Nhân bản"
+          onClick={
+            onDuplicate
+          }
+        />
+
+        <SmallButton
+          label="Layer +"
+          onClick={
+            onLayerUp
+          }
+        />
+
+        <SmallButton
+          label="Layer −"
+          onClick={
+            onLayerDown
+          }
+        />
+
+        <SmallButton
+          label={
+            element.locked
+              ? 'Mở khóa'
+              : 'Khóa'
+          }
+          onClick={
+            onToggleLock
+          }
+        />
+
+        <SmallButton
+          label="Xóa"
+          danger
+          onClick={
+            onDelete
+          }
+        />
+      </div>
+
+      <InspectorSection
+        title="Layer"
+      >
+        <TextInput
+          label="Tên layer"
+          value={
+            element.name ||
+            ''
+          }
+          placeholder={
+            getElementLabel(
+              element
+            )
+          }
+          onChange={(
+            name
+          ) =>
+            onChange(
+              (current) => ({
+                ...current,
+                name:
+                  name ||
+                  undefined,
+              } as
+                SceneElement)
+            )
+          }
+        />
+      </InspectorSection>
+
       <InspectorSection
         title="Nội dung"
       >
         {element.type ===
           'text' && (
-          <>
-            <TextAreaInput
-              label="Text"
-              value={
-                element.text
-              }
-              onChange={(
-                text
-              ) =>
-                onChange(
-                  (
-                    current
-                  ) => ({
-                    ...current,
-                    text,
-                  } as
-                    SceneElement)
-                )
-              }
-            />
-
-            <ColorInput
-              label="Màu chữ"
-              value={
-                element
-                  .textStyle
-                  ?.color ||
-                '#111827'
-              }
-              onChange={(
-                color
-              ) =>
-                onChange(
-                  (
-                    current
-                  ) => ({
-                    ...current,
-                    textStyle: {
-                      ...(
-                        current.type ===
-                        'text'
-                          ? current
-                              .textStyle
-                          : {}
-                      ),
-                      color,
-                    },
-                  } as
-                    SceneElement)
-                )
-              }
-            />
-
-            <NumberInput
-              label="Cỡ chữ"
-              value={
-                element
-                  .textStyle
-                  ?.fontSize ||
-                24
-              }
-              min={6}
-              max={200}
-              step={1}
-              suffix="px"
-              onChange={(
-                fontSize
-              ) =>
-                onChange(
-                  (
-                    current
-                  ) => ({
-                    ...current,
-                    textStyle: {
-                      ...(
-                        current.type ===
-                        'text'
-                          ? current
-                              .textStyle
-                          : {}
-                      ),
-                      fontSize,
-                    },
-                  } as
-                    SceneElement)
-                )
-              }
-            />
-          </>
+          <TextControls
+            element={
+              element
+            }
+            onChange={
+              onChange
+            }
+          />
         )}
 
         {(element.type ===
           'image' ||
           element.type ===
           'decor') && (
-          <>
-            <TextInput
-              label="URL ảnh"
-              value={
-                element.src
-              }
-              placeholder="/images/..."
-              onChange={(
-                src
-              ) =>
-                onChange(
-                  (
-                    current
-                  ) => ({
-                    ...current,
-                    src,
-                  } as
-                    SceneElement)
-                )
-              }
-            />
+          <ImageControls
+            element={
+              element
+            }
+            onChange={
+              onChange
+            }
+          />
+        )}
 
-            <SelectInput
-              label="Cách fit"
-              value={
-                element
-                  .imageStyle
-                  ?.objectFit ||
-                'contain'
-              }
-              options={[
-                {
-                  value:
-                    'contain',
-                  label:
-                    'Contain',
-                },
-                {
-                  value:
-                    'cover',
-                  label:
-                    'Cover',
-                },
-                {
-                  value:
-                    'fill',
-                  label:
-                    'Fill',
-                },
-              ]}
-              onChange={(
-                objectFit
-              ) =>
-                onChange(
-                  (
-                    current
-                  ) => ({
-                    ...current,
-                    imageStyle: {
-                      ...(
-                        current.type ===
-                          'image' ||
-                        current.type ===
-                          'decor'
-                          ? current
-                              .imageStyle
-                          : {}
-                      ),
-                      objectFit:
-                        objectFit as any,
-                    },
-                  } as
-                    SceneElement)
-                )
-              }
-            />
-          </>
+        {element.type ===
+          'shape' && (
+          <ShapeControls
+            element={
+              element
+            }
+            onChange={
+              onChange
+            }
+          />
         )}
 
         {element.type ===
           'button' && (
-          <>
-            <TextInput
-              label="Chữ nút"
-              value={
-                element.label
-              }
-              onChange={(
-                label
-              ) =>
-                onChange(
-                  (
-                    current
-                  ) => ({
-                    ...current,
-                    label,
-                  } as
-                    SceneElement)
-                )
-              }
-            />
-
-            <ColorInput
-              label="Nền nút"
-              value={
-                element
-                  .buttonStyle
-                  ?.background ||
-                '#ff245a'
-              }
-              onChange={(
-                background
-              ) =>
-                onChange(
-                  (
-                    current
-                  ) => ({
-                    ...current,
-                    buttonStyle: {
-                      ...(
-                        current.type ===
-                        'button'
-                          ? current
-                              .buttonStyle
-                          : {}
-                      ),
-                      background,
-                    },
-                  } as
-                    SceneElement)
-                )
-              }
-            />
-
-            <ColorInput
-              label="Màu chữ"
-              value={
-                element
-                  .buttonStyle
-                  ?.color ||
-                '#ffffff'
-              }
-              onChange={(
-                color
-              ) =>
-                onChange(
-                  (
-                    current
-                  ) => ({
-                    ...current,
-                    buttonStyle: {
-                      ...(
-                        current.type ===
-                        'button'
-                          ? current
-                              .buttonStyle
-                          : {}
-                      ),
-                      color,
-                    },
-                  } as
-                    SceneElement)
-                )
-              }
-            />
-          </>
+          <ButtonControls
+            element={
+              element
+            }
+            onChange={
+              onChange
+            }
+          />
         )}
       </InspectorSection>
 
@@ -881,6 +1041,79 @@ React.FC<{
           />
         </div>
 
+        <SelectInput
+          label="Anchor"
+          value={
+            frame.anchor ||
+            'center'
+          }
+          options={[
+            {
+              value:
+                'top-left',
+              label:
+                'Top left',
+            },
+            {
+              value:
+                'top-center',
+              label:
+                'Top center',
+            },
+            {
+              value:
+                'top-right',
+              label:
+                'Top right',
+            },
+            {
+              value:
+                'center-left',
+              label:
+                'Center left',
+            },
+            {
+              value:
+                'center',
+              label:
+                'Center',
+            },
+            {
+              value:
+                'center-right',
+              label:
+                'Center right',
+            },
+            {
+              value:
+                'bottom-left',
+              label:
+                'Bottom left',
+            },
+            {
+              value:
+                'bottom-center',
+              label:
+                'Bottom center',
+            },
+            {
+              value:
+                'bottom-right',
+              label:
+                'Bottom right',
+            },
+          ]}
+          onChange={(
+            anchor
+          ) =>
+            onFrameChange({
+              ...frame,
+              anchor:
+                anchor as any,
+            })
+          }
+        />
+
         <RangeInput
           label="Scale"
           value={
@@ -938,9 +1171,7 @@ React.FC<{
             preset
           ) =>
             onChange(
-              (
-                current
-              ) => ({
+              (current) => ({
                 ...current,
                 animation: {
                   ...current
@@ -971,9 +1202,7 @@ React.FC<{
               delayMs
             ) =>
               onChange(
-                (
-                  current
-                ) => ({
+                (current) => ({
                   ...current,
                   animation: {
                     ...current
@@ -1007,9 +1236,7 @@ React.FC<{
               durationMs
             ) =>
               onChange(
-                (
-                  current
-                ) => ({
+                (current) => ({
                   ...current,
                   animation: {
                     ...current
@@ -1027,6 +1254,75 @@ React.FC<{
             }
           />
         </div>
+
+        <SelectInput
+          label="Easing"
+          value={
+            element
+              .animation
+              ?.easing ||
+            'easeOut'
+          }
+          options={[
+            {
+              value:
+                'linear',
+              label:
+                'Linear',
+            },
+            {
+              value:
+                'easeIn',
+              label:
+                'Ease in',
+            },
+            {
+              value:
+                'easeOut',
+              label:
+                'Ease out',
+            },
+            {
+              value:
+                'easeInOut',
+              label:
+                'Ease in/out',
+            },
+            {
+              value:
+                'circOut',
+              label:
+                'Circ out',
+            },
+            {
+              value:
+                'backOut',
+              label:
+                'Back out',
+            },
+          ]}
+          onChange={(
+            easing
+          ) =>
+            onChange(
+              (current) => ({
+                ...current,
+                animation: {
+                  ...current
+                    .animation,
+                  preset:
+                    current
+                      .animation
+                      ?.preset ||
+                    'fade',
+                  easing:
+                    easing as any,
+                },
+              } as
+                SceneElement)
+            )
+          }
+        />
       </InspectorSection>
 
       <InspectorSection
@@ -1060,6 +1356,24 @@ React.FC<{
             },
             {
               value:
+                'reset-scene',
+              label:
+                'Reset scene',
+            },
+            {
+              value:
+                'show-element',
+              label:
+                'Hiện element',
+            },
+            {
+              value:
+                'hide-element',
+              label:
+                'Ẩn element',
+            },
+            {
+              value:
                 'toggle-element',
               label:
                 'Ẩn/hiện element',
@@ -1087,7 +1401,6 @@ React.FC<{
               setAction(
                 null
               );
-
               return;
             }
 
@@ -1103,35 +1416,39 @@ React.FC<{
                     ?.id ||
                   '',
               });
-
               return;
             }
 
             if (
               type ===
-              'toggle-element'
+              'reset-scene'
             ) {
               setAction({
                 type:
-                  'toggle-element',
-                elementId:
-                  element.id,
+                  'reset-scene',
               });
-
               return;
             }
 
             if (
+              type ===
+              'show-element' ||
+              type ===
+              'hide-element' ||
+              type ===
+              'toggle-element' ||
               type ===
               'replay-animation'
             ) {
               setAction({
                 type:
-                  'replay-animation',
+                  type as any,
                 elementId:
+                  actionTargets[0]
+                    ?.value ||
                   element.id,
-              });
-
+              } as
+                SceneElementAction);
               return;
             }
 
@@ -1147,7 +1464,6 @@ React.FC<{
                 newTab:
                   true,
               });
-
               return;
             }
 
@@ -1189,14 +1505,38 @@ React.FC<{
           />
         )}
 
-        {firstAction
+        {(firstAction
           ?.type ===
-          'toggle-element' && (
-          <TextInput
-            label="Element ID"
+          'show-element' ||
+          firstAction
+            ?.type ===
+            'hide-element' ||
+          firstAction
+            ?.type ===
+            'toggle-element' ||
+          firstAction
+            ?.type ===
+            'replay-animation') && (
+          <SelectInput
+            label="Element đích"
             value={
               firstAction
                 .elementId
+            }
+            options={
+              actionTargets
+                .length
+                ? actionTargets
+                : [
+                    {
+                      value:
+                        element.id,
+                      label:
+                        getElementLabel(
+                          element
+                        ),
+                    },
+                  ]
             }
             onChange={(
               elementId
@@ -1204,27 +1544,8 @@ React.FC<{
               setAction({
                 ...firstAction,
                 elementId,
-              })
-            }
-          />
-        )}
-
-        {firstAction
-          ?.type ===
-          'replay-animation' && (
-          <TextInput
-            label="Element ID"
-            value={
-              firstAction
-                .elementId
-            }
-            onChange={(
-              elementId
-            ) =>
-              setAction({
-                ...firstAction,
-                elementId,
-              })
+              } as
+                SceneElementAction)
             }
           />
         )}
@@ -1249,35 +1570,956 @@ React.FC<{
         )}
       </InspectorSection>
 
-      <label className="mt-4 flex cursor-pointer items-center justify-between gap-3 rounded-[10px] bg-[#faf9f8] px-3 py-2.5">
-        <span className="text-[10px] font-bold text-black/55">
-          Khóa element
-        </span>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <ToggleRow
+          label="Visible"
+          checked={
+            element.visible !==
+            false
+          }
+          onChange={(
+            visible
+          ) =>
+            onChange(
+              (current) => ({
+                ...current,
+                visible,
+              } as
+                SceneElement)
+            )
+          }
+        />
 
-        <input
-          type="checkbox"
+        <ToggleRow
+          label="Locked"
           checked={
             element.locked ===
             true
           }
           onChange={(
-            event
+            locked
           ) =>
             onChange(
-              (
-                current
-              ) => ({
+              (current) => ({
                 ...current,
-                locked:
-                  event.target
-                    .checked,
+                locked,
               } as
                 SceneElement)
             )
           }
-          className="h-4 w-4 accent-[#b83e57]"
         />
-      </label>
+      </div>
     </div>
   );
 };
+
+const TextControls:
+React.FC<{
+  element:
+    Extract<
+      SceneElement,
+      {
+        type:
+          'text';
+      }
+    >;
+
+  onChange: (
+    updater: (
+      element:
+        SceneElement
+    ) =>
+      SceneElement
+  ) => void;
+}> = ({
+  element,
+  onChange,
+}) => {
+  const style =
+    element.textStyle ||
+    {};
+
+  const patch = (
+    next:
+      Record<
+        string,
+        unknown
+      >
+  ) =>
+    onChange(
+      (current) => ({
+        ...current,
+        textStyle: {
+          ...(
+            current.type ===
+            'text'
+              ? current
+                  .textStyle
+              : {}
+          ),
+          ...next,
+        },
+      } as
+        SceneElement)
+    );
+
+  return (
+    <>
+      <TextAreaInput
+        label="Text"
+        value={
+          element.text
+        }
+        onChange={(
+          text
+        ) =>
+          onChange(
+            (current) => ({
+              ...current,
+              text,
+            } as
+              SceneElement)
+          )
+        }
+      />
+
+      <TextInput
+        label="Font family"
+        value={
+          style.fontFamily ||
+          ''
+        }
+        placeholder='"Quicksand", sans-serif'
+        onChange={(
+          fontFamily
+        ) =>
+          patch({
+            fontFamily:
+              fontFamily ||
+              undefined,
+          })
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <ColorInput
+          label="Màu chữ"
+          value={
+            style.color ||
+            '#111827'
+          }
+          onChange={(
+            color
+          ) =>
+            patch({
+              color,
+            })
+          }
+        />
+
+        <NumberInput
+          label="Cỡ chữ"
+          value={
+            style.fontSize ||
+            24
+          }
+          min={6}
+          max={240}
+          step={1}
+          suffix="px"
+          onChange={(
+            fontSize
+          ) =>
+            patch({
+              fontSize,
+            })
+          }
+        />
+
+        <SelectInput
+          label="Weight"
+          value={
+            String(
+              style.fontWeight ||
+              400
+            )
+          }
+          options={[
+            {
+              value:
+                '300',
+              label:
+                'Light',
+            },
+            {
+              value:
+                '400',
+              label:
+                'Regular',
+            },
+            {
+              value:
+                '500',
+              label:
+                'Medium',
+            },
+            {
+              value:
+                '600',
+              label:
+                'Semi bold',
+            },
+            {
+              value:
+                '700',
+              label:
+                'Bold',
+            },
+            {
+              value:
+                '800',
+              label:
+                'Extra bold',
+            },
+            {
+              value:
+                '900',
+              label:
+                'Black',
+            },
+          ]}
+          onChange={(
+            fontWeight
+          ) =>
+            patch({
+              fontWeight:
+                Number(
+                  fontWeight
+                ),
+            })
+          }
+        />
+
+        <SelectInput
+          label="Align"
+          value={
+            style.textAlign ||
+            'left'
+          }
+          options={[
+            {
+              value:
+                'left',
+              label:
+                'Left',
+            },
+            {
+              value:
+                'center',
+              label:
+                'Center',
+            },
+            {
+              value:
+                'right',
+              label:
+                'Right',
+            },
+          ]}
+          onChange={(
+            textAlign
+          ) =>
+            patch({
+              textAlign,
+            })
+          }
+        />
+
+        <NumberInput
+          label="Line height"
+          value={
+            style.lineHeight ||
+            1.2
+          }
+          min={0.6}
+          max={4}
+          step={0.05}
+          onChange={(
+            lineHeight
+          ) =>
+            patch({
+              lineHeight,
+            })
+          }
+        />
+
+        <NumberInput
+          label="Letter spacing"
+          value={
+            style.letterSpacing ||
+            0
+          }
+          min={-10}
+          max={40}
+          step={0.5}
+          suffix="px"
+          onChange={(
+            letterSpacing
+          ) =>
+            patch({
+              letterSpacing,
+            })
+          }
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <ToggleRow
+          label="Italic"
+          checked={
+            style.fontStyle ===
+            'italic'
+          }
+          onChange={(
+            checked
+          ) =>
+            patch({
+              fontStyle:
+                checked
+                  ? 'italic'
+                  : 'normal',
+            })
+          }
+        />
+
+        <ToggleRow
+          label="Underline"
+          checked={
+            style.textDecoration ===
+            'underline'
+          }
+          onChange={(
+            checked
+          ) =>
+            patch({
+              textDecoration:
+                checked
+                  ? 'underline'
+                  : 'none',
+            })
+          }
+        />
+
+        <ToggleRow
+          label="UPPER"
+          checked={
+            style.textTransform ===
+            'uppercase'
+          }
+          onChange={(
+            checked
+          ) =>
+            patch({
+              textTransform:
+                checked
+                  ? 'uppercase'
+                  : 'none',
+            })
+          }
+        />
+      </div>
+    </>
+  );
+};
+
+const ImageControls:
+React.FC<{
+  element:
+    Extract<
+      SceneElement,
+      {
+        type:
+          'image' |
+          'decor';
+      }
+    >;
+
+  onChange: (
+    updater: (
+      element:
+        SceneElement
+    ) =>
+      SceneElement
+  ) => void;
+}> = ({
+  element,
+  onChange,
+}) => {
+  const style =
+    element.imageStyle ||
+    {};
+
+  const patchStyle = (
+    next:
+      Record<
+        string,
+        unknown
+      >
+  ) =>
+    onChange(
+      (current) => ({
+        ...current,
+        imageStyle: {
+          ...(
+            current.type ===
+              'image' ||
+            current.type ===
+              'decor'
+              ? current
+                  .imageStyle
+              : {}
+          ),
+          ...next,
+        },
+      } as
+        SceneElement)
+    );
+
+  return (
+    <>
+      <TextInput
+        label="URL / path ảnh"
+        value={
+          element.src
+        }
+        placeholder="/images/..."
+        onChange={(
+          src
+        ) =>
+          onChange(
+            (current) => ({
+              ...current,
+              src,
+            } as
+              SceneElement)
+          )
+        }
+      />
+
+      <SelectInput
+        label="Cách fit"
+        value={
+          style.objectFit ||
+          'contain'
+        }
+        options={[
+          {
+            value:
+              'contain',
+            label:
+              'Contain',
+          },
+          {
+            value:
+              'cover',
+            label:
+              'Cover',
+          },
+          {
+            value:
+              'fill',
+            label:
+              'Fill',
+          },
+        ]}
+        onChange={(
+          objectFit
+        ) =>
+          patchStyle({
+            objectFit,
+          })
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <NumberInput
+          label="Bo góc"
+          value={
+            style.borderRadius ||
+            0
+          }
+          min={0}
+          max={999}
+          step={1}
+          suffix="px"
+          onChange={(
+            borderRadius
+          ) =>
+            patchStyle({
+              borderRadius,
+            })
+          }
+        />
+
+        <NumberInput
+          label="Viền"
+          value={
+            style.borderWidth ||
+            0
+          }
+          min={0}
+          max={30}
+          step={1}
+          suffix="px"
+          onChange={(
+            borderWidth
+          ) =>
+            patchStyle({
+              borderWidth,
+            })
+          }
+        />
+      </div>
+
+      <ColorInput
+        label="Màu viền"
+        value={
+          style.borderColor ||
+          '#ffffff'
+        }
+        onChange={(
+          borderColor
+        ) =>
+          patchStyle({
+            borderColor,
+          })
+        }
+      />
+
+      <TextInput
+        label="Shadow CSS"
+        value={
+          style.boxShadow ||
+          ''
+        }
+        placeholder="0 12px 30px rgba(...)"
+        onChange={(
+          boxShadow
+        ) =>
+          patchStyle({
+            boxShadow:
+              boxShadow ||
+              undefined,
+          })
+        }
+      />
+    </>
+  );
+};
+
+const ShapeControls:
+React.FC<{
+  element:
+    Extract<
+      SceneElement,
+      {
+        type:
+          'shape';
+      }
+    >;
+
+  onChange: (
+    updater: (
+      element:
+        SceneElement
+    ) =>
+      SceneElement
+  ) => void;
+}> = ({
+  element,
+  onChange,
+}) => {
+  const style =
+    element.shapeStyle ||
+    {};
+
+  const patch = (
+    next:
+      Record<
+        string,
+        unknown
+      >
+  ) =>
+    onChange(
+      (current) => ({
+        ...current,
+        shapeStyle: {
+          ...(
+            current.type ===
+            'shape'
+              ? current
+                  .shapeStyle
+              : {}
+          ),
+          ...next,
+        },
+      } as
+        SceneElement)
+    );
+
+  return (
+    <>
+      <SelectInput
+        label="Shape"
+        value={
+          style.kind ||
+          'rectangle'
+        }
+        options={[
+          {
+            value:
+              'rectangle',
+            label:
+              'Rectangle',
+          },
+          {
+            value:
+              'circle',
+            label:
+              'Circle / ellipse',
+          },
+          {
+            value:
+              'line',
+            label:
+              'Line',
+          },
+        ]}
+        onChange={(
+          kind
+        ) =>
+          patch({
+            kind,
+          })
+        }
+      />
+
+      <ColorInput
+        label="Fill"
+        value={
+          style.fill ||
+          '#f4b8c4'
+        }
+        onChange={(
+          fill
+        ) =>
+          patch({
+            fill,
+          })
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <NumberInput
+          label="Viền"
+          value={
+            style.borderWidth ||
+            0
+          }
+          min={0}
+          max={40}
+          step={1}
+          suffix="px"
+          onChange={(
+            borderWidth
+          ) =>
+            patch({
+              borderWidth,
+            })
+          }
+        />
+
+        <NumberInput
+          label="Bo góc"
+          value={
+            style.borderRadius ||
+            0
+          }
+          min={0}
+          max={999}
+          step={1}
+          suffix="px"
+          onChange={(
+            borderRadius
+          ) =>
+            patch({
+              borderRadius,
+            })
+          }
+        />
+      </div>
+
+      <ColorInput
+        label="Màu viền / line"
+        value={
+          style.borderColor ||
+          '#cf5068'
+        }
+        onChange={(
+          borderColor
+        ) =>
+          patch({
+            borderColor,
+          })
+        }
+      />
+
+      <SelectInput
+        label="Kiểu line"
+        value={
+          style.lineStyle ||
+          'solid'
+        }
+        options={[
+          {
+            value:
+              'solid',
+            label:
+              'Solid',
+          },
+          {
+            value:
+              'dashed',
+            label:
+              'Dashed',
+          },
+          {
+            value:
+              'dotted',
+            label:
+              'Dotted',
+          },
+        ]}
+        onChange={(
+          lineStyle
+        ) =>
+          patch({
+            lineStyle,
+          })
+        }
+      />
+
+      <TextInput
+        label="Shadow CSS"
+        value={
+          style.boxShadow ||
+          ''
+        }
+        onChange={(
+          boxShadow
+        ) =>
+          patch({
+            boxShadow:
+              boxShadow ||
+              undefined,
+          })
+        }
+      />
+    </>
+  );
+};
+
+const ButtonControls:
+React.FC<{
+  element:
+    Extract<
+      SceneElement,
+      {
+        type:
+          'button';
+      }
+    >;
+
+  onChange: (
+    updater: (
+      element:
+        SceneElement
+    ) =>
+      SceneElement
+  ) => void;
+}> = ({
+  element,
+  onChange,
+}) => {
+  const style =
+    element.buttonStyle ||
+    {};
+
+  const patch = (
+    next:
+      Record<
+        string,
+        unknown
+      >
+  ) =>
+    onChange(
+      (current) => ({
+        ...current,
+        buttonStyle: {
+          ...(
+            current.type ===
+            'button'
+              ? current
+                  .buttonStyle
+              : {}
+          ),
+          ...next,
+        },
+      } as
+        SceneElement)
+    );
+
+  return (
+    <>
+      <TextInput
+        label="Chữ nút"
+        value={
+          element.label
+        }
+        onChange={(
+          label
+        ) =>
+          onChange(
+            (current) => ({
+              ...current,
+              label,
+            } as
+              SceneElement)
+          )
+        }
+      />
+
+      <TextInput
+        label="Font family"
+        value={
+          style.fontFamily ||
+          ''
+        }
+        onChange={(
+          fontFamily
+        ) =>
+          patch({
+            fontFamily:
+              fontFamily ||
+              undefined,
+          })
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <ColorInput
+          label="Nền"
+          value={
+            style.background ||
+            '#ff245a'
+          }
+          onChange={(
+            background
+          ) =>
+            patch({
+              background,
+            })
+          }
+        />
+
+        <ColorInput
+          label="Chữ"
+          value={
+            style.color ||
+            '#ffffff'
+          }
+          onChange={(
+            color
+          ) =>
+            patch({
+              color,
+            })
+          }
+        />
+
+        <NumberInput
+          label="Cỡ chữ"
+          value={
+            style.fontSize ||
+            16
+          }
+          min={6}
+          max={120}
+          step={1}
+          suffix="px"
+          onChange={(
+            fontSize
+          ) =>
+            patch({
+              fontSize,
+            })
+          }
+        />
+
+        <NumberInput
+          label="Bo góc"
+          value={
+            style.borderRadius ||
+            0
+          }
+          min={0}
+          max={999}
+          step={1}
+          suffix="px"
+          onChange={(
+            borderRadius
+          ) =>
+            patch({
+              borderRadius,
+            })
+          }
+        />
+      </div>
+    </>
+  );
+};
+
+const ToggleRow:
+React.FC<{
+  label: string;
+  checked: boolean;
+  onChange: (
+    checked: boolean
+  ) => void;
+}> = ({
+  label,
+  checked,
+  onChange,
+}) => (
+  <label className="flex cursor-pointer items-center justify-between gap-2 rounded-[9px] bg-[#faf9f8] px-2.5 py-2">
+    <span className="text-[9px] font-bold text-black/45">
+      {label}
+    </span>
+
+    <input
+      type="checkbox"
+      checked={
+        checked
+      }
+      onChange={(
+        event
+      ) =>
+        onChange(
+          event.target
+            .checked
+        )
+      }
+      className="h-4 w-4 accent-[#b83e57]"
+    />
+  </label>
+);

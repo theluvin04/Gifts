@@ -33,6 +33,10 @@ import {
   normalizeTemplateConfig,
 } from './templateService';
 
+import {
+  createBlankVisualEditorConfig,
+} from '../templates/visualEditor';
+
 export interface AdminSession {
   uid: string;
   email: string;
@@ -482,67 +486,390 @@ export const deleteAdminOrder =
   };
 
 
-export const getAdminTemplateConfig =
-  async (): Promise<TemplateConfig> => {
-    await assertAdminAccess();
+export type AdminTemplateCreateMode =
+  | 'blank'
+  | 'duplicate';
 
-    try {
-      const templateRef = doc(
-        db,
-        'templates',
-        'love-01'
+export interface AdminTemplateCreateInput {
+  id: string;
+  name: string;
+  mode:
+    AdminTemplateCreateMode;
+  source?:
+    TemplateConfig;
+}
+
+const TEMPLATE_ID_PATTERN =
+  /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+const cloneTemplateValue =
+  <T,>(
+    value: T
+  ): T =>
+    JSON.parse(
+      JSON.stringify(
+        value
+      )
+    );
+
+const normalizeAdminTemplateId =
+  (
+    templateId: string
+  ) => {
+    const normalized =
+      templateId
+        .trim()
+        .toLowerCase()
+        .replace(
+          /[^a-z0-9]+/g,
+          '-'
+        )
+        .replace(
+          /^-+|-+$/g,
+          ''
+        );
+
+    if (
+      !normalized ||
+      !TEMPLATE_ID_PATTERN
+        .test(
+          normalized
+        )
+    ) {
+      const error =
+        new Error(
+          'ID sản phẩm chỉ được dùng chữ thường, số và dấu gạch ngang.'
+        ) as
+          Error & {
+            code?: string;
+          };
+
+      error.code =
+        'template/invalid-id';
+
+      throw error;
+    }
+
+    return normalized;
+  };
+
+const buildTemplateFallback =
+  (
+    templateId: string,
+    name?: string
+  ):
+    TemplateConfig => {
+    const fallback =
+      cloneTemplateValue(
+        DEFAULT_LOVE_TEMPLATE_CONFIG
       );
 
-      const snapshot =
-        await getDoc(templateRef);
+    fallback.id =
+      templateId;
 
-      if (!snapshot.exists()) {
-        return {
-          ...DEFAULT_LOVE_TEMPLATE_CONFIG,
-        };
-      }
+    fallback.name =
+      name?.trim() ||
+      templateId;
+
+    fallback.status =
+      'coming_soon';
+
+    fallback.visible =
+      false;
+
+    fallback.saleEnabled =
+      false;
+
+    fallback.promotionLabel =
+      '';
+
+    fallback.visualEditor =
+      createBlankVisualEditorConfig();
+
+    return fallback;
+  };
+
+export const buildAdminTemplateDraft =
+  (
+    input:
+      AdminTemplateCreateInput
+  ):
+    TemplateConfig => {
+    const id =
+      normalizeAdminTemplateId(
+        input.id
+      );
+
+    const name =
+      input.name
+        .trim() ||
+      id;
+
+    if (
+      input.mode ===
+        'duplicate' &&
+      input.source
+    ) {
+      const duplicate =
+        cloneTemplateValue(
+          input.source
+        );
+
+      duplicate.id =
+        id;
+
+      duplicate.name =
+        name;
+
+      duplicate.status =
+        'coming_soon';
+
+      duplicate.visible =
+        false;
+
+      duplicate.promotionLabel =
+        '';
 
       return normalizeTemplateConfig(
-        snapshot.data()
+        duplicate as unknown as
+          Record<
+            string,
+            any
+          >,
+        buildTemplateFallback(
+          id,
+          name
+        )
       );
-    } catch (error) {
-      // Template pricing is an optional Admin module.
-      // A missing / outdated template rule must never
-      // make Orders, Customers or Dashboard unusable.
+    }
+
+    const blank =
+      buildTemplateFallback(
+        id,
+        name
+      );
+
+    blank.basePrice =
+      99000;
+
+    blank.salePrice =
+      79000;
+
+    blank.saleEnabled =
+      false;
+
+    blank.visualEditor =
+      createBlankVisualEditorConfig();
+
+    return blank;
+  };
+
+export const listAdminTemplateConfigs =
+  async ():
+    Promise<
+      TemplateConfig[]
+    > => {
+    await assertAdminAccess();
+
+    const snapshot =
+      await getDocs(
+        collection(
+          db,
+          'templates'
+        )
+      );
+
+    const templates =
+      snapshot.docs.map(
+        (
+          templateSnapshot
+        ) => {
+          const data =
+            templateSnapshot
+              .data();
+
+          const id =
+            templateSnapshot.id;
+
+          const fallback =
+            buildTemplateFallback(
+              id,
+              typeof data
+                .name ===
+                'string'
+                ? data.name
+                : id
+            );
+
+          return normalizeTemplateConfig(
+            {
+              ...data,
+              id,
+            },
+            fallback
+          );
+        }
+      );
+
+    if (
+      templates.length ===
+      0
+    ) {
+      return [
+        cloneTemplateValue(
+          DEFAULT_LOVE_TEMPLATE_CONFIG
+        ),
+      ];
+    }
+
+    return templates.sort(
+      (
+        left,
+        right
+      ) => {
+        if (
+          left.id ===
+          'love-01'
+        ) {
+          return -1;
+        }
+
+        if (
+          right.id ===
+          'love-01'
+        ) {
+          return 1;
+        }
+
+        return left.name.localeCompare(
+          right.name,
+          'vi'
+        );
+      }
+    );
+  };
+
+export const getAdminTemplateConfig =
+  async (
+    templateId =
+      'love-01'
+  ):
+    Promise<
+      TemplateConfig
+    > => {
+    await assertAdminAccess();
+
+    const id =
+      normalizeAdminTemplateId(
+        templateId
+      );
+
+    try {
+      const templateRef =
+        doc(
+          db,
+          'templates',
+          id
+        );
+
+      const snapshot =
+        await getDoc(
+          templateRef
+        );
+
+      if (
+        !snapshot.exists()
+      ) {
+        if (
+          id ===
+          'love-01'
+        ) {
+          return cloneTemplateValue(
+            DEFAULT_LOVE_TEMPLATE_CONFIG
+          );
+        }
+
+        return buildTemplateFallback(
+          id
+        );
+      }
+
+      const data =
+        snapshot.data();
+
+      return normalizeTemplateConfig(
+        {
+          ...data,
+          id,
+        },
+        buildTemplateFallback(
+          id,
+          typeof data.name ===
+            'string'
+            ? data.name
+            : id
+        )
+      );
+    } catch (
+      error
+    ) {
       console.warn(
         'Admin template config fallback:',
         error
       );
 
-      return {
-        ...DEFAULT_LOVE_TEMPLATE_CONFIG,
-      };
+      if (
+        id ===
+        'love-01'
+      ) {
+        return cloneTemplateValue(
+          DEFAULT_LOVE_TEMPLATE_CONFIG
+        );
+      }
+
+      return buildTemplateFallback(
+        id
+      );
     }
   };
 
 export const saveAdminTemplateConfig =
   async (
-    template: TemplateConfig
+    template:
+      TemplateConfig
   ) => {
     await assertAdminAccess();
 
+    const id =
+      normalizeAdminTemplateId(
+        template.id
+      );
+
     const normalized =
       normalizeTemplateConfig(
-        template as unknown as Record<
-          string,
-          any
-        >
+        {
+          ...template,
+          id,
+        } as unknown as
+          Record<
+            string,
+            any
+          >,
+        buildTemplateFallback(
+          id,
+          template.name
+        )
       );
 
     await setDoc(
       doc(
         db,
         'templates',
-        'love-01'
+        id
       ),
       {
         ...normalized,
-        id: 'love-01',
+        id,
         updatedAt:
           serverTimestamp(),
       },
@@ -552,4 +879,113 @@ export const saveAdminTemplateConfig =
     );
 
     return normalized;
+  };
+
+export const createAdminTemplateConfig =
+  async (
+    input:
+      AdminTemplateCreateInput
+  ) => {
+    await assertAdminAccess();
+
+    const draft =
+      buildAdminTemplateDraft(
+        input
+      );
+
+    const ref =
+      doc(
+        db,
+        'templates',
+        draft.id
+      );
+
+    const existing =
+      await getDoc(
+        ref
+      );
+
+    if (
+      existing.exists()
+    ) {
+      const error =
+        new Error(
+          `Sản phẩm "${draft.id}" đã tồn tại.`
+        ) as
+          Error & {
+            code?: string;
+          };
+
+      error.code =
+        'template/already-exists';
+
+      throw error;
+    }
+
+    await setDoc(
+      ref,
+      {
+        ...draft,
+        createdAt:
+          serverTimestamp(),
+        updatedAt:
+          serverTimestamp(),
+      }
+    );
+
+    return draft;
+  };
+
+export const duplicateAdminTemplateConfig =
+  async (
+    source:
+      TemplateConfig,
+    id: string,
+    name: string
+  ) => {
+    return createAdminTemplateConfig({
+      id,
+      name,
+      mode:
+        'duplicate',
+      source,
+    });
+  };
+
+export const deleteAdminTemplateConfig =
+  async (
+    templateId: string
+  ) => {
+    await assertAdminAccess();
+
+    const id =
+      normalizeAdminTemplateId(
+        templateId
+      );
+
+    if (
+      id ===
+      'love-01'
+    ) {
+      const error =
+        new Error(
+          'love-01 là template mặc định của hệ thống nên không thể xóa.'
+        ) as
+          Error & {
+            code?: string;
+          };
+
+      error.code =
+        'template/protected';
+
+      throw error;
+    }
+
+    await deleteDoc(
+      doc(
+        db,
+        'templates',
+        id
+      )
+    );
   };

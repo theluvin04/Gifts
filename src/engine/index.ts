@@ -59,6 +59,9 @@ export type {
   SceneElementType,
   SceneImageElement,
   SceneImageStyle,
+  SceneShapeElement,
+  SceneShapeKind,
+  SceneShapeStyle,
   SceneTextElement,
   SceneTextStyle,
 } from './scene/elementTypes';

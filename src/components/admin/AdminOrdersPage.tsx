@@ -11,10 +11,13 @@ import {
 import {
   AdminOrderRecord,
   AdminSession,
+  AdminTemplateCreateInput,
+  createAdminTemplateConfig,
   deleteAdminOrder,
+  deleteAdminTemplateConfig,
   getAdminSession,
-  getAdminTemplateConfig,
   listAdminOrders,
+  listAdminTemplateConfigs,
   loginAdminWithGoogle,
   logoutAdmin,
   saveAdminTemplateConfig,
@@ -140,6 +143,22 @@ React.FC<Props> = ({
     );
 
   const [
+    templateCatalog,
+    setTemplateCatalog,
+  ] =
+    useState<
+      TemplateConfig[]
+    >([
+      DEFAULT_LOVE_TEMPLATE_CONFIG,
+    ]);
+
+  const [
+    isTemplateCatalogBusy,
+    setIsTemplateCatalogBusy,
+  ] =
+    useState(false);
+
+  const [
     tab,
     setTab,
   ] =
@@ -238,11 +257,11 @@ React.FC<Props> = ({
 
         const [
           nextOrders,
-          nextTemplate,
+          nextTemplates,
         ] =
           await Promise.all([
             listAdminOrders(),
-            getAdminTemplateConfig(),
+            listAdminTemplateConfigs(),
           ]);
 
         setOrders(
@@ -253,11 +272,39 @@ React.FC<Props> = ({
           []
         );
 
+        const normalizedTemplates =
+          nextTemplates.length
+            ? nextTemplates
+            : [
+                DEFAULT_LOVE_TEMPLATE_CONFIG,
+              ];
+
+        setTemplateCatalog(
+          normalizedTemplates
+        );
+
+        const preferred =
+          normalizedTemplates.find(
+            (item) =>
+              item.id ===
+              templateDraft.id
+          ) ||
+          normalizedTemplates.find(
+            (item) =>
+              item.id ===
+              'love-01'
+          ) ||
+          normalizedTemplates[0];
+
         setTemplateDraft(
-          nextTemplate
+          preferred
         );
 
         setIsTemplateDirty(
+          false
+        );
+
+        setTemplateSaved(
           false
         );
       } catch (
@@ -443,6 +490,18 @@ React.FC<Props> = ({
       setSelectedOrderIds(
         []
       );
+
+      setTemplateCatalog([
+        DEFAULT_LOVE_TEMPLATE_CONFIG,
+      ]);
+
+      setTemplateDraft(
+        DEFAULT_LOVE_TEMPLATE_CONFIG
+      );
+
+      setIsTemplateDirty(
+        false
+      );
     };
 
   const handleSaveTemplate =
@@ -465,6 +524,57 @@ React.FC<Props> = ({
 
         setTemplateDraft(
           saved
+        );
+
+        setTemplateCatalog(
+          (current) => {
+            const exists =
+              current.some(
+                (item) =>
+                  item.id ===
+                  saved.id
+              );
+
+            const next =
+              exists
+                ? current.map(
+                    (item) =>
+                      item.id ===
+                      saved.id
+                        ? saved
+                        : item
+                  )
+                : [
+                    ...current,
+                    saved,
+                  ];
+
+            return next.sort(
+              (
+                left,
+                right
+              ) => {
+                if (
+                  left.id ===
+                  'love-01'
+                ) {
+                  return -1;
+                }
+
+                if (
+                  right.id ===
+                  'love-01'
+                ) {
+                  return 1;
+                }
+
+                return left.name.localeCompare(
+                  right.name,
+                  'vi'
+                );
+              }
+            );
+          }
         );
 
         setIsTemplateDirty(
@@ -492,6 +602,226 @@ React.FC<Props> = ({
         );
       } finally {
         setIsSavingTemplate(
+          false
+        );
+      }
+    };
+
+  const handleSelectTemplate =
+    (
+      templateId:
+        string
+    ) => {
+      if (
+        templateId ===
+        templateDraft.id
+      ) {
+        return;
+      }
+
+      if (
+        isTemplateDirty
+      ) {
+        const discard =
+          window.confirm(
+            'Sản phẩm hiện tại có thay đổi chưa lưu. Bỏ thay đổi và chuyển sản phẩm?'
+          );
+
+        if (!discard) {
+          return;
+        }
+      }
+
+      const next =
+        templateCatalog.find(
+          (item) =>
+            item.id ===
+            templateId
+        );
+
+      if (!next) {
+        return;
+      }
+
+      setTemplateDraft(
+        next
+      );
+
+      setIsTemplateDirty(
+        false
+      );
+
+      setTemplateSaved(
+        false
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior:
+          'instant',
+      });
+    };
+
+  const handleCreateTemplate =
+    async (
+      input:
+        AdminTemplateCreateInput
+    ) => {
+      setIsTemplateCatalogBusy(
+        true
+      );
+
+      setError('');
+
+      try {
+        const created =
+          await createAdminTemplateConfig(
+            input
+          );
+
+        setTemplateCatalog(
+          (current) =>
+            [
+              ...current.filter(
+                (item) =>
+                  item.id !==
+                  created.id
+              ),
+              created,
+            ].sort(
+              (
+                left,
+                right
+              ) => {
+                if (
+                  left.id ===
+                  'love-01'
+                ) {
+                  return -1;
+                }
+
+                if (
+                  right.id ===
+                  'love-01'
+                ) {
+                  return 1;
+                }
+
+                return left.name.localeCompare(
+                  right.name,
+                  'vi'
+                );
+              }
+            )
+        );
+
+        setTemplateDraft(
+          created
+        );
+
+        setIsTemplateDirty(
+          false
+        );
+
+        setTemplateSaved(
+          true
+        );
+
+        window.setTimeout(
+          () =>
+            setTemplateSaved(
+              false
+            ),
+          1600
+        );
+
+        return created;
+      } catch (
+        createError: any
+      ) {
+        setError(
+          getAuthErrorMessage(
+            createError
+          )
+        );
+
+        throw createError;
+      } finally {
+        setIsTemplateCatalogBusy(
+          false
+        );
+      }
+    };
+
+  const handleDeleteTemplate =
+    async (
+      templateId:
+        string
+    ) => {
+      setIsTemplateCatalogBusy(
+        true
+      );
+
+      setError('');
+
+      try {
+        await deleteAdminTemplateConfig(
+          templateId
+        );
+
+        const remaining =
+          templateCatalog.filter(
+            (item) =>
+              item.id !==
+              templateId
+          );
+
+        const safeRemaining =
+          remaining.length
+            ? remaining
+            : [
+                DEFAULT_LOVE_TEMPLATE_CONFIG,
+              ];
+
+        setTemplateCatalog(
+          safeRemaining
+        );
+
+        const next =
+          safeRemaining.find(
+            (item) =>
+              item.id ===
+              'love-01'
+          ) ||
+          safeRemaining[0];
+
+        setTemplateDraft(
+          next
+        );
+
+        setIsTemplateDirty(
+          false
+        );
+
+        setTemplateSaved(
+          false
+        );
+
+        showNotice(
+          `Đã xóa sản phẩm ${templateId}.`
+        );
+      } catch (
+        deleteError: any
+      ) {
+        setError(
+          getAuthErrorMessage(
+            deleteError
+          )
+        );
+
+        throw deleteError;
+      } finally {
+        setIsTemplateCatalogBusy(
           false
         );
       }
@@ -1210,6 +1540,9 @@ React.FC<Props> = ({
           {tab ===
             'templates' && (
             <AdminTemplatesTab
+              templates={
+                templateCatalog
+              }
               template={
                 templateDraft
               }
@@ -1221,6 +1554,18 @@ React.FC<Props> = ({
               }
               saving={
                 isSavingTemplate
+              }
+              catalogBusy={
+                isTemplateCatalogBusy
+              }
+              onSelectTemplate={
+                handleSelectTemplate
+              }
+              onCreateTemplate={
+                handleCreateTemplate
+              }
+              onDeleteTemplate={
+                handleDeleteTemplate
               }
               onChange={(
                 nextTemplate

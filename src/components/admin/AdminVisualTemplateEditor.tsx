@@ -1,5 +1,7 @@
 import React, {
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -17,6 +19,7 @@ import {
   createButtonElement,
   createDecorElement,
   createImageElement,
+  createShapeElement,
   createTextElement,
   createVisualScene,
   duplicateVisualScene,
@@ -32,8 +35,16 @@ import {
 } from './visual-editor/EditorCanvas';
 
 import {
+  EditorToolbar,
+} from './visual-editor/EditorToolbar';
+
+import {
   InspectorPanel,
 } from './visual-editor/InspectorPanel';
+
+import {
+  KeyboardShortcutsModal,
+} from './visual-editor/KeyboardShortcutsModal';
 
 import {
   LayersPanel,
@@ -44,10 +55,27 @@ import {
 } from './visual-editor/PreviewOverlay';
 
 import {
+  AlignAction,
+  cloneValue,
   DeviceMode,
+  getEffectiveFrame,
   getElementLabel,
+  getFrameBounds,
+  getSelectionBounds,
+  LayerAction,
   makeId,
+  moveFrameToBounds,
+  normalizeSelectionIds,
+  setElementFrameForDevice,
 } from './visual-editor/editorUtils';
+
+import {
+  useEditorHistory,
+} from './visual-editor/useEditorHistory';
+
+import {
+  useEditorShortcuts,
+} from './visual-editor/useEditorShortcuts';
 
 interface Props {
   config:
@@ -58,6 +86,10 @@ interface Props {
       TemplateVisualEditorConfig
   ) => void;
 }
+
+type ChangeMode =
+  | 'commit'
+  | 'replace';
 
 export const AdminVisualTemplateEditor:
 React.FC<Props> = ({
@@ -76,11 +108,11 @@ React.FC<Props> = ({
     );
 
   const [
-    selectedElementId,
-    setSelectedElementId,
+    selectedElementIds,
+    setSelectedElementIds,
   ] =
-    useState<string>(
-      ''
+    useState<string[]>(
+      []
     );
 
   const [
@@ -96,6 +128,99 @@ React.FC<Props> = ({
     setPreviewOpen,
   ] =
     useState(false);
+
+  const [
+    shortcutsOpen,
+    setShortcutsOpen,
+  ] =
+    useState(false);
+
+  const [
+    gridEnabled,
+    setGridEnabled,
+  ] =
+    useState(false);
+
+  const [
+    snapEnabled,
+    setSnapEnabled,
+  ] =
+    useState(true);
+
+  const [
+    zoom,
+    setZoom,
+  ] =
+    useState(100);
+
+  const [
+    fullscreen,
+    setFullscreen,
+  ] =
+    useState(false);
+
+  const [
+    layersOpen,
+    setLayersOpen,
+  ] =
+    useState(true);
+
+  const [
+    inspectorOpen,
+    setInspectorOpen,
+  ] =
+    useState(true);
+
+  const [
+    compactViewport,
+    setCompactViewport,
+  ] =
+    useState(
+      () =>
+        typeof window !==
+          'undefined' &&
+        window.matchMedia(
+          '(max-width: 1199px)'
+        ).matches
+    );
+
+  useEffect(() => {
+    const media =
+      window.matchMedia(
+        '(max-width: 1199px)'
+      );
+
+    const update =
+      () => {
+        setCompactViewport(
+          media.matches
+        );
+      };
+
+    update();
+
+    media.addEventListener(
+      'change',
+      update
+    );
+
+    return () =>
+      media.removeEventListener(
+        'change',
+        update
+      );
+  }, []);
+
+  const clipboardRef =
+    useRef<
+      SceneElement[]
+    >([]);
+
+  const history =
+    useEditorHistory({
+      config,
+      onChange,
+    });
 
   useEffect(() => {
     if (
@@ -115,8 +240,8 @@ React.FC<Props> = ({
       ''
     );
 
-    setSelectedElementId(
-      ''
+    setSelectedElementIds(
+      []
     );
   }, [
     config,
@@ -131,42 +256,143 @@ React.FC<Props> = ({
     ) ||
     config.scenes[0];
 
-  const selectedElement =
-    scene?.elements.find(
-      (element) =>
-        element.id ===
-        selectedElementId
-    ) ||
-    null;
+  useEffect(() => {
+    if (!scene) {
+      setSelectedElementIds(
+        []
+      );
+      return;
+    }
+
+    setSelectedElementIds(
+      (current) =>
+        normalizeSelectionIds(
+          scene,
+          current
+        )
+    );
+  }, [
+    scene?.id,
+    scene?.elements,
+  ]);
+
+  const selectedElements =
+    useMemo(
+      () => {
+        if (!scene) {
+          return [];
+        }
+
+        const selected =
+          new Set(
+            selectedElementIds
+          );
+
+        return scene.elements.filter(
+          (element) =>
+            selected.has(
+              element.id
+            )
+        );
+      },
+      [
+        scene,
+        selectedElementIds,
+      ]
+    );
+
+  const groupedSelection =
+    useMemo(
+      () => {
+        if (
+          selectedElements.length ===
+          0
+        ) {
+          return false;
+        }
+
+        const groupIds =
+          new Set(
+            selectedElements.map(
+              (element) =>
+                element.groupId ||
+                ''
+            )
+          );
+
+        return (
+          groupIds.size ===
+            1 &&
+          !groupIds.has('')
+        );
+      },
+      [
+        selectedElements,
+      ]
+    );
+
+  const applyConfig = (
+    next:
+      TemplateVisualEditorConfig,
+    mode:
+      ChangeMode =
+      'commit'
+  ) => {
+    if (
+      mode ===
+      'replace'
+    ) {
+      history.replace(
+        next
+      );
+      return;
+    }
+
+    history.commit(
+      next
+    );
+  };
 
   const updateConfig = (
     patch:
       Partial<
         TemplateVisualEditorConfig
-      >
+      >,
+    mode:
+      ChangeMode =
+      'commit'
   ) => {
-    onChange({
-      ...config,
-      ...patch,
-    });
+    applyConfig(
+      {
+        ...config,
+        ...patch,
+      },
+      mode
+    );
   };
 
   const updateScene = (
     nextScene:
-      SceneCanvasDefinition
+      SceneCanvasDefinition,
+    mode:
+      ChangeMode =
+      'commit'
   ) => {
-    onChange({
-      ...config,
+    applyConfig(
+      {
+        ...config,
 
-      scenes:
-        config.scenes.map(
-          (item) =>
-            item.id ===
-            nextScene.id
-              ? nextScene
-              : item
-        ),
-    });
+        scenes:
+          config.scenes.map(
+            (item) =>
+              item.id ===
+              nextScene.id
+                ? nextScene
+                : item
+          ),
+      },
+      mode
+    );
   };
 
   const updateScenePatch = (
@@ -188,65 +414,98 @@ React.FC<Props> = ({
   const updateElement = (
     elementId:
       string,
-    updater:
-      (
-        element:
-          SceneElement
-      ) =>
+    updater: (
+      element:
         SceneElement
+    ) =>
+      SceneElement,
+    mode:
+      ChangeMode =
+      'commit'
   ) => {
     if (!scene) {
       return;
     }
 
-    updateScene({
-      ...scene,
+    updateScene(
+      {
+        ...scene,
 
-      elements:
-        scene.elements.map(
-          (element) =>
-            element.id ===
-            elementId
-              ? updater(
-                  element
-                )
-              : element
-        ),
-    });
+        elements:
+          scene.elements.map(
+            (element) =>
+              element.id ===
+              elementId
+                ? updater(
+                    element
+                  )
+                : element
+          ),
+      },
+      mode
+    );
   };
 
   const updateElementFrame = (
     elementId:
       string,
     nextFrame:
-      SceneElementFrame
+      SceneElementFrame,
+    mode:
+      ChangeMode =
+      'commit'
   ) => {
     updateElement(
       elementId,
-      (element) => {
-        if (
-          device ===
-          'mobile'
-        ) {
-          return {
-            ...element,
+      (element) =>
+        setElementFrameForDevice(
+          element,
+          device,
+          nextFrame
+        ),
+      mode
+    );
+  };
 
-            mobileFrame: {
-              ...element
-                .mobileFrame,
-              ...nextFrame,
-            },
-          } as
-            SceneElement;
-        }
+  const updateFrames = (
+    frames:
+      Record<
+        string,
+        SceneElementFrame
+      >,
+    mode:
+      ChangeMode =
+      'replace'
+  ) => {
+    if (!scene) {
+      return;
+    }
 
-        return {
-          ...element,
-          frame:
-            nextFrame,
-        } as
-          SceneElement;
-      }
+    updateScene(
+      {
+        ...scene,
+
+        elements:
+          scene.elements.map(
+            (element) => {
+              const frame =
+                frames[
+                  element.id
+                ];
+
+              if (!frame) {
+                return element;
+              }
+
+              return setElementFrameForDevice(
+                element,
+                device,
+                frame
+              );
+            }
+          ),
+      },
+      mode
     );
   };
 
@@ -270,8 +529,8 @@ React.FC<Props> = ({
         next.id
       );
 
-      setSelectedElementId(
-        ''
+      setSelectedElementIds(
+        []
       );
     };
 
@@ -300,8 +559,8 @@ React.FC<Props> = ({
         next.id
       );
 
-      setSelectedElementId(
-        ''
+      setSelectedElementIds(
+        []
       );
     };
 
@@ -339,7 +598,7 @@ React.FC<Props> = ({
               .id
           : config.initialSceneId;
 
-      onChange({
+      history.commit({
         ...config,
         initialSceneId:
           nextInitial,
@@ -352,8 +611,8 @@ React.FC<Props> = ({
           .id
       );
 
-      setSelectedElementId(
-        ''
+      setSelectedElementIds(
+        []
       );
     };
 
@@ -363,6 +622,7 @@ React.FC<Props> = ({
       | 'image'
       | 'button'
       | 'decor'
+      | 'shape'
   ) => {
     if (!scene) {
       return;
@@ -389,9 +649,32 @@ React.FC<Props> = ({
             ? createButtonElement(
                 count
               )
-            : createDecorElement(
-                count
-              );
+            : type ===
+                'shape'
+              ? createShapeElement(
+                  count
+                )
+              : createDecorElement(
+                  count
+                );
+
+    const maxZ =
+      Math.max(
+        0,
+        ...scene.elements.map(
+          (item) =>
+            item.frame
+              .zIndex ||
+            0
+        )
+      );
+
+    element.frame = {
+      ...element.frame,
+      zIndex:
+        maxZ +
+        1,
+    };
 
     updateScene({
       ...scene,
@@ -402,28 +685,26 @@ React.FC<Props> = ({
       ],
     });
 
-    setSelectedElementId(
-      element.id
-    );
+    setSelectedElementIds([
+      element.id,
+    ]);
   };
 
-  const deleteElement =
+  const deleteSelected =
     () => {
       if (
         !scene ||
-        !selectedElement
+        selectedElementIds
+          .length ===
+          0
       ) {
         return;
       }
 
-      const confirmed =
-        window.confirm(
-          `Xóa ${getElementLabel(selectedElement)}?`
+      const selected =
+        new Set(
+          selectedElementIds
         );
-
-      if (!confirmed) {
-        return;
-      }
 
       updateScene({
         ...scene,
@@ -431,104 +712,893 @@ React.FC<Props> = ({
         elements:
           scene.elements.filter(
             (element) =>
-              element.id !==
-              selectedElement.id
+              !selected.has(
+                element.id
+              )
           ),
       });
 
-      setSelectedElementId(
-        ''
+      setSelectedElementIds(
+        []
       );
-    };
+  };
 
-  const duplicateElement =
+  const copySelected =
     () => {
       if (
-        !scene ||
-        !selectedElement
+        selectedElements.length ===
+        0
       ) {
         return;
       }
 
-      const copy =
-        JSON.parse(
-          JSON.stringify(
-            selectedElement
-          )
-        ) as
-          SceneElement;
-
-      copy.id =
-        makeId(
-          selectedElement.type
+      clipboardRef.current =
+        cloneValue(
+          selectedElements
         );
-
-      copy.frame = {
-        ...copy.frame,
-
-        x:
-          copy.frame.x +
-          3,
-
-        y:
-          copy.frame.y +
-          3,
-
-        zIndex:
-          (
-            copy.frame
-              .zIndex ||
-            0
-          ) +
-          1,
-      };
-
-      updateScene({
-        ...scene,
-
-        elements: [
-          ...scene.elements,
-          copy,
-        ],
-      });
-
-      setSelectedElementId(
-        copy.id
-      );
     };
 
-  const moveLayer = (
-    direction:
-      1 |
-      -1
+  const createCopies = (
+    source:
+      SceneElement[]
   ) => {
     if (
-      !selectedElement ||
-      !scene
+      !scene ||
+      source.length ===
+      0
     ) {
       return;
     }
 
-    updateElement(
-      selectedElement.id,
-      (element) => ({
-        ...element,
+    const idMap =
+      new Map<
+        string,
+        string
+      >();
 
-        frame: {
-          ...element.frame,
+    const groupMap =
+      new Map<
+        string,
+        string
+      >();
 
-          zIndex:
+    source.forEach(
+      (element) => {
+        idMap.set(
+          element.id,
+          makeId(
+            element.type
+          )
+        );
+
+        if (
+          element.groupId &&
+          !groupMap.has(
+            element.groupId
+          )
+        ) {
+          groupMap.set(
+            element.groupId,
+            makeId(
+              'group'
+            )
+          );
+        }
+      }
+    );
+
+    const maxZ =
+      Math.max(
+        0,
+        ...scene.elements.map(
+          (element) =>
+            element.frame
+              .zIndex ||
+            0
+        )
+      );
+
+    const copies =
+      source.map(
+        (
+          element,
+          index
+        ) => {
+          const copy =
+            cloneValue(
+              element
+            );
+
+          copy.id =
+            idMap.get(
+              element.id
+            )!;
+
+          copy.groupId =
+            element.groupId
+              ? groupMap.get(
+                  element.groupId
+                )
+              : undefined;
+
+          const sourceFrame =
+            copy.frame;
+
+          copy.frame = {
+            ...sourceFrame,
+            x:
+              sourceFrame.x +
+              3,
+            y:
+              sourceFrame.y +
+              3,
+            zIndex:
+              maxZ +
+              index +
+              1,
+          };
+
+          if (
+            copy.mobileFrame
+          ) {
+            copy.mobileFrame = {
+              ...copy.mobileFrame,
+              x:
+                (
+                  copy.mobileFrame
+                    .x ??
+                  sourceFrame.x
+                ) +
+                3,
+              y:
+                (
+                  copy.mobileFrame
+                    .y ??
+                  sourceFrame.y
+                ) +
+                3,
+            };
+          }
+
+          copy.actions =
             (
-              element.frame
-                .zIndex ||
-              0
-            ) +
-            direction,
-        },
-      } as
-        SceneElement)
+              copy.actions ||
+              []
+            ).map(
+              (action) => {
+                if (
+                  (
+                    action.type ===
+                      'show-element' ||
+                    action.type ===
+                      'hide-element' ||
+                    action.type ===
+                      'toggle-element' ||
+                    action.type ===
+                      'replay-animation'
+                  ) &&
+                  idMap.has(
+                    action.elementId
+                  )
+                ) {
+                  return {
+                    ...action,
+                    elementId:
+                      idMap.get(
+                        action.elementId
+                      )!,
+                  } as any;
+                }
+
+                return action;
+              }
+            );
+
+          return copy;
+        }
+      );
+
+    updateScene({
+      ...scene,
+      elements: [
+        ...scene.elements,
+        ...copies,
+      ],
+    });
+
+    setSelectedElementIds(
+      copies.map(
+        (element) =>
+          element.id
+      )
     );
   };
+
+  const paste =
+    () => {
+      createCopies(
+        clipboardRef.current
+      );
+    };
+
+  const duplicateSelected =
+    () => {
+      createCopies(
+        selectedElements
+      );
+    };
+
+  const groupSelected =
+    () => {
+      if (
+        !scene ||
+        selectedElementIds
+          .length <
+          2
+      ) {
+        return;
+      }
+
+      const selected =
+        new Set(
+          selectedElementIds
+        );
+
+      const groupId =
+        makeId(
+          'group'
+        );
+
+      updateScene({
+        ...scene,
+
+        elements:
+          scene.elements.map(
+            (element) =>
+              selected.has(
+                element.id
+              )
+                ? {
+                    ...element,
+                    groupId,
+                  }
+                : element
+          ),
+      });
+    };
+
+  const ungroupSelected =
+    () => {
+      if (
+        !scene ||
+        selectedElementIds
+          .length ===
+          0
+      ) {
+        return;
+      }
+
+      const selectedGroupIds =
+        new Set(
+          selectedElements
+            .map(
+              (element) =>
+                element.groupId
+            )
+            .filter(
+              Boolean
+            ) as
+            string[]
+        );
+
+      if (
+        selectedGroupIds.size ===
+        0
+      ) {
+        return;
+      }
+
+      updateScene({
+        ...scene,
+
+        elements:
+          scene.elements.map(
+            (element) =>
+              element.groupId &&
+              selectedGroupIds.has(
+                element.groupId
+              )
+                ? {
+                    ...element,
+                    groupId:
+                      undefined,
+                  }
+                : element
+          ),
+      });
+    };
+
+  const nudgeSelection = (
+    dx: number,
+    dy: number
+  ) => {
+    if (
+      !scene ||
+      selectedElements.length ===
+      0
+    ) {
+      return;
+    }
+
+    const nextFrames:
+      Record<
+        string,
+        SceneElementFrame
+      > = {};
+
+    selectedElements.forEach(
+      (element) => {
+        if (
+          element.locked
+        ) {
+          return;
+        }
+
+        const frame =
+          getEffectiveFrame(
+            element,
+            device
+          );
+
+        nextFrames[
+          element.id
+        ] = {
+          ...frame,
+          x:
+            frame.x +
+            dx,
+          y:
+            frame.y +
+            dy,
+        };
+      }
+    );
+
+    if (
+      Object.keys(
+        nextFrames
+      ).length ===
+      0
+    ) {
+      return;
+    }
+
+    if (!scene) {
+      return;
+    }
+
+    updateFrames(
+      nextFrames,
+      'commit'
+    );
+  };
+
+  const alignSelection = (
+    action:
+      AlignAction
+  ) => {
+    if (
+      !scene ||
+      selectedElements.length <
+      2
+    ) {
+      return;
+    }
+
+    const unlocked =
+      selectedElements.filter(
+        (element) =>
+          !element.locked
+      );
+
+    if (
+      unlocked.length <
+      2
+    ) {
+      return;
+    }
+
+    const selectionBounds =
+      getSelectionBounds(
+        unlocked,
+        device
+      );
+
+    if (
+      !selectionBounds
+    ) {
+      return;
+    }
+
+    const nextFrames:
+      Record<
+        string,
+        SceneElementFrame
+      > = {};
+
+    if (
+      action ===
+        'distribute-x' ||
+      action ===
+        'distribute-y'
+    ) {
+      if (
+        unlocked.length <
+        3
+      ) {
+        return;
+      }
+
+      const items =
+        unlocked
+          .map(
+            (element) => {
+              const frame =
+                getEffectiveFrame(
+                  element,
+                  device
+                );
+
+              return {
+                element,
+                frame,
+                bounds:
+                  getFrameBounds(
+                    frame
+                  ),
+              };
+            }
+          )
+          .sort(
+            (
+              left,
+              right
+            ) =>
+              action ===
+              'distribute-x'
+                ? left.bounds
+                    .centerX -
+                  right.bounds
+                    .centerX
+                : left.bounds
+                    .centerY -
+                  right.bounds
+                    .centerY
+          );
+
+      const first =
+        action ===
+        'distribute-x'
+          ? items[0]
+              .bounds
+              .centerX
+          : items[0]
+              .bounds
+              .centerY;
+
+      const last =
+        action ===
+        'distribute-x'
+          ? items[
+              items.length -
+                1
+            ].bounds
+              .centerX
+          : items[
+              items.length -
+                1
+            ].bounds
+              .centerY;
+
+      const step =
+        (
+          last -
+          first
+        ) /
+        (
+          items.length -
+          1
+        );
+
+      items.forEach(
+        (
+          item,
+          index
+        ) => {
+          const target =
+            first +
+            step *
+              index;
+
+          nextFrames[
+            item.element.id
+          ] =
+            action ===
+            'distribute-x'
+              ? moveFrameToBounds(
+                  item.frame,
+                  {
+                    centerX:
+                      target,
+                  }
+                )
+              : moveFrameToBounds(
+                  item.frame,
+                  {
+                    centerY:
+                      target,
+                  }
+                );
+        }
+      );
+    } else {
+      unlocked.forEach(
+        (element) => {
+          const frame =
+            getEffectiveFrame(
+              element,
+              device
+            );
+
+          const target =
+            action ===
+            'left'
+              ? {
+                  left:
+                    selectionBounds.left,
+                }
+              : action ===
+                  'center-x'
+                ? {
+                    centerX:
+                      selectionBounds.centerX,
+                  }
+                : action ===
+                    'right'
+                  ? {
+                      right:
+                        selectionBounds.right,
+                    }
+                  : action ===
+                      'top'
+                    ? {
+                        top:
+                          selectionBounds.top,
+                      }
+                    : action ===
+                        'center-y'
+                      ? {
+                          centerY:
+                            selectionBounds.centerY,
+                        }
+                      : {
+                          bottom:
+                            selectionBounds.bottom,
+                        };
+
+          nextFrames[
+            element.id
+          ] =
+            moveFrameToBounds(
+              frame,
+              target
+            );
+        }
+      );
+    }
+
+    updateFrames(
+      nextFrames,
+      'commit'
+    );
+  };
+
+  const moveLayer = (
+    action:
+      LayerAction
+  ) => {
+    if (
+      !scene ||
+      selectedElements.length ===
+      0
+    ) {
+      return;
+    }
+
+    const selected =
+      new Set(
+        selectedElementIds
+      );
+
+    const allZ =
+      scene.elements.map(
+        (element) =>
+          getEffectiveFrame(
+            element,
+            device
+          ).zIndex ||
+          0
+      );
+
+    const maxZ =
+      Math.max(
+        0,
+        ...allZ
+      );
+
+    const minZ =
+      Math.min(
+        0,
+        ...allZ
+      );
+
+    let order =
+      0;
+
+    const nextFrames:
+      Record<
+        string,
+        SceneElementFrame
+      > = {};
+
+    scene.elements.forEach(
+      (element) => {
+        if (
+          !selected.has(
+            element.id
+          ) ||
+          element.locked
+        ) {
+          return;
+        }
+
+        const frame =
+          getEffectiveFrame(
+            element,
+            device
+          );
+
+        order += 1;
+
+        const zIndex =
+          action ===
+          'forward'
+            ? (
+                frame.zIndex ||
+                0
+              ) +
+              1
+            : action ===
+                'backward'
+              ? (
+                  frame.zIndex ||
+                  0
+                ) -
+                1
+              : action ===
+                  'front'
+                ? maxZ +
+                  order
+                : minZ -
+                  order;
+
+        nextFrames[
+          element.id
+        ] = {
+          ...frame,
+          zIndex,
+        };
+      }
+    );
+
+    updateFrames(
+      nextFrames,
+      'commit'
+    );
+  };
+
+  const toggleSelectedLock =
+    () => {
+      if (
+        !scene ||
+        selectedElements.length ===
+        0
+      ) {
+        return;
+      }
+
+      const shouldLock =
+        selectedElements.some(
+          (element) =>
+            !element.locked
+        );
+
+      const selected =
+        new Set(
+          selectedElementIds
+        );
+
+      updateScene({
+        ...scene,
+
+        elements:
+          scene.elements.map(
+            (element) =>
+              selected.has(
+                element.id
+              )
+                ? {
+                    ...element,
+                    locked:
+                      shouldLock,
+                  }
+                : element
+          ),
+      });
+    };
+
+  const toggleElementVisible =
+    (
+      elementId:
+        string
+    ) => {
+      updateElement(
+        elementId,
+        (element) => ({
+          ...element,
+          visible:
+            element.visible ===
+            false,
+        } as
+          SceneElement)
+      );
+    };
+
+  const toggleElementLock =
+    (
+      elementId:
+        string
+    ) => {
+      updateElement(
+        elementId,
+        (element) => ({
+          ...element,
+          locked:
+            !element.locked,
+        } as
+          SceneElement)
+      );
+    };
+
+  const selectAll =
+    () => {
+      if (!scene) {
+        return;
+      }
+
+      setSelectedElementIds(
+        scene.elements.map(
+          (element) =>
+            element.id
+        )
+      );
+    };
+
+  const changeZoom = (
+    next:
+      number
+  ) => {
+    setZoom(
+      Math.max(
+        25,
+        Math.min(
+          200,
+          Math.round(
+            next
+          )
+        )
+      )
+    );
+  };
+
+  useEditorShortcuts({
+    undo:
+      history.undo,
+
+    redo:
+      history.redo,
+
+    copy:
+      copySelected,
+
+    paste,
+
+    duplicate:
+      duplicateSelected,
+
+    remove:
+      deleteSelected,
+
+    selectAll,
+
+    clearSelection:
+      () =>
+        setSelectedElementIds(
+          []
+        ),
+
+    group:
+      groupSelected,
+
+    ungroup:
+      ungroupSelected,
+
+    nudge:
+      nudgeSelection,
+
+    layerForward:
+      () =>
+        moveLayer(
+          'forward'
+        ),
+
+    layerBackward:
+      () =>
+        moveLayer(
+          'backward'
+        ),
+
+    layerFront:
+      () =>
+        moveLayer(
+          'front'
+        ),
+
+    layerBack:
+      () =>
+        moveLayer(
+          'back'
+        ),
+
+    toggleLock:
+      toggleSelectedLock,
+
+    zoomIn:
+      () =>
+        changeZoom(
+          zoom +
+            10
+        ),
+
+    zoomOut:
+      () =>
+        changeZoom(
+          zoom -
+            10
+        ),
+
+    zoomReset:
+      () =>
+        changeZoom(
+          100
+        ),
+
+    openShortcutHelp:
+      () =>
+        setShortcutsOpen(
+          true
+        ),
+  });
 
   if (!scene) {
     return (
@@ -552,15 +1622,30 @@ React.FC<Props> = ({
 
   return (
     <>
-      <div className="min-w-0">
-        <div className="flex flex-col gap-4 border-b border-black/7 pb-4 xl:flex-row xl:items-center xl:justify-between">
-          <div>
-            <h3 className="text-base font-black">
-              Visual Template Editor
-            </h3>
+      <div
+        className={[
+          'min-w-0 bg-[#f4f3f1]',
+          fullscreen
+            ? 'fixed inset-0 z-[110] overflow-hidden p-2 sm:p-3'
+            : 'rounded-[14px] border border-black/8 p-2 sm:p-3',
+        ].join(' ')}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-[11px] border border-black/7 bg-white px-3 py-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="truncate text-xs font-black sm:text-sm">
+                Visual Editor
+              </h3>
 
-            <p className="mt-1 max-w-[720px] text-[11px] leading-5 text-black/38">
-              Kéo-thả, resize, xoay, chỉnh layer và animation. Đây là phần Admin dùng để dựng template; khách sẽ không thấy editor này.
+              <span className="rounded-full bg-[#f4e9ec] px-2 py-1 text-[8px] font-black text-[#a63550]">
+                CANVA MINI
+              </span>
+            </div>
+
+            <p className="mt-0.5 hidden truncate text-[9px] text-black/30 md:block">
+              {scene.title || scene.id}
+              {' · '}
+              {selectedElements.length} selected
             </p>
           </div>
 
@@ -571,11 +1656,15 @@ React.FC<Props> = ({
                 'desktop'
               }
               label="Desktop"
-              onClick={() =>
+              onClick={() => {
                 setDevice(
                   'desktop'
-                )
-              }
+                );
+
+                setSelectedElementIds(
+                  []
+                );
+              }}
             />
 
             <TogglePill
@@ -584,12 +1673,67 @@ React.FC<Props> = ({
                 'mobile'
               }
               label="Mobile"
-              onClick={() =>
+              onClick={() => {
                 setDevice(
                   'mobile'
+                );
+
+                setSelectedElementIds(
+                  []
+                );
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() =>
+                setLayersOpen(
+                  (value) =>
+                    !value
                 )
               }
-            />
+              className={[
+                'rounded-[8px] border px-2.5 py-2 text-[9px] font-black',
+                layersOpen
+                  ? 'border-[#cf5068]/20 bg-[#f9eef1] text-[#a63550]'
+                  : 'border-black/8 bg-white text-black/35',
+              ].join(' ')}
+            >
+              Layers
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setInspectorOpen(
+                  (value) =>
+                    !value
+                )
+              }
+              className={[
+                'rounded-[8px] border px-2.5 py-2 text-[9px] font-black',
+                inspectorOpen
+                  ? 'border-[#cf5068]/20 bg-[#f9eef1] text-[#a63550]'
+                  : 'border-black/8 bg-white text-black/35',
+              ].join(' ')}
+            >
+              Properties
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setFullscreen(
+                  (value) =>
+                    !value
+                )
+              }
+              className="rounded-[8px] border border-black/8 bg-white px-2.5 py-2 text-[9px] font-black text-black/45"
+            >
+              {fullscreen
+                ? 'Thu nhỏ'
+                : 'Toàn màn hình'}
+            </button>
 
             <button
               type="button"
@@ -598,14 +1742,14 @@ React.FC<Props> = ({
                   true
                 )
               }
-              className="rounded-[10px] bg-[#191919] px-3.5 py-2 text-[10px] font-bold text-white"
+              className="rounded-[8px] bg-[#191919] px-3 py-2 text-[9px] font-black text-white"
             >
-              Xem preview
+              Preview
             </button>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 rounded-[14px] bg-[#faf9f8] p-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-black/7 bg-white p-2">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             <select
               value={
@@ -619,11 +1763,11 @@ React.FC<Props> = ({
                     .value
                 );
 
-                setSelectedElementId(
-                  ''
+                setSelectedElementIds(
+                  []
                 );
               }}
-              className="min-w-[150px] max-w-full rounded-[9px] border border-black/10 bg-white px-3 py-2 text-[11px] font-bold outline-none"
+              className="min-w-[150px] max-w-[260px] rounded-[8px] border border-black/10 bg-[#faf9f8] px-2.5 py-2 text-[9px] font-black outline-none"
             >
               {config.scenes.map(
                 (
@@ -653,7 +1797,7 @@ React.FC<Props> = ({
               onClick={
                 addScene
               }
-              className="rounded-[9px] border border-black/10 bg-white px-3 py-2 text-[10px] font-bold text-black/55"
+              className="rounded-[8px] border border-black/9 bg-white px-2.5 py-2 text-[9px] font-black text-black/45"
             >
               + Scene
             </button>
@@ -663,9 +1807,9 @@ React.FC<Props> = ({
               onClick={
                 duplicateScene
               }
-              className="rounded-[9px] border border-black/10 bg-white px-3 py-2 text-[10px] font-bold text-black/55"
+              className="rounded-[8px] border border-black/9 bg-white px-2.5 py-2 text-[9px] font-black text-black/45"
             >
-              Nhân bản
+              Duplicate
             </button>
 
             <button
@@ -678,9 +1822,9 @@ React.FC<Props> = ({
               onClick={
                 deleteScene
               }
-              className="rounded-[9px] border border-red-100 bg-white px-3 py-2 text-[10px] font-bold text-red-500 disabled:opacity-30"
+              className="rounded-[8px] border border-red-100 bg-white px-2.5 py-2 text-[9px] font-black text-red-500 disabled:opacity-30"
             >
-              Xóa scene
+              Xóa
             </button>
 
             <button
@@ -732,9 +1876,82 @@ React.FC<Props> = ({
           </label>
         </div>
 
-        <div className="mt-3 rounded-[12px] border border-amber-100 bg-amber-50 px-3 py-2.5 text-[10px] leading-5 text-amber-800">
-          Editor này lưu scene thật vào Firestore và Preview chạy bằng Scene Engine. Love Story 01 ngoài storefront vẫn dùng renderer cũ; bước kế tiếp sẽ dựng Birthday template mới bằng chính scene này.
-        </div>
+        <EditorToolbar
+          selectionCount={
+            selectedElements.length
+          }
+          groupedSelection={
+            groupedSelection
+          }
+          canUndo={
+            history.canUndo
+          }
+          canRedo={
+            history.canRedo
+          }
+          gridEnabled={
+            gridEnabled
+          }
+          snapEnabled={
+            snapEnabled
+          }
+          zoom={
+            zoom
+          }
+          onUndo={
+            history.undo
+          }
+          onRedo={
+            history.redo
+          }
+          onCopy={
+            copySelected
+          }
+          onPaste={
+            paste
+          }
+          onDuplicate={
+            duplicateSelected
+          }
+          onDelete={
+            deleteSelected
+          }
+          onGroup={
+            groupSelected
+          }
+          onUngroup={
+            ungroupSelected
+          }
+          onAlign={
+            alignSelection
+          }
+          onLayer={
+            moveLayer
+          }
+          onToggleLock={
+            toggleSelectedLock
+          }
+          onToggleGrid={() =>
+            setGridEnabled(
+              (value) =>
+                !value
+            )
+          }
+          onToggleSnap={() =>
+            setSnapEnabled(
+              (value) =>
+                !value
+            )
+          }
+          onZoomChange={
+            changeZoom
+          }
+          onOpenShortcuts={() =>
+            setShortcutsOpen(
+              true
+            )
+          }
+        />
 
         <div className="mt-3 flex flex-wrap gap-2">
           <AddElementButton
@@ -751,6 +1968,15 @@ React.FC<Props> = ({
             onClick={() =>
               addElement(
                 'image'
+              )
+            }
+          />
+
+          <AddElementButton
+            label="+ Shape"
+            onClick={() =>
+              addElement(
+                'shape'
               )
             }
           />
@@ -774,33 +2000,50 @@ React.FC<Props> = ({
           />
         </div>
 
-        <div className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[190px_minmax(0,1fr)_280px]">
+        <div
+          className="mt-2 grid min-w-0 gap-2 overflow-hidden"
+          style={{
+            gridTemplateColumns:
+              compactViewport
+                ? 'minmax(0, 1fr)'
+                : [
+                    layersOpen
+                      ? fullscreen
+                        ? '190px'
+                        : '175px'
+                      : '',
+                    'minmax(0, 1fr)',
+                    inspectorOpen
+                      ? fullscreen
+                        ? '280px'
+                        : '260px'
+                      : '',
+                  ]
+                    .filter(
+                      Boolean
+                    )
+                    .join(' '),
+          }}
+        >
+          {layersOpen && (
           <LayersPanel
             scene={
               scene
             }
-            selectedElementId={
-              selectedElementId
+            selectedElementIds={
+              selectedElementIds
             }
-            onSelect={
-              setSelectedElementId
+            onSelectionChange={
+              setSelectedElementIds
             }
-            onToggleVisible={(
-              elementId
-            ) =>
-              updateElement(
-                elementId,
-                (element) => ({
-                  ...element,
-
-                  visible:
-                    element.visible ===
-                    false,
-                } as
-                  SceneElement)
-              )
+            onToggleVisible={
+              toggleElementVisible
+            }
+            onToggleLock={
+              toggleElementLock
             }
           />
+          )}
 
           <EditorCanvas
             scene={
@@ -809,28 +2052,36 @@ React.FC<Props> = ({
             device={
               device
             }
-            selectedElementId={
-              selectedElementId
+            selectedElementIds={
+              selectedElementIds
             }
-            onSelect={
-              setSelectedElementId
+            zoom={
+              zoom
             }
-            onClearSelection={() =>
-              setSelectedElementId(
-                ''
-              )
+            gridEnabled={
+              gridEnabled
             }
-            onFrameChange={
-              updateElementFrame
+            snapEnabled={
+              snapEnabled
+            }
+            onSelectionChange={
+              setSelectedElementIds
+            }
+            onTransformStart={
+              history.checkpoint
+            }
+            onFramesChange={
+              updateFrames
             }
           />
 
+          {inspectorOpen && (
           <InspectorPanel
             scene={
               scene
             }
-            element={
-              selectedElement
+            elements={
+              selectedElements
             }
             device={
               device
@@ -841,48 +2092,40 @@ React.FC<Props> = ({
             onSceneChange={
               updateScenePatch
             }
-            onElementChange={(
-              updater
-            ) => {
-              if (
-                !selectedElement
-              ) {
-                return;
-              }
-
-              updateElement(
-                selectedElement.id,
-                updater
-              );
-            }}
-            onFrameChange={(
-              frame
-            ) => {
-              if (
-                !selectedElement
-              ) {
-                return;
-              }
-
-              updateElementFrame(
-                selectedElement.id,
-                frame
-              );
-            }}
+            onElementChange={
+              updateElement
+            }
+            onFrameChange={
+              updateElementFrame
+            }
             onDuplicate={
-              duplicateElement
+              duplicateSelected
             }
             onDelete={
-              deleteElement
+              deleteSelected
             }
             onLayerUp={() =>
-              moveLayer(1)
+              moveLayer(
+                'forward'
+              )
             }
             onLayerDown={() =>
-              moveLayer(-1)
+              moveLayer(
+                'backward'
+              )
+            }
+            onToggleLock={
+              toggleSelectedLock
             }
           />
+          )}
         </div>
+
+        {!fullscreen && (
+        <div className="mt-2 rounded-[9px] border border-[#cf5068]/10 bg-[#fff9fa] px-3 py-2 text-[9px] leading-4 text-black/35">
+          Thiết kế trong Admin → Lưu thay đổi. Dùng Toàn màn hình khi cần không gian canvas lớn hơn.
+        </div>
+        )}
       </div>
 
       {previewOpen && (
@@ -892,6 +2135,16 @@ React.FC<Props> = ({
           }
           onClose={() =>
             setPreviewOpen(
+              false
+            )
+          }
+        />
+      )}
+
+      {shortcutsOpen && (
+        <KeyboardShortcutsModal
+          onClose={() =>
+            setShortcutsOpen(
               false
             )
           }

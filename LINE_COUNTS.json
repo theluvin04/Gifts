@@ -1,200 +1,116 @@
 {
   "files": [
     {
-      "path": "src/components/GiftSelector.tsx",
-      "old": 209,
-      "new": 198,
-      "diff": -11,
+      "path": "src/components/admin/AdminOrdersPage.tsx",
+      "old": 1319,
+      "new": 1664,
+      "diff": 345,
       "new_file": false
     },
     {
       "path": "src/components/admin/AdminTemplatesTab.tsx",
-      "old": 587,
-      "new": 627,
-      "diff": 40,
+      "old": 627,
+      "new": 1392,
+      "diff": 765,
       "new_file": false
     },
     {
       "path": "src/components/admin/AdminVisualTemplateEditor.tsx",
-      "old": 0,
-      "new": 902,
-      "diff": 902,
-      "new_file": true
+      "old": 902,
+      "new": 2155,
+      "diff": 1253,
+      "new_file": false
     },
     {
       "path": "src/components/admin/visual-editor/EditorCanvas.tsx",
-      "old": 0,
-      "new": 705,
-      "diff": 705,
-      "new_file": true
+      "old": 705,
+      "new": 1701,
+      "diff": 996,
+      "new_file": false
     },
     {
-      "path": "src/components/admin/visual-editor/EditorControls.tsx",
+      "path": "src/components/admin/visual-editor/EditorToolbar.tsx",
       "old": 0,
-      "new": 418,
-      "diff": 418,
+      "new": 455,
+      "diff": 455,
       "new_file": true
     },
     {
       "path": "src/components/admin/visual-editor/InspectorPanel.tsx",
+      "old": 1283,
+      "new": 2525,
+      "diff": 1242,
+      "new_file": false
+    },
+    {
+      "path": "src/components/admin/visual-editor/KeyboardShortcutsModal.tsx",
       "old": 0,
-      "new": 1283,
-      "diff": 1283,
+      "new": 77,
+      "diff": 77,
       "new_file": true
     },
     {
       "path": "src/components/admin/visual-editor/LayersPanel.tsx",
-      "old": 0,
-      "new": 132,
-      "diff": 132,
-      "new_file": true
-    },
-    {
-      "path": "src/components/admin/visual-editor/PreviewOverlay.tsx",
-      "old": 0,
-      "new": 60,
-      "diff": 60,
-      "new_file": true
+      "old": 132,
+      "new": 266,
+      "diff": 134,
+      "new_file": false
     },
     {
       "path": "src/components/admin/visual-editor/editorUtils.ts",
+      "old": 157,
+      "new": 638,
+      "diff": 481,
+      "new_file": false
+    },
+    {
+      "path": "src/components/admin/visual-editor/useEditorHistory.ts",
       "old": 0,
-      "new": 157,
-      "diff": 157,
+      "new": 343,
+      "diff": 343,
       "new_file": true
     },
     {
-      "path": "src/engine/animation/AnimatedElement.tsx",
+      "path": "src/components/admin/visual-editor/useEditorShortcuts.ts",
       "old": 0,
-      "new": 143,
-      "diff": 143,
-      "new_file": true
-    },
-    {
-      "path": "src/engine/animation/AnimatedGroup.tsx",
-      "old": 0,
-      "new": 92,
-      "diff": 92,
-      "new_file": true
-    },
-    {
-      "path": "src/engine/animation/presets.ts",
-      "old": 0,
-      "new": 386,
-      "diff": 386,
-      "new_file": true
-    },
-    {
-      "path": "src/engine/animation/types.ts",
-      "old": 0,
-      "new": 103,
-      "diff": 103,
+      "new": 363,
+      "diff": 363,
       "new_file": true
     },
     {
       "path": "src/engine/index.ts",
-      "old": 0,
-      "new": 89,
-      "diff": 89,
-      "new_file": true
-    },
-    {
-      "path": "src/engine/scene/SceneCanvas.tsx",
-      "old": 0,
-      "new": 293,
-      "diff": 293,
-      "new_file": true
+      "old": 89,
+      "new": 92,
+      "diff": 3,
+      "new_file": false
     },
     {
       "path": "src/engine/scene/SceneElementView.tsx",
-      "old": 0,
-      "new": 423,
-      "diff": 423,
-      "new_file": true
-    },
-    {
-      "path": "src/engine/scene/SceneTransition.tsx",
-      "old": 0,
-      "new": 251,
-      "diff": 251,
-      "new_file": true
-    },
-    {
-      "path": "src/engine/scene/VisualSceneExperience.tsx",
-      "old": 0,
-      "new": 198,
-      "diff": 198,
-      "new_file": true
-    },
-    {
-      "path": "src/engine/scene/actions.ts",
-      "old": 0,
-      "new": 172,
-      "diff": 172,
-      "new_file": true
+      "old": 423,
+      "new": 511,
+      "diff": 88,
+      "new_file": false
     },
     {
       "path": "src/engine/scene/elementTypes.ts",
-      "old": 0,
-      "new": 256,
-      "diff": 256,
-      "new_file": true
-    },
-    {
-      "path": "src/engine/scene/types.ts",
-      "old": 0,
-      "new": 51,
-      "diff": 51,
-      "new_file": true
-    },
-    {
-      "path": "src/engine/scene/useSceneController.ts",
-      "old": 0,
-      "new": 145,
-      "diff": 145,
-      "new_file": true
-    },
-    {
-      "path": "src/engine/scene/useSceneElementRuntime.ts",
-      "old": 0,
-      "new": 201,
-      "diff": 201,
-      "new_file": true
-    },
-    {
-      "path": "src/services/templateService.ts",
-      "old": 373,
-      "new": 524,
-      "diff": 151,
+      "old": 256,
+      "new": 310,
+      "diff": 54,
       "new_file": false
     },
     {
-      "path": "src/templates/love-01/LoveStoryExperience.tsx",
-      "old": 335,
-      "new": 388,
-      "diff": 53,
+      "path": "src/services/adminService.ts",
+      "old": 555,
+      "new": 991,
+      "diff": 436,
       "new_file": false
-    },
-    {
-      "path": "src/templates/love-01/engineExampleScene.ts",
-      "old": 0,
-      "new": 100,
-      "diff": 100,
-      "new_file": true
-    },
-    {
-      "path": "src/templates/love-01/sceneConfig.ts",
-      "old": 0,
-      "new": 49,
-      "diff": 49,
-      "new_file": true
     },
     {
       "path": "src/templates/visualEditor.ts",
-      "old": 0,
-      "new": 1406,
-      "diff": 1406,
-      "new_file": true
+      "old": 1406,
+      "new": 1538,
+      "diff": 132,
+      "new_file": false
     }
   ]
 }

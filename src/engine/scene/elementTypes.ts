@@ -11,6 +11,7 @@ export type SceneElementType =
   | 'image'
   | 'button'
   | 'decor'
+  | 'shape'
   | 'custom';
 
 export type SceneElementAnchor =
@@ -59,6 +60,10 @@ export interface SceneTextStyle {
   fontStyle?:
     'normal' |
     'italic';
+  textDecoration?:
+    'none' |
+    'underline' |
+    'line-through';
   whiteSpace?:
     'normal' |
     'pre-line' |
@@ -76,6 +81,10 @@ export interface SceneImageStyle {
   boxShadow?: string;
 
   background?: string;
+
+  borderColor?: string;
+
+  borderWidth?: number;
 }
 
 export interface SceneButtonStyle
@@ -87,6 +96,31 @@ extends SceneTextStyle {
   paddingX?: number;
   paddingY?: number;
   boxShadow?: string;
+}
+
+export type SceneShapeKind =
+  | 'rectangle'
+  | 'circle'
+  | 'line';
+
+export interface SceneShapeStyle {
+  kind?:
+    SceneShapeKind;
+
+  fill?: string;
+
+  borderColor?: string;
+
+  borderWidth?: number;
+
+  borderRadius?: number;
+
+  boxShadow?: string;
+
+  lineStyle?:
+    'solid' |
+    'dashed' |
+    'dotted';
 }
 
 export type SceneElementAction =
@@ -137,6 +171,17 @@ interface BaseSceneElement {
 
   type:
     SceneElementType;
+
+  /**
+   * Friendly layer name shown in Admin.
+   */
+  name?: string;
+
+  /**
+   * Elements sharing the same groupId behave as one group
+   * inside the visual editor.
+   */
+  groupId?: string;
 
   frame:
     SceneElementFrame;
@@ -198,6 +243,14 @@ extends BaseSceneElement {
     SceneButtonStyle;
 }
 
+export interface SceneShapeElement
+extends BaseSceneElement {
+  type: 'shape';
+
+  shapeStyle?:
+    SceneShapeStyle;
+}
+
 export interface SceneCustomElement
 extends BaseSceneElement {
   type: 'custom';
@@ -215,6 +268,7 @@ export type SceneElement =
   | SceneTextElement
   | SceneImageElement
   | SceneButtonElement
+  | SceneShapeElement
   | SceneCustomElement;
 
 export interface SceneCanvasBackground {

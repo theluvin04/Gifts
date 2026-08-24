@@ -1,77 +1,87 @@
-DEARLY — CUMULATIVE PHASE 1 + 2 + 3
-VISUAL TEMPLATE EDITOR / CANVA MINI FOUNDATION
+DEARLY — VISUAL EDITOR V3 + MULTI PRODUCT ADMIN
 
-GitHub main lúc kiểm tra:
-- Admin sticky save: CÓ
-- src/engine/: CHƯA CÓ
-- Love Story public: vẫn renderer hard-code
+BẢN NÀY LÀ BẢN CỘNG DỒN.
+Dùng V3 này thay cho ZIP Visual Editor V2 trước.
 
-BUNDLE NÀY GỘP TOÀN BỘ PHASE 1 + 2 + 3.
+1. BỐ CỤC EDITOR GỌN HƠN
+- Header Visual Editor nhỏ lại
+- Toolbar sticky
+- Canvas tự fit vào vùng còn lại của màn hình
+- Canvas có chiều cao theo viewport
+- Layers tự scroll
+- Properties tự scroll
+- Có nút ẩn/hiện Layers
+- Có nút ẩn/hiện Properties
+- Có chế độ Toàn màn hình
+- Màn hình < 1200px tự chuyển workspace thành 1 cột để không tràn ngang
+- Product header / tab Admin nhỏ gọn hơn
 
-ADMIN → TEMPLATES → BỐ CỤC
+2. QUẢN LÝ NHIỀU SẢN PHẨM
+Admin → Templates:
+- dropdown đổi sản phẩm
+- + Sản phẩm
+- tạo canvas trắng
+- nhân bản sản phẩm hiện tại
+- xóa sản phẩm
+- love-01 được bảo vệ không cho xóa
+- mỗi sản phẩm lưu document riêng: templates/{productId}
+- save dùng đúng productId, không còn hard-code love-01
+- list toàn bộ template từ Firestore
+- sản phẩm mới mặc định coming_soon + hidden để không lộ khi chưa làm xong
 
-TÍNH NĂNG:
-- Tạo / nhân bản / xóa scene
-- Đặt scene đầu
-- Desktop / Mobile layout riêng
-- Thêm Text / Ảnh / Nút / Decor
-- Click chọn element
-- Drag bằng chuột
-- Resize bằng handle góc phải dưới
-- Rotate bằng handle phía trên
-- X / Y / Width / Height / Rotate / Scale / Opacity
-- Layer z-index
-- Ẩn / hiện
-- Khóa element
-- Animation + delay + duration
-- Click action: chuyển scene / back / toggle / replay / open URL
-- Background / overlay / blur / brightness
-- Transition scene
-- Interactive Preview trong Admin
-- Save vào Firestore qua template.visualEditor
+3. TẠO SẢN PHẨM TRẮNG
+Sản phẩm mới có:
+- 1 scene trắng
+- Visual Engine bật
+- giá mặc định
+- status coming_soon
+- visible false
+Sau đó vào Bố cục và tự design.
 
-KIẾN TRÚC UI ĐÃ TÁCH:
-src/components/admin/visual-editor/
-├── EditorCanvas.tsx
-├── InspectorPanel.tsx
-├── LayersPanel.tsx
-├── EditorControls.tsx
-├── PreviewOverlay.tsx
-└── editorUtils.ts
+4. NHÂN BẢN
+Nhân bản copy:
+- scene
+- element
+- position
+- desktop/mobile
+- animation
+- click action
+- style
+- asset/config hiện tại
 
-AdminVisualTemplateEditor.tsx chỉ điều phối state + scene/element CRUD.
+5. CANVA MINI V2 VẪN GIỮ NGUYÊN
+- multi-select
+- marquee select
+- drag nhiều object
+- group / ungroup
+- copy / paste / duplicate
+- undo / redo
+- keyboard shortcuts
+- align / distribute
+- layer
+- lock / visible
+- grid / snap guide
+- zoom
+- shape
+- text formatting
+- animation
+- click action
 
-LƯU Ý:
-Visual Editor đã thiết kế + lưu + preview thật.
-Love Story 01 ngoài storefront CHƯA dùng visualEditor để tránh phá flow khách hiện tại.
-Bước tiếp theo là tạo Birthday template scene-based chạy trực tiếp bằng config này.
+FIREBASE
+Không cần sửa firestore.rules.
+Rules hiện tại đã cho Admin list/create/update/delete /templates.
 
-LINE COUNTS VS GITHUB MAIN:
-SỬA — src/components/GiftSelector.tsx: 209 -> 198 (-11)
-SỬA — src/components/admin/AdminTemplatesTab.tsx: 587 -> 627 (+40)
-THÊM FILE MỚI — src/components/admin/AdminVisualTemplateEditor.tsx: 902 dòng
-THÊM FILE MỚI — src/components/admin/visual-editor/EditorCanvas.tsx: 705 dòng
-THÊM FILE MỚI — src/components/admin/visual-editor/EditorControls.tsx: 418 dòng
-THÊM FILE MỚI — src/components/admin/visual-editor/InspectorPanel.tsx: 1283 dòng
-THÊM FILE MỚI — src/components/admin/visual-editor/LayersPanel.tsx: 132 dòng
-THÊM FILE MỚI — src/components/admin/visual-editor/PreviewOverlay.tsx: 60 dòng
-THÊM FILE MỚI — src/components/admin/visual-editor/editorUtils.ts: 157 dòng
-THÊM FILE MỚI — src/engine/animation/AnimatedElement.tsx: 143 dòng
-THÊM FILE MỚI — src/engine/animation/AnimatedGroup.tsx: 92 dòng
-THÊM FILE MỚI — src/engine/animation/presets.ts: 386 dòng
-THÊM FILE MỚI — src/engine/animation/types.ts: 103 dòng
-THÊM FILE MỚI — src/engine/index.ts: 89 dòng
-THÊM FILE MỚI — src/engine/scene/SceneCanvas.tsx: 293 dòng
-THÊM FILE MỚI — src/engine/scene/SceneElementView.tsx: 423 dòng
-THÊM FILE MỚI — src/engine/scene/SceneTransition.tsx: 251 dòng
-THÊM FILE MỚI — src/engine/scene/VisualSceneExperience.tsx: 198 dòng
-THÊM FILE MỚI — src/engine/scene/actions.ts: 172 dòng
-THÊM FILE MỚI — src/engine/scene/elementTypes.ts: 256 dòng
-THÊM FILE MỚI — src/engine/scene/types.ts: 51 dòng
-THÊM FILE MỚI — src/engine/scene/useSceneController.ts: 145 dòng
-THÊM FILE MỚI — src/engine/scene/useSceneElementRuntime.ts: 201 dòng
-SỬA — src/services/templateService.ts: 373 -> 524 (+151)
-SỬA — src/templates/love-01/LoveStoryExperience.tsx: 335 -> 388 (+53)
-THÊM FILE MỚI — src/templates/love-01/engineExampleScene.ts: 100 dòng
-THÊM FILE MỚI — src/templates/love-01/sceneConfig.ts: 49 dòng
-THÊM FILE MỚI — src/templates/visualEditor.ts: 1406 dòng
+LƯU Ý PUBLIC
+Tạo sản phẩm mới ở V3 tạo product/template THẬT trong Firestore và design được ngay.
+Public storefront hiện vẫn dùng registry module tĩnh.
+Vì vậy product mới chưa tự xuất hiện ngoài Home / checkout cho đến khi làm bước Generic Customer Fields + Generic Checkout.
+
+CÁCH DÙNG
+1. Thay các file trong ZIP đúng path.
+2. Vào /admin/templates
+3. Bấm + Sản phẩm
+4. Nhập tên + ID
+5. Tạo sản phẩm
+6. Vào Bố cục
+7. Bấm Toàn màn hình để design
+8. Lưu thay đổi

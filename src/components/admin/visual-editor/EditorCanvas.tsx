@@ -1,5 +1,7 @@
 import React, {
+  useMemo,
   useRef,
+  useState,
 } from 'react';
 
 import type {
@@ -13,6 +15,7 @@ import {
   clamp,
   DeviceMode,
   getEffectiveFrame,
+  getGroupedSelectionIds,
 } from './editorUtils';
 
 interface Props {
@@ -22,36 +25,105 @@ interface Props {
   device:
     DeviceMode;
 
-  selectedElementId:
-    string;
+  selectedElementIds:
+    string[];
 
-  onSelect: (
-    id: string
+  zoom: number;
+
+  gridEnabled: boolean;
+
+  snapEnabled: boolean;
+
+  onSelectionChange: (
+    ids: string[]
   ) => void;
 
-  onClearSelection:
+  onTransformStart:
     () => void;
 
-  onFrameChange: (
-    id: string,
-    frame:
-      SceneElementFrame
+  onFramesChange: (
+    frames:
+      Record<
+        string,
+        SceneElementFrame
+      >
   ) => void;
 }
+
+interface MarqueeState {
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+  startClientX: number;
+  startClientY: number;
+  currentClientX: number;
+  currentClientY: number;
+  additive: boolean;
+}
+
+interface Guides {
+  x?: number;
+  y?: number;
+}
+
+const SNAP_THRESHOLD =
+  1.15;
 
 export const EditorCanvas:
 React.FC<Props> = ({
   scene,
   device,
-  selectedElementId,
-  onSelect,
-  onClearSelection,
-  onFrameChange,
+  selectedElementIds,
+  zoom,
+  gridEnabled,
+  snapEnabled,
+  onSelectionChange,
+  onTransformStart,
+  onFramesChange,
 }) => {
   const canvasRef =
     useRef<HTMLDivElement>(
       null
     );
+
+  const [
+    guides,
+    setGuides,
+  ] =
+    useState<Guides>(
+      {}
+    );
+
+  const [
+    marquee,
+    setMarquee,
+  ] =
+    useState<
+      MarqueeState |
+      null
+    >(
+      null
+    );
+
+  const selectedSet =
+    useMemo(
+      () =>
+        new Set(
+          selectedElementIds
+        ),
+      [
+        selectedElementIds,
+      ]
+    );
+
+  const primaryId =
+    selectedElementIds[
+      selectedElementIds
+        .length -
+        1
+    ] ||
+    '';
 
   const aspectRatio =
     device ===
@@ -63,6 +135,220 @@ React.FC<Props> = ({
   const background =
     scene.background ||
     {};
+
+  const resolveClickSelection =
+    (
+      element:
+        SceneElement,
+      additive:
+        boolean
+    ) => {
+      const grouped =
+        getGroupedSelectionIds(
+          scene,
+          element.id
+        );
+
+      if (!additive) {
+        return grouped;
+      }
+
+      const next =
+        new Set(
+          selectedElementIds
+        );
+
+      const allSelected =
+        grouped.every(
+          (id) =>
+            next.has(
+              id
+            )
+        );
+
+      grouped.forEach(
+        (id) => {
+          if (
+            allSelected
+          ) {
+            next.delete(
+              id
+            );
+          } else {
+            next.add(
+              id
+            );
+          }
+        }
+      );
+
+      return Array.from(
+        next
+      );
+    };
+
+  const snapDelta = (
+    element:
+      SceneElement,
+    initialFrame:
+      SceneElementFrame,
+    dx: number,
+    dy: number,
+    activeIds:
+      Set<string>,
+    disableSnap:
+      boolean
+  ) => {
+    if (
+      !snapEnabled ||
+      disableSnap
+    ) {
+      return {
+        dx,
+        dy,
+        guides: {},
+      };
+    }
+
+    const xCandidates = [
+      0,
+      50,
+      100,
+    ];
+
+    const yCandidates = [
+      0,
+      50,
+      100,
+    ];
+
+    scene.elements
+      .filter(
+        (item) =>
+          !activeIds.has(
+            item.id
+          )
+      )
+      .forEach(
+        (item) => {
+          const frame =
+            getEffectiveFrame(
+              item,
+              device
+            );
+
+          xCandidates.push(
+            frame.x
+          );
+
+          yCandidates.push(
+            frame.y
+          );
+        }
+      );
+
+    const proposedX =
+      initialFrame.x +
+      dx;
+
+    const proposedY =
+      initialFrame.y +
+      dy;
+
+    const threshold =
+      SNAP_THRESHOLD *
+      (
+        100 /
+        Math.max(
+          25,
+          zoom
+        )
+      );
+
+    const nearestX =
+      xCandidates
+        .map(
+          (value) => ({
+            value,
+            distance:
+              Math.abs(
+                value -
+                proposedX
+              ),
+          })
+        )
+        .sort(
+          (
+            left,
+            right
+          ) =>
+            left.distance -
+            right.distance
+        )[0];
+
+    const nearestY =
+      yCandidates
+        .map(
+          (value) => ({
+            value,
+            distance:
+              Math.abs(
+                value -
+                proposedY
+              ),
+          })
+        )
+        .sort(
+          (
+            left,
+            right
+          ) =>
+            left.distance -
+            right.distance
+        )[0];
+
+    let nextDx =
+      dx;
+
+    let nextDy =
+      dy;
+
+    const nextGuides:
+      Guides = {};
+
+    if (
+      nearestX &&
+      nearestX.distance <=
+        threshold
+    ) {
+      nextDx =
+        nearestX.value -
+        initialFrame.x;
+
+      nextGuides.x =
+        nearestX.value;
+    }
+
+    if (
+      nearestY &&
+      nearestY.distance <=
+        threshold
+    ) {
+      nextDy =
+        nearestY.value -
+        initialFrame.y;
+
+      nextGuides.y =
+        nearestY.value;
+    }
+
+    return {
+      dx: nextDx,
+      dy: nextDy,
+      guides:
+        nextGuides,
+    };
+  };
 
   const startPointerOperation =
     (
@@ -84,10 +370,6 @@ React.FC<Props> = ({
       event.preventDefault();
       event.stopPropagation();
 
-      onSelect(
-        element.id
-      );
-
       const canvas =
         canvasRef.current;
 
@@ -95,15 +377,65 @@ React.FC<Props> = ({
         return;
       }
 
+      const additive =
+        event.shiftKey ||
+        event.metaKey ||
+        event.ctrlKey;
+
+      let nextSelection =
+        selectedElementIds;
+
+      if (
+        !selectedSet.has(
+          element.id
+        )
+      ) {
+        nextSelection =
+          resolveClickSelection(
+            element,
+            additive
+          );
+
+        onSelectionChange(
+          nextSelection
+        );
+      }
+
+      const activeIds =
+        mode ===
+        'drag'
+          ? new Set(
+              nextSelection.length
+                ? nextSelection
+                : [
+                    element.id,
+                  ]
+            )
+          : new Set([
+              element.id,
+            ]);
+
+      const activeElements =
+        scene.elements.filter(
+          (item) =>
+            activeIds.has(
+              item.id
+            ) &&
+            !item.locked
+        );
+
+      if (
+        activeElements.length ===
+        0
+      ) {
+        return;
+      }
+
+      onTransformStart();
+
       const canvasRect =
         canvas
           .getBoundingClientRect();
-
-      const initialFrame =
-        getEffectiveFrame(
-          element,
-          device
-        );
 
       const startX =
         event.clientX;
@@ -111,11 +443,37 @@ React.FC<Props> = ({
       const startY =
         event.clientY;
 
+      const initialFrames =
+        new Map(
+          activeElements.map(
+            (item) => [
+              item.id,
+              getEffectiveFrame(
+                item,
+                device
+              ),
+            ]
+          )
+        );
+
+      const primary =
+        activeElements.find(
+          (item) =>
+            item.id ===
+            element.id
+        ) ||
+        activeElements[0];
+
+      const primaryFrame =
+        initialFrames.get(
+          primary.id
+        )!;
+
       const targetRect =
         (
           event.currentTarget
             .closest(
-              '[data-editor-element]'
+              '[data-editor-element-id]'
             ) as
             HTMLElement |
             null
@@ -149,7 +507,7 @@ React.FC<Props> = ({
           moveEvent:
             PointerEvent
         ) => {
-          const dxPercent =
+          let dxPercent =
             (
               moveEvent.clientX -
               startX
@@ -157,7 +515,7 @@ React.FC<Props> = ({
             canvasRect.width *
             100;
 
-          const dyPercent =
+          let dyPercent =
             (
               moveEvent.clientY -
               startY
@@ -169,29 +527,97 @@ React.FC<Props> = ({
             mode ===
             'drag'
           ) {
-            onFrameChange(
-              element.id,
-              {
-                ...initialFrame,
+            if (
+              moveEvent.shiftKey
+            ) {
+              if (
+                Math.abs(
+                  dxPercent
+                ) >
+                Math.abs(
+                  dyPercent
+                )
+              ) {
+                dyPercent = 0;
+              } else {
+                dxPercent = 0;
+              }
+            }
 
-                x:
-                  clamp(
-                    initialFrame.x +
-                      dxPercent,
-                    -50,
-                    150
-                  ),
+            const snapped =
+              snapDelta(
+                primary,
+                primaryFrame,
+                dxPercent,
+                dyPercent,
+                activeIds,
+                moveEvent.altKey
+              );
 
-                y:
-                  clamp(
-                    initialFrame.y +
-                      dyPercent,
-                    -50,
-                    150
-                  ),
+            dxPercent =
+              snapped.dx;
+
+            dyPercent =
+              snapped.dy;
+
+            setGuides(
+              snapped.guides
+            );
+
+            const nextFrames:
+              Record<
+                string,
+                SceneElementFrame
+              > = {};
+
+            activeElements.forEach(
+              (item) => {
+                const frame =
+                  initialFrames.get(
+                    item.id
+                  );
+
+                if (!frame) {
+                  return;
+                }
+
+                nextFrames[
+                  item.id
+                ] = {
+                  ...frame,
+
+                  x:
+                    clamp(
+                      frame.x +
+                        dxPercent,
+                      -100,
+                      200
+                    ),
+
+                  y:
+                    clamp(
+                      frame.y +
+                        dyPercent,
+                      -100,
+                      200
+                    ),
+                };
               }
             );
 
+            onFramesChange(
+              nextFrames
+            );
+
+            return;
+          }
+
+          const frame =
+            initialFrames.get(
+              element.id
+            );
+
+          if (!frame) {
             return;
           }
 
@@ -199,34 +625,44 @@ React.FC<Props> = ({
             mode ===
             'resize'
           ) {
-            onFrameChange(
-              element.id,
-              {
-                ...initialFrame,
+            const preserveRatio =
+              moveEvent.shiftKey;
 
-                width:
-                  clamp(
-                    initialFrame.width +
-                      dxPercent,
-                    2,
-                    180
-                  ),
+            const width =
+              clamp(
+                frame.width +
+                  dxPercent,
+                1,
+                200
+              );
 
-                height:
-                  typeof initialFrame
-                    .height ===
-                    'number'
-                    ? clamp(
-                        initialFrame
-                          .height +
-                          dyPercent,
-                        2,
-                        180
-                      )
-                    : initialFrame
-                        .height,
-              }
-            );
+            const height =
+              typeof frame.height ===
+              'number'
+                ? clamp(
+                    preserveRatio
+                      ? frame.height *
+                        (
+                          width /
+                          Math.max(
+                            0.001,
+                            frame.width
+                          )
+                        )
+                      : frame.height +
+                        dyPercent,
+                    1,
+                    200
+                  )
+                : frame.height;
+
+            onFramesChange({
+              [element.id]: {
+                ...frame,
+                width,
+                height,
+              },
+            });
 
             return;
           }
@@ -239,34 +675,327 @@ React.FC<Props> = ({
                 centerX
             );
 
-          const delta =
+          let rotate =
+            (
+              frame.rotate ||
+              0
+            ) +
             (
               currentAngle -
               startAngle
             ) *
-            180 /
-            Math.PI;
+              180 /
+              Math.PI;
 
-          onFrameChange(
-            element.id,
-            {
-              ...initialFrame,
+          if (
+            moveEvent.shiftKey
+          ) {
+            rotate =
+              Math.round(
+                rotate /
+                  15
+              ) *
+              15;
+          }
 
+          onFramesChange({
+            [element.id]: {
+              ...frame,
               rotate:
                 Math.round(
-                  (
-                    initialFrame
-                      .rotate ||
-                    0
-                  ) +
-                  delta
+                  rotate
                 ),
-            }
-          );
+            },
+          });
         };
 
       const handleUp =
         () => {
+          setGuides(
+            {}
+          );
+
+          window.removeEventListener(
+            'pointermove',
+            handleMove
+          );
+
+          window.removeEventListener(
+            'pointerup',
+            handleUp
+          );
+        };
+
+      window.addEventListener(
+        'pointermove',
+        handleMove
+      );
+
+      window.addEventListener(
+        'pointerup',
+        handleUp
+      );
+    };
+
+  const beginMarquee =
+    (
+      event:
+        React.PointerEvent<
+          HTMLDivElement
+        >
+    ) => {
+      if (
+        event.button !==
+        0 ||
+        event.target !==
+        event.currentTarget
+      ) {
+        return;
+      }
+
+      const canvas =
+        canvasRef.current;
+
+      if (!canvas) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const rect =
+        canvas
+          .getBoundingClientRect();
+
+      const percentX =
+        clamp(
+          (
+            event.clientX -
+            rect.left
+          ) /
+            rect.width *
+            100,
+          0,
+          100
+        );
+
+      const percentY =
+        clamp(
+          (
+            event.clientY -
+            rect.top
+          ) /
+            rect.height *
+            100,
+          0,
+          100
+        );
+
+      const additive =
+        event.shiftKey ||
+        event.metaKey ||
+        event.ctrlKey;
+
+      const start:
+        MarqueeState = {
+        startX:
+          percentX,
+        startY:
+          percentY,
+        currentX:
+          percentX,
+        currentY:
+          percentY,
+        startClientX:
+          event.clientX,
+        startClientY:
+          event.clientY,
+        currentClientX:
+          event.clientX,
+        currentClientY:
+          event.clientY,
+        additive,
+      };
+
+      setMarquee(
+        start
+      );
+
+      const handleMove =
+        (
+          moveEvent:
+            PointerEvent
+        ) => {
+          const nextX =
+            clamp(
+              (
+                moveEvent.clientX -
+                rect.left
+              ) /
+                rect.width *
+                100,
+              0,
+              100
+            );
+
+          const nextY =
+            clamp(
+              (
+                moveEvent.clientY -
+                rect.top
+              ) /
+                rect.height *
+                100,
+              0,
+              100
+            );
+
+          setMarquee(
+            (current) =>
+              current
+                ? {
+                    ...current,
+                    currentX:
+                      nextX,
+                    currentY:
+                      nextY,
+                    currentClientX:
+                      moveEvent.clientX,
+                    currentClientY:
+                      moveEvent.clientY,
+                  }
+                : current
+          );
+        };
+
+      const handleUp =
+        (
+          upEvent:
+            PointerEvent
+        ) => {
+          const endClientX =
+            upEvent.clientX;
+
+          const endClientY =
+            upEvent.clientY;
+
+          const moved =
+            Math.hypot(
+              endClientX -
+                start.startClientX,
+              endClientY -
+                start.startClientY
+            );
+
+          if (
+            moved <
+            4
+          ) {
+            if (
+              !start.additive
+            ) {
+              onSelectionChange(
+                []
+              );
+            }
+          } else {
+            const selectionRect = {
+              left:
+                Math.min(
+                  start.startClientX,
+                  endClientX
+                ),
+              right:
+                Math.max(
+                  start.startClientX,
+                  endClientX
+                ),
+              top:
+                Math.min(
+                  start.startClientY,
+                  endClientY
+                ),
+              bottom:
+                Math.max(
+                  start.startClientY,
+                  endClientY
+                ),
+            };
+
+            const hits =
+              new Set<
+                string
+              >();
+
+            canvas
+              .querySelectorAll<
+                HTMLElement
+              >(
+                '[data-editor-element-id]'
+              )
+              .forEach(
+                (
+                  node
+                ) => {
+                  const itemRect =
+                    node.getBoundingClientRect();
+
+                  const intersects =
+                    itemRect.right >=
+                      selectionRect.left &&
+                    itemRect.left <=
+                      selectionRect.right &&
+                    itemRect.bottom >=
+                      selectionRect.top &&
+                    itemRect.top <=
+                      selectionRect.bottom;
+
+                  if (!intersects) {
+                    return;
+                  }
+
+                  const id =
+                    node.dataset
+                      .editorElementId;
+
+                  if (!id) {
+                    return;
+                  }
+
+                  getGroupedSelectionIds(
+                    scene,
+                    id
+                  ).forEach(
+                    (
+                      groupId
+                    ) =>
+                      hits.add(
+                        groupId
+                      )
+                  );
+                }
+              );
+
+            const next =
+              start.additive
+                ? Array.from(
+                    new Set([
+                      ...selectedElementIds,
+                      ...hits,
+                    ])
+                  )
+                : Array.from(
+                    hits
+                  );
+
+            onSelectionChange(
+              next
+            );
+          }
+
+          setMarquee(
+            null
+          );
+
           window.removeEventListener(
             'pointermove',
             handleMove
@@ -290,8 +1019,8 @@ React.FC<Props> = ({
     };
 
   return (
-    <section className="min-w-0 rounded-[14px] border border-black/8 bg-[#eeeeec] p-3 sm:p-5">
-      <div className="mb-3 flex items-center justify-between">
+    <section className="min-w-0 overflow-hidden rounded-[11px] border border-black/8 bg-[#eeeeec] p-2 sm:p-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[9px] font-black uppercase tracking-[0.14em] text-black/30">
           Canvas ·{' '}
           {device ===
@@ -301,113 +1030,247 @@ React.FC<Props> = ({
         </p>
 
         <p className="text-[9px] text-black/30">
-          Click nền để chỉnh scene
+          Shift kéo = khóa trục · Alt kéo = bỏ Snap · Shift resize = giữ tỉ lệ
         </p>
       </div>
 
-      <div className="flex min-h-[500px] items-center justify-center overflow-auto rounded-[12px] bg-[#deddd9] p-3 sm:p-5">
+      <div className="relative flex h-[calc(100svh-330px)] min-h-[420px] max-h-[760px] items-center justify-center overflow-auto rounded-[9px] bg-[#deddd9] p-3 sm:p-5">
         <div
-          ref={
-            canvasRef
-          }
-          onPointerDown={(
-            event
-          ) => {
-            if (
-              event.target ===
-              event.currentTarget
-            ) {
-              onClearSelection();
-            }
-          }}
           style={{
-            aspectRatio:
-              String(
-                aspectRatio
-              ),
-
-            width:
-              device ===
-              'mobile'
-                ? 'min(100%, 360px)'
-                : 'min(100%, 900px)',
-
-            backgroundColor:
-              background.color ||
-              '#ffffff',
-
-            backgroundImage:
-              background.imageUrl
-                ? `url("${background.imageUrl}")`
-                : undefined,
-
-            backgroundSize:
-              background.imageFit ||
-              'cover',
-
-            backgroundPosition:
-              'center',
-
-            overflow:
-              scene.overflow ||
-              'hidden',
+            transform:
+              `scale(${zoom / 100})`,
+            transformOrigin:
+              'center center',
           }}
-          className="relative shrink-0 select-none shadow-[0_18px_55px_rgba(0,0,0,0.14)]"
+          className="flex w-full shrink-0 items-center justify-center transition-transform duration-150"
         >
-          {background
-            .imageUrl && (
-            <div
-              style={{
-                background:
-                  background
-                    .overlayColor ||
-                  '#000000',
+          <div
+            ref={
+              canvasRef
+            }
+            onPointerDown={
+              beginMarquee
+            }
+            style={{
+              aspectRatio:
+                String(
+                  aspectRatio
+                ),
 
-                opacity:
-                  background
-                    .overlayOpacity ||
-                  0,
-              }}
-              className="pointer-events-none absolute inset-0 z-0"
-            />
-          )}
+              width:
+                device ===
+                'mobile'
+                  ? 'min(100%, 340px)'
+                  : 'min(100%, 900px)',
 
-          {scene.elements.map(
-            (
-              element
-            ) => (
-              <EditableCanvasElement
-                key={
-                  element.id
+              backgroundColor:
+                background.color ||
+                '#ffffff',
+
+              overflow:
+                scene.overflow ||
+                'hidden',
+            }}
+            className="relative isolate shrink-0 select-none shadow-[0_18px_55px_rgba(0,0,0,0.14)]"
+          >
+            {background
+              .imageUrl && (
+              <img
+                src={
+                  background
+                    .imageUrl
                 }
-                element={
-                  element
+                alt=""
+                draggable={
+                  false
                 }
-                device={
-                  device
-                }
-                selected={
-                  selectedElementId ===
-                  element.id
-                }
-                onSelect={() =>
-                  onSelect(
-                    element.id
-                  )
-                }
-                onPointerOperation={(
-                  event,
-                  mode
-                ) =>
-                  startPointerOperation(
-                    event,
-                    element,
-                    mode
-                  )
-                }
+                style={{
+                  objectFit:
+                    background
+                      .imageFit ||
+                    'cover',
+
+                  filter: [
+                    background
+                      .blurPx
+                      ? `blur(${background.blurPx}px)`
+                      : '',
+                    typeof background
+                      .brightness ===
+                      'number'
+                      ? `brightness(${background.brightness})`
+                      : '',
+                  ]
+                    .filter(
+                      Boolean
+                    )
+                    .join(' ') ||
+                    undefined,
+
+                  transform:
+                    background
+                      .blurPx
+                      ? 'scale(1.04)'
+                      : undefined,
+
+                  zIndex:
+                    -1000,
+                }}
+                className="pointer-events-none absolute inset-0 h-full w-full select-none"
               />
-            )
-          )}
+            )}
+
+            {background
+              .overlayColor &&
+              (
+                background
+                  .overlayOpacity ||
+                0
+              ) >
+                0 && (
+              <div
+                style={{
+                  background:
+                    background
+                      .overlayColor,
+                  opacity:
+                    background
+                      .overlayOpacity ||
+                    0,
+                  zIndex:
+                    -999,
+                }}
+                className="pointer-events-none absolute inset-0"
+              />
+            )}
+
+            {gridEnabled && (
+              <div
+                style={{
+                  backgroundImage:
+                    'linear-gradient(to right, rgba(174,45,76,.12) 1px, transparent 1px), linear-gradient(to bottom, rgba(174,45,76,.12) 1px, transparent 1px)',
+                  backgroundSize:
+                    '5% 5%',
+                  zIndex:
+                    20000,
+                }}
+                className="pointer-events-none absolute inset-0"
+              />
+            )}
+
+            {typeof guides.x ===
+              'number' && (
+              <div
+                style={{
+                  left:
+                    `${guides.x}%`,
+                  zIndex:
+                    22000,
+                }}
+                className="pointer-events-none absolute bottom-0 top-0 w-px bg-[#ff245a]"
+              />
+            )}
+
+            {typeof guides.y ===
+              'number' && (
+              <div
+                style={{
+                  top:
+                    `${guides.y}%`,
+                  zIndex:
+                    22000,
+                }}
+                className="pointer-events-none absolute left-0 right-0 h-px bg-[#ff245a]"
+              />
+            )}
+
+            {scene.elements.map(
+              (
+                element
+              ) => (
+                <EditableCanvasElement
+                  key={
+                    element.id
+                  }
+                  element={
+                    element
+                  }
+                  device={
+                    device
+                  }
+                  selected={
+                    selectedSet.has(
+                      element.id
+                    )
+                  }
+                  primary={
+                    primaryId ===
+                    element.id
+                  }
+                  multiSelection={
+                    selectedElementIds
+                      .length >
+                    1
+                  }
+                  onClickSelect={(
+                    event
+                  ) => {
+                    const additive =
+                      event.shiftKey ||
+                      event.metaKey ||
+                      event.ctrlKey;
+
+                    onSelectionChange(
+                      resolveClickSelection(
+                        element,
+                        additive
+                      )
+                    );
+                  }}
+                  onPointerOperation={(
+                    event,
+                    mode
+                  ) =>
+                    startPointerOperation(
+                      event,
+                      element,
+                      mode
+                    )
+                  }
+                />
+              )
+            )}
+
+            {marquee && (
+              <div
+                style={{
+                  left:
+                    `${Math.min(
+                      marquee.startX,
+                      marquee.currentX
+                    )}%`,
+                  top:
+                    `${Math.min(
+                      marquee.startY,
+                      marquee.currentY
+                    )}%`,
+                  width:
+                    `${Math.abs(
+                      marquee.currentX -
+                        marquee.startX
+                    )}%`,
+                  height:
+                    `${Math.abs(
+                      marquee.currentY -
+                        marquee.startY
+                    )}%`,
+                  zIndex:
+                    30000,
+                }}
+                className="pointer-events-none absolute border border-[#ff245a] bg-[#ff245a]/10"
+              />
+            )}
+          </div>
         </div>
       </div>
     </section>
@@ -425,8 +1288,16 @@ React.FC<{
   selected:
     boolean;
 
-  onSelect:
-    () => void;
+  primary:
+    boolean;
+
+  multiSelection:
+    boolean;
+
+  onClickSelect: (
+    event:
+      React.MouseEvent
+  ) => void;
 
   onPointerOperation: (
     event:
@@ -440,7 +1311,9 @@ React.FC<{
   element,
   device,
   selected,
-  onSelect,
+  primary,
+  multiSelection,
+  onClickSelect,
   onPointerOperation,
 }) => {
   if (
@@ -463,7 +1336,9 @@ React.FC<{
 
   return (
     <div
-      data-editor-element
+      data-editor-element-id={
+        element.id
+      }
       onPointerDown={(
         event
       ) =>
@@ -476,7 +1351,22 @@ React.FC<{
         event
       ) => {
         event.stopPropagation();
-        onSelect();
+
+        const additive =
+          event.shiftKey ||
+          event.metaKey ||
+          event.ctrlKey;
+
+        if (
+          selected &&
+          !additive
+        ) {
+          return;
+        }
+
+        onClickSelect(
+          event
+        );
       }}
       style={{
         position:
@@ -524,7 +1414,16 @@ React.FC<{
         }
       />
 
+      {element.locked &&
+      selected && (
+        <div className="pointer-events-none absolute -right-2 -top-2 z-[60] rounded-full bg-amber-500 px-1.5 py-1 text-[7px] font-black text-white shadow">
+          🔒
+        </div>
+      )}
+
       {selected &&
+      primary &&
+      !multiSelection &&
       !element.locked && (
         <>
           <div className="pointer-events-none absolute -inset-[5px] border border-dashed border-[#ff245a]/60" />
@@ -583,6 +1482,7 @@ React.FC<{
       <div
         style={{
           width: '100%',
+          height: '100%',
           color:
             style.color,
           fontFamily:
@@ -598,8 +1498,15 @@ React.FC<{
           textAlign:
             style.textAlign ||
             'left',
+          textTransform:
+            style.textTransform ===
+            'none'
+              ? undefined
+              : style.textTransform,
           fontStyle:
             style.fontStyle,
+          textDecoration:
+            style.textDecoration,
           whiteSpace:
             style.whiteSpace ||
             'pre-line',
@@ -617,6 +1524,10 @@ React.FC<{
     element.type ===
       'decor'
   ) {
+    const style =
+      element.imageStyle ||
+      {};
+
     return (
       <img
         src={
@@ -628,27 +1539,101 @@ React.FC<{
         }
         style={{
           objectFit:
-            element
-              .imageStyle
-              ?.objectFit ||
+            style.objectFit ||
             'contain',
 
           borderRadius:
-            element
-              .imageStyle
-              ?.borderRadius,
+            style.borderRadius,
 
           boxShadow:
-            element
-              .imageStyle
-              ?.boxShadow,
+            style.boxShadow,
 
           background:
-            element
-              .imageStyle
-              ?.background,
+            style.background,
+
+          borderColor:
+            style.borderColor,
+
+          borderWidth:
+            style.borderWidth,
+
+          borderStyle:
+            style.borderWidth
+              ? 'solid'
+              : undefined,
         }}
         className="h-full w-full select-none"
+      />
+    );
+  }
+
+  if (
+    element.type ===
+    'shape'
+  ) {
+    const style =
+      element.shapeStyle ||
+      {};
+
+    const kind =
+      style.kind ||
+      'rectangle';
+
+    if (
+      kind ===
+      'line'
+    ) {
+      return (
+        <div className="flex h-full w-full items-center">
+          <div
+            style={{
+              width: '100%',
+              borderTopColor:
+                style.borderColor ||
+                style.fill ||
+                '#111827',
+              borderTopWidth:
+                Math.max(
+                  1,
+                  style.borderWidth ||
+                    2
+                ),
+              borderTopStyle:
+                style.lineStyle ||
+                'solid',
+              boxShadow:
+                style.boxShadow,
+            }}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          background:
+            style.fill ||
+            '#f4b8c4',
+          borderColor:
+            style.borderColor,
+          borderWidth:
+            style.borderWidth,
+          borderStyle:
+            style.borderWidth
+              ? style.lineStyle ||
+                'solid'
+              : undefined,
+          borderRadius:
+            kind ===
+            'circle'
+              ? '9999px'
+              : style.borderRadius,
+          boxShadow:
+            style.boxShadow,
+        }}
       />
     );
   }
@@ -675,6 +1660,17 @@ React.FC<{
             style.fontSize,
           fontWeight:
             style.fontWeight,
+          lineHeight:
+            style.lineHeight,
+          letterSpacing:
+            style.letterSpacing,
+          textAlign:
+            style.textAlign ||
+            'center',
+          fontStyle:
+            style.fontStyle,
+          textDecoration:
+            style.textDecoration,
           background:
             style.background,
           borderColor:
@@ -690,7 +1686,7 @@ React.FC<{
           boxShadow:
             style.boxShadow,
         }}
-        className="flex items-center justify-center text-center"
+        className="flex items-center justify-center"
       >
         {element.label}
       </div>

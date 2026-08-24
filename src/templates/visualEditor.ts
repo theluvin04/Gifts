@@ -398,6 +398,58 @@ export const createButtonElement =
     actions: [],
   });
 
+export const createShapeElement =
+  (
+    index = 1
+  ):
+    SceneElement => ({
+    id:
+      createId(
+        'shape'
+      ),
+
+    type: 'shape',
+
+    name:
+      `Shape ${index}`,
+
+    frame: {
+      ...DEFAULT_FRAME,
+      width: 24,
+      height: 18,
+      zIndex: 1,
+    },
+
+    mobileFrame: {
+      width: 40,
+      height: 14,
+    },
+
+    shapeStyle: {
+      kind:
+        'rectangle',
+      fill:
+        '#f4b8c4',
+      borderColor:
+        '#cf5068',
+      borderWidth: 0,
+      borderRadius: 18,
+      lineStyle:
+        'solid',
+    },
+
+    animation: {
+      preset:
+        'fade',
+      durationMs: 420,
+      delayMs: 0,
+      easing:
+        'easeOut',
+    },
+
+    actions: [],
+  });
+
 const introScene:
 SceneCanvasDefinition = {
   id:
@@ -703,6 +755,40 @@ TemplateVisualEditorConfig = {
   ],
 };
 
+
+export const createBlankVisualEditorConfig =
+  ():
+    TemplateVisualEditorConfig => {
+    const firstScene =
+      createVisualScene(
+        1
+      );
+
+    firstScene.title =
+      'Scene 1';
+
+    firstScene.background = {
+      color:
+        '#ffffff',
+      imageFit:
+        'cover',
+      overlayColor:
+        '#000000',
+      overlayOpacity: 0,
+      blurPx: 0,
+      brightness: 1,
+    };
+
+    return {
+      enabled: true,
+      initialSceneId:
+        firstScene.id,
+      scenes: [
+        firstScene,
+      ],
+    };
+  };
+
 const safeNumber = (
   value: unknown,
   fallback: number,
@@ -899,7 +985,9 @@ const normalizeElement = (
     data.type ===
       'button' ||
     data.type ===
-      'decor'
+      'decor' ||
+    data.type ===
+      'shape'
       ? data.type
       : null;
 
@@ -924,6 +1012,22 @@ const normalizeElement = (
       ),
 
     type,
+
+    name:
+      safeString(
+        data.name,
+        '',
+        160
+      ) ||
+      undefined,
+
+    groupId:
+      safeString(
+        data.groupId,
+        '',
+        160
+      ) ||
+      undefined,
 
     frame:
       baseFrame,
@@ -1046,6 +1150,34 @@ const normalizeElement = (
               ...data.imageStyle,
             }
           : {},
+    };
+  }
+
+  if (
+    type ===
+    'shape'
+  ) {
+    return {
+      ...base,
+
+      type: 'shape',
+
+      shapeStyle:
+        data.shapeStyle &&
+        typeof data
+          .shapeStyle ===
+          'object'
+          ? {
+              ...data.shapeStyle,
+            }
+          : {
+              kind:
+                'rectangle',
+              fill:
+                '#f4b8c4',
+              borderRadius:
+                18,
+            },
     };
   }
 
