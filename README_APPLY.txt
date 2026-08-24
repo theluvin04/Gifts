@@ -1,87 +1,79 @@
-DEARLY — VISUAL EDITOR V3 + MULTI PRODUCT ADMIN
+DEARLY — ASSET LIBRARY V4
 
-BẢN NÀY LÀ BẢN CỘNG DỒN.
-Dùng V3 này thay cho ZIP Visual Editor V2 trước.
+MỤC TIÊU
+Thêm kho tài nguyên thật cho Visual Editor:
+- upload ảnh / GIF
+- chia thư mục
+- tìm kiếm
+- chọn asset đã upload
+- thay ảnh hiện tại
+- chọn background
+- dùng lại asset cho nhiều template
 
-1. BỐ CỤC EDITOR GỌN HƠN
-- Header Visual Editor nhỏ lại
-- Toolbar sticky
-- Canvas tự fit vào vùng còn lại của màn hình
-- Canvas có chiều cao theo viewport
-- Layers tự scroll
-- Properties tự scroll
-- Có nút ẩn/hiện Layers
-- Có nút ẩn/hiện Properties
-- Có chế độ Toàn màn hình
-- Màn hình < 1200px tự chuyển workspace thành 1 cột để không tràn ngang
-- Product header / tab Admin nhỏ gọn hơn
+KHO MẶC ĐỊNH
+- Ảnh thiệp
+- Background
+- Sticker
+- Nhân vật
+- Hoa & cây
+- Bánh & sinh nhật
+- Tape & scrapbook
+- Icon & decor
+- GIF
+- Khác
 
-2. QUẢN LÝ NHIỀU SẢN PHẨM
-Admin → Templates:
-- dropdown đổi sản phẩm
-- + Sản phẩm
-- tạo canvas trắng
-- nhân bản sản phẩm hiện tại
-- xóa sản phẩm
-- love-01 được bảo vệ không cho xóa
-- mỗi sản phẩm lưu document riêng: templates/{productId}
-- save dùng đúng productId, không còn hard-code love-01
-- list toàn bộ template từ Firestore
-- sản phẩm mới mặc định coming_soon + hidden để không lộ khi chưa làm xong
+CÓ THỂ TẠO THƯ MỤC RIÊNG
+VD:
+- Thiệp sinh nhật
+- Thiệp tốt nghiệp
+- Hoa hồng
+- Cake
+- Tape vintage
 
-3. TẠO SẢN PHẨM TRẮNG
-Sản phẩm mới có:
-- 1 scene trắng
-- Visual Engine bật
-- giá mặc định
-- status coming_soon
-- visible false
-Sau đó vào Bố cục và tự design.
+TRONG VISUAL EDITOR
+1. Nút "Tài nguyên"
+   → mở toàn bộ kho
+   → chọn asset
+   → asset được thêm vào canvas
 
-4. NHÂN BẢN
-Nhân bản copy:
-- scene
-- element
-- position
-- desktop/mobile
-- animation
-- click action
-- style
-- asset/config hiện tại
+2. Properties của Image / Decor
+   → "Chọn từ kho tài nguyên"
+   → thay src của element hiện tại
 
-5. CANVA MINI V2 VẪN GIỮ NGUYÊN
-- multi-select
-- marquee select
-- drag nhiều object
-- group / ungroup
-- copy / paste / duplicate
-- undo / redo
-- keyboard shortcuts
-- align / distribute
-- layer
-- lock / visible
-- grid / snap guide
-- zoom
-- shape
-- text formatting
-- animation
-- click action
+3. Properties của Scene
+   → "Chọn ảnh nền từ kho tài nguyên"
 
-FIREBASE
-Không cần sửa firestore.rules.
-Rules hiện tại đã cho Admin list/create/update/delete /templates.
+ASSET LIBRARY
+- sidebar thư mục + số lượng
+- search theo tên / folder / tag
+- upload nhiều file một lúc
+- chọn folder trước khi upload
+- tạo folder custom
+- rename asset
+- đổi folder
+- tags
+- delete
+- PNG / JPG / WEBP / GIF
+- max 15MB / file
 
-LƯU Ý PUBLIC
-Tạo sản phẩm mới ở V3 tạo product/template THẬT trong Firestore và design được ngay.
-Public storefront hiện vẫn dùng registry module tĩnh.
-Vì vậy product mới chưa tự xuất hiện ngoài Home / checkout cho đến khi làm bước Generic Customer Fields + Generic Checkout.
+LƯU TRỮ
+- file thật: Firebase Storage /dearly-assets/...
+- metadata: Firestore /assetLibrary/{id}
+- custom folder: Firestore /assetFolders/{id}
 
-CÁCH DÙNG
-1. Thay các file trong ZIP đúng path.
-2. Vào /admin/templates
-3. Bấm + Sản phẩm
-4. Nhập tên + ID
-5. Tạo sản phẩm
-6. Vào Bố cục
-7. Bấm Toàn màn hình để design
-8. Lưu thay đổi
+CẦN LÀM 1 LẦN TRONG FIREBASE
+1. Bật Firebase Storage nếu project chưa bật.
+2. Deploy/paste firestore.rules mới vào named Firestore database đang dùng.
+3. Deploy/paste storage.rules vào Firebase Storage Rules.
+
+LƯU Ý SECURITY
+Project hiện dùng named Firestore database cho Admin allowlist.
+Theo Firebase, Storage Rules chỉ đọc được default Firestore database khi project có nhiều database.
+Vì vậy:
+- app vẫn check Admin allowlist trước mọi upload/delete/update;
+- Storage rule bổ sung chặn Anonymous và chỉ cho Google-authenticated session upload ảnh <=15MB.
+Nếu sau này public lớn hơn, nên chuyển quyền Admin sang Firebase custom claim hoặc backend upload endpoint.
+
+KHÔNG CẦN
+- không nhét base64 vào Firestore
+- không cần copy file thủ công vào public/images

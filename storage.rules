@@ -1,0 +1,28 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isGoogleUser() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.email != null;
+    }
+
+    match /dearly-assets/{allPaths=**} {
+      // Final asset URLs are used by public gift pages.
+      allow read: if true;
+
+      // The browser service additionally verifies the Admin allowlist
+      // in the project's named Firestore database before every upload.
+      //
+      // Storage Rules cannot read a non-default Firestore database,
+      // therefore this rule can only restrict the Storage write itself
+      // to Google-authenticated sessions.
+      allow create, update: if isGoogleUser()
+        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+
+      allow delete: if isGoogleUser();
+    }
+  }
+}

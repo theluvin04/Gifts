@@ -79,6 +79,20 @@ interface Props {
 
   onToggleLock:
     () => void;
+
+  onOpenAssetLibrary: (
+    target:
+      | {
+          kind:
+            'background';
+        }
+      | {
+          kind:
+            'element';
+          elementId:
+            string;
+        }
+  ) => void;
 }
 
 export const InspectorPanel:
@@ -95,6 +109,7 @@ React.FC<Props> = ({
   onLayerUp,
   onLayerDown,
   onToggleLock,
+  onOpenAssetLibrary,
 }) => {
   if (
     elements.length ===
@@ -108,6 +123,12 @@ React.FC<Props> = ({
           }
           onChange={
             onSceneChange
+          }
+          onOpenAssetLibrary={() =>
+            onOpenAssetLibrary({
+              kind:
+                'background',
+            })
           }
         />
       </aside>
@@ -193,6 +214,14 @@ React.FC<Props> = ({
         onToggleLock={
           onToggleLock
         }
+        onOpenAssetLibrary={() =>
+          onOpenAssetLibrary({
+            kind:
+              'element',
+            elementId:
+              element.id,
+          })
+        }
       />
     </aside>
   );
@@ -209,9 +238,13 @@ React.FC<{
         SceneCanvasDefinition
       >
   ) => void;
+
+  onOpenAssetLibrary:
+    () => void;
 }> = ({
   scene,
   onChange,
+  onOpenAssetLibrary,
 }) => {
   const background =
     scene.background ||
@@ -399,6 +432,13 @@ React.FC<{
                   undefined,
               },
             })
+          }
+        />
+
+        <AssetPickerButton
+          label="Chọn ảnh nền từ kho tài nguyên"
+          onClick={
+            onOpenAssetLibrary
           }
         />
 
@@ -718,6 +758,9 @@ React.FC<{
 
   onToggleLock:
     () => void;
+
+  onOpenAssetLibrary:
+    () => void;
 }> = ({
   element,
   device,
@@ -730,6 +773,7 @@ React.FC<{
   onLayerUp,
   onLayerDown,
   onToggleLock,
+  onOpenAssetLibrary,
 }) => {
   const frame =
     getEffectiveFrame(
@@ -887,6 +931,9 @@ React.FC<{
             }
             onChange={
               onChange
+            }
+            onOpenAssetLibrary={
+              onOpenAssetLibrary
             }
           />
         )}
@@ -1951,9 +1998,13 @@ React.FC<{
     ) =>
       SceneElement
   ) => void;
+
+  onOpenAssetLibrary:
+    () => void;
 }> = ({
   element,
   onChange,
+  onOpenAssetLibrary,
 }) => {
   const style =
     element.imageStyle ||
@@ -2003,6 +2054,13 @@ React.FC<{
             } as
               SceneElement)
           )
+        }
+      />
+
+      <AssetPickerButton
+        label="Chọn từ kho tài nguyên"
+        onClick={
+          onOpenAssetLibrary
         }
       />
 
@@ -2488,6 +2546,28 @@ React.FC<{
     </>
   );
 };
+
+const AssetPickerButton:
+React.FC<{
+  label:
+    string;
+
+  onClick:
+    () => void;
+}> = ({
+  label,
+  onClick,
+}) => (
+  <button
+    type="button"
+    onClick={
+      onClick
+    }
+    className="w-full rounded-[9px] border border-[#cf5068]/20 bg-[#fff7f9] px-3 py-2.5 text-[9px] font-black text-[#a73551] transition hover:bg-[#f7e9ed]"
+  >
+    ▧ {label}
+  </button>
+);
 
 const ToggleRow:
 React.FC<{

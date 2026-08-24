@@ -1,116 +1,53 @@
 {
   "files": [
     {
-      "path": "src/components/admin/AdminOrdersPage.tsx",
-      "old": 1319,
-      "new": 1664,
-      "diff": 345,
+      "path": "src/config/firebase.ts",
+      "old": 122,
+      "new": 131,
+      "diff": 9,
       "new_file": false
     },
     {
-      "path": "src/components/admin/AdminTemplatesTab.tsx",
-      "old": 627,
-      "new": 1392,
-      "diff": 765,
-      "new_file": false
+      "path": "src/services/assetLibraryService.ts",
+      "old": 0,
+      "new": 884,
+      "diff": 884,
+      "new_file": true
     },
     {
       "path": "src/components/admin/AdminVisualTemplateEditor.tsx",
-      "old": 902,
-      "new": 2155,
-      "diff": 1253,
+      "old": 2155,
+      "new": 2391,
+      "diff": 236,
       "new_file": false
-    },
-    {
-      "path": "src/components/admin/visual-editor/EditorCanvas.tsx",
-      "old": 705,
-      "new": 1701,
-      "diff": 996,
-      "new_file": false
-    },
-    {
-      "path": "src/components/admin/visual-editor/EditorToolbar.tsx",
-      "old": 0,
-      "new": 455,
-      "diff": 455,
-      "new_file": true
     },
     {
       "path": "src/components/admin/visual-editor/InspectorPanel.tsx",
-      "old": 1283,
-      "new": 2525,
-      "diff": 1242,
+      "old": 2525,
+      "new": 2605,
+      "diff": 80,
       "new_file": false
     },
     {
-      "path": "src/components/admin/visual-editor/KeyboardShortcutsModal.tsx",
+      "path": "src/components/admin/visual-editor/AssetLibraryModal.tsx",
       "old": 0,
-      "new": 77,
-      "diff": 77,
+      "new": 1291,
+      "diff": 1291,
       "new_file": true
     },
     {
-      "path": "src/components/admin/visual-editor/LayersPanel.tsx",
-      "old": 132,
-      "new": 266,
-      "diff": 134,
+      "path": "firestore.rules",
+      "old": 190,
+      "new": 201,
+      "diff": 11,
       "new_file": false
     },
     {
-      "path": "src/components/admin/visual-editor/editorUtils.ts",
-      "old": 157,
-      "new": 638,
-      "diff": 481,
-      "new_file": false
-    },
-    {
-      "path": "src/components/admin/visual-editor/useEditorHistory.ts",
+      "path": "storage.rules",
       "old": 0,
-      "new": 343,
-      "diff": 343,
+      "new": 28,
+      "diff": 28,
       "new_file": true
-    },
-    {
-      "path": "src/components/admin/visual-editor/useEditorShortcuts.ts",
-      "old": 0,
-      "new": 363,
-      "diff": 363,
-      "new_file": true
-    },
-    {
-      "path": "src/engine/index.ts",
-      "old": 89,
-      "new": 92,
-      "diff": 3,
-      "new_file": false
-    },
-    {
-      "path": "src/engine/scene/SceneElementView.tsx",
-      "old": 423,
-      "new": 511,
-      "diff": 88,
-      "new_file": false
-    },
-    {
-      "path": "src/engine/scene/elementTypes.ts",
-      "old": 256,
-      "new": 310,
-      "diff": 54,
-      "new_file": false
-    },
-    {
-      "path": "src/services/adminService.ts",
-      "old": 555,
-      "new": 991,
-      "diff": 436,
-      "new_file": false
-    },
-    {
-      "path": "src/templates/visualEditor.ts",
-      "old": 1406,
-      "new": 1538,
-      "diff": 132,
-      "new_file": false
     }
   ]
 }

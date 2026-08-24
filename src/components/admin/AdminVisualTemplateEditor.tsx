@@ -35,6 +35,10 @@ import {
 } from './visual-editor/EditorCanvas';
 
 import {
+  AssetLibraryModal,
+} from './visual-editor/AssetLibraryModal';
+
+import {
   EditorToolbar,
 } from './visual-editor/EditorToolbar';
 
@@ -90,6 +94,22 @@ interface Props {
 type ChangeMode =
   | 'commit'
   | 'replace';
+
+type AssetPickerTarget =
+  | {
+      kind:
+        'insert';
+    }
+  | {
+      kind:
+        'background';
+    }
+  | {
+      kind:
+        'element';
+      elementId:
+        string;
+    };
 
 export const AdminVisualTemplateEditor:
 React.FC<Props> = ({
@@ -210,6 +230,17 @@ React.FC<Props> = ({
         update
       );
   }, []);
+
+  const [
+    assetPickerTarget,
+    setAssetPickerTarget,
+  ] =
+    useState<
+      AssetPickerTarget |
+      null
+    >(
+      null
+    );
 
   const clipboardRef =
     useRef<
@@ -689,6 +720,158 @@ React.FC<Props> = ({
       element.id,
     ]);
   };
+
+  const addAssetElement =
+    (
+      assetUrl: string,
+      assetName: string
+    ) => {
+      if (!scene) {
+        return;
+      }
+
+      const count =
+        scene.elements
+          .length +
+        1;
+
+      const element =
+        createImageElement(
+          count
+        );
+
+      element.src =
+        assetUrl;
+
+      element.name =
+        assetName;
+
+      if (
+        element.type ===
+        'image'
+      ) {
+        element.alt =
+          assetName;
+
+        element.imageStyle = {
+          ...element.imageStyle,
+          objectFit:
+            'contain',
+        };
+      }
+
+      const maxZ =
+        Math.max(
+          0,
+          ...scene.elements.map(
+            (
+              item
+            ) =>
+              item.frame
+                .zIndex ||
+              0
+          )
+        );
+
+      element.frame = {
+        ...element.frame,
+        zIndex:
+          maxZ +
+          1,
+      };
+
+      updateScene({
+        ...scene,
+        elements: [
+          ...scene.elements,
+          element,
+        ],
+      });
+
+      setSelectedElementIds([
+        element.id,
+      ]);
+    };
+
+  const handleAssetSelected =
+    (
+      asset: {
+        url: string;
+        name: string;
+      }
+    ) => {
+      if (
+        !assetPickerTarget
+      ) {
+        return;
+      }
+
+      if (
+        assetPickerTarget.kind ===
+        'insert'
+      ) {
+        addAssetElement(
+          asset.url,
+          asset.name
+        );
+      }
+
+      if (
+        assetPickerTarget.kind ===
+        'background' &&
+        scene
+      ) {
+        updateScene({
+          ...scene,
+          background: {
+            ...scene.background,
+            imageUrl:
+              asset.url,
+          },
+        });
+      }
+
+      if (
+        assetPickerTarget.kind ===
+        'element'
+      ) {
+        updateElement(
+          assetPickerTarget
+            .elementId,
+          (
+            element
+          ) => {
+            if (
+              element.type !==
+                'image' &&
+              element.type !==
+                'decor'
+            ) {
+              return element;
+            }
+
+            return {
+              ...element,
+              src:
+                asset.url,
+              name:
+                element.name ||
+                asset.name,
+              alt:
+                element.type ===
+                'image'
+                  ? asset.name
+                  : element.alt,
+            } as
+              SceneElement;
+          }
+        );
+      }
+
+      setAssetPickerTarget(
+        null
+      );
+    };
 
   const deleteSelected =
     () => {
@@ -1963,6 +2146,19 @@ React.FC<Props> = ({
             }
           />
 
+          <button
+            type="button"
+            onClick={() =>
+              setAssetPickerTarget({
+                kind:
+                  'insert',
+              })
+            }
+            className="rounded-[9px] bg-[#191919] px-3 py-2 text-[10px] font-black text-white shadow-[0_8px_20px_rgba(0,0,0,0.08)]"
+          >
+            Tài nguyên
+          </button>
+
           <AddElementButton
             label="+ Ảnh"
             onClick={() =>
@@ -2117,6 +2313,24 @@ React.FC<Props> = ({
             onToggleLock={
               toggleSelectedLock
             }
+            onOpenAssetLibrary={(
+              target
+            ) =>
+              setAssetPickerTarget(
+                target.kind ===
+                  'background'
+                  ? {
+                      kind:
+                        'background',
+                    }
+                  : {
+                      kind:
+                        'element',
+                      elementId:
+                        target.elementId,
+                    }
+              )
+            }
           />
           )}
         </div>
@@ -2127,6 +2341,28 @@ React.FC<Props> = ({
         </div>
         )}
       </div>
+
+      {assetPickerTarget && (
+        <AssetLibraryModal
+          title={
+            assetPickerTarget.kind ===
+              'insert'
+              ? 'Chọn tài nguyên để thêm vào canvas'
+              : assetPickerTarget.kind ===
+                  'background'
+                ? 'Chọn ảnh nền'
+                : 'Thay ảnh từ kho tài nguyên'
+          }
+          onClose={() =>
+            setAssetPickerTarget(
+              null
+            )
+          }
+          onSelect={
+            handleAssetSelected
+          }
+        />
+      )}
 
       {previewOpen && (
         <PreviewOverlay

@@ -79,6 +79,17 @@ service cloud.firestore {
     }
 
 
+    match /assetLibrary/{assetId} {
+      // Asset metadata is only needed inside Admin.
+      // Public templates use the final Storage download URL.
+      allow get, list, create, update, delete: if isAdmin();
+    }
+
+    match /assetFolders/{folderId} {
+      allow get, list, create, update, delete: if isAdmin();
+    }
+
+
     match /orderCodes/{orderNumber} {
       // Anonymous checkout may only CLAIM a brand-new 4-digit code.
       // Existing documents cannot be overwritten, so collisions retry.
