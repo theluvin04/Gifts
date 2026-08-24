@@ -1,56 +1,29 @@
-DEARLY — ASSET LIBRARY V4.1
-CODE ASSETS + UPLOADED ASSETS
+DEARLY ASSET LIBRARY V4.1.1 — PERMISSION FIX
 
-ĐÂY LÀ BẢN CỘNG DỒN.
-Nếu chưa cài V4 thì chỉ cần cài V4.1 này.
+LỖI ĐÃ XÁC ĐỊNH
+Firestore assetLibrary/assetFolders trả Missing or insufficient permissions.
+V4.1 dùng Promise.all và service throw trước khi trả codeAssets, nên public/images/** bị biến mất.
 
-KHO TÀI NGUYÊN SẼ CÓ CẢ
-1. File đang có sẵn trong public/images/**
-2. File upload mới qua Firebase Storage
+FIX
+- public/images/** được build/normalize trước.
+- Firestore assetLibrary chỉ là nguồn bổ sung.
+- Firestore lỗi -> vẫn trả code assets.
+- assetFolders lỗi -> vẫn trả folder từ code + default.
+- Upload vẫn cần Firebase rules đúng, nhưng không còn ảnh hưởng tới tab "Trong code".
 
-QUAN TRỌNG
-vite.config.ts tự quét public/images/** khi dev/build.
-Không phải khai báo từng ảnh.
+FILE
+src/services/assetLibraryService.ts
 
-Ví dụ:
-public/images/anh-thiep/card-01.png
-→ Ảnh thiệp
+LINE COUNT
+1024 -> 1064 (+40)
 
-public/images/sticker/heart.png
-→ Sticker
+SAU KHI THAY FILE
+1. AI Studio restart server / refresh Preview.
+2. Admin -> Templates -> Bố cục -> Tài nguyên.
+3. Bấm "Trong code".
+4. Phải thấy các file đang có trong public/images/**.
 
-public/images/background/pink-paper.webp
-→ Background
-
-public/images/letter/envelope-cover.png
-→ Ảnh thiệp
-
-public/images/template-assets/proposal/cat-love-sticker.gif
-→ Sticker
-
-public/images/gifts/gift-1.png
-→ Quà / Gifts
-
-TRONG MODAL KHO TÀI NGUYÊN
-Filter:
-- Tất cả
-- Trong code
-- Đã upload
-
-Tài nguyên trong code:
-- badge CODE
-- chọn được bình thường
-- dùng URL /images/...
-- read-only trong Admin
-
-Tài nguyên upload:
-- Firebase Storage
-- rename
-- tags
-- đổi folder
-- delete
-
-CURRENT MAIN ĐÃ XÁC NHẬN CÓ 8 FILE ẢNH/GIF:
+Hiện GitHub main đã xác nhận có:
 - /images/cat-default.gif
 - /images/dearly-logo.png
 - /images/gifts/gift-1.png
@@ -60,17 +33,5 @@ CURRENT MAIN ĐÃ XÁC NHẬN CÓ 8 FILE ẢNH/GIF:
 - /images/letter/envelope-cover.png
 - /images/template-assets/proposal/cat-love-sticker.gif
 
-CÁCH TỔ CHỨC CODE SAU NÀY
-public/images/
-├── anh-thiep/
-├── background/
-├── sticker/
-├── nhan-vat/
-├── hoa-cay/
-├── banh-sinh-nhat/
-├── tape-scrapbook/
-├── icon-decor/
-├── gif/
-└── ...
-
-Sau khi thêm file mới: restart dev hoặc build/deploy lại.
+Nếu phần "Đã upload" vẫn chưa dùng được thì deploy firestore.rules/storage.rules sau.
+Điều đó KHÔNG còn được phép làm mất ảnh "Trong code".

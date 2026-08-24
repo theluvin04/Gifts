@@ -469,35 +469,16 @@ export const listAdminAssetFolders =
     Promise<
       AssetLibraryFolder[]
     > => {
-    await assertAdmin();
-
-    const snapshot =
-      await getDocs(
-        collection(
-          db,
-          'assetFolders'
-        )
-      );
-
-    const custom =
-      snapshot.docs.map(
-        (
-          folderSnapshot
-        ) =>
-          normalizeFolder({
-            id:
-              folderSnapshot.id,
-            ...folderSnapshot
-              .data(),
-          })
-      );
-
     const map =
       new Map<
         string,
         AssetLibraryFolder
       >();
 
+    // IMPORTANT:
+    // Code assets must never depend on Firestore permissions.
+    // Build the local/code folder list first so the editor keeps
+    // working even when assetFolders rules have not been deployed.
     codeAssets.forEach(
       (
         asset
@@ -532,15 +513,49 @@ export const listAdminAssetFolders =
         )
     );
 
-    custom.forEach(
-      (
-        folder
-      ) =>
-        map.set(
-          folder.id,
+    try {
+      await assertAdmin();
+
+      const snapshot =
+        await getDocs(
+          collection(
+            db,
+            'assetFolders'
+          )
+        );
+
+      const custom =
+        snapshot.docs.map(
+          (
+            folderSnapshot
+          ) =>
+            normalizeFolder({
+              id:
+                folderSnapshot.id,
+              ...folderSnapshot
+                .data(),
+            })
+        );
+
+      custom.forEach(
+        (
           folder
-        )
-    );
+        ) =>
+          map.set(
+            folder.id,
+            folder
+          )
+      );
+    } catch (
+      error
+    ) {
+      // Uploaded/custom folders are optional.
+      // Never hide folders generated from public/images/**.
+      console.warn(
+        'Asset custom folders unavailable; using code/default folders:',
+        error
+      );
+    }
 
     return Array.from(
       map.values()
@@ -634,25 +649,17 @@ export const listAdminAssetLibrary =
     Promise<
       AssetLibraryItem[]
     > => {
-    await assertAdmin();
-
-    const snapshot =
-      await getDocs(
-        collection(
-          db,
-          'assetLibrary'
-        )
-      );
-
-    const uploaded =
-      snapshot.docs
+    // public/images/** is compiled into this virtual module.
+    // It must be available without any Firestore request.
+    const bundled =
+      codeAssets
         .map(
           (
-            assetSnapshot
+            asset
           ) =>
             normalizeAsset(
-              assetSnapshot.id,
-              assetSnapshot.data()
+              asset.id,
+              asset
             )
         )
         .filter(
@@ -664,16 +671,49 @@ export const listAdminAssetLibrary =
             )
         );
 
-    const bundled =
-      codeAssets.map(
-        (
-          asset
-        ) =>
-          normalizeAsset(
-            asset.id,
-            asset
+    let uploaded:
+      AssetLibraryItem[] = [];
+
+    try {
+      await assertAdmin();
+
+      const snapshot =
+        await getDocs(
+          collection(
+            db,
+            'assetLibrary'
           )
+        );
+
+      uploaded =
+        snapshot.docs
+          .map(
+            (
+              assetSnapshot
+            ) =>
+              normalizeAsset(
+                assetSnapshot.id,
+                assetSnapshot.data()
+              )
+          )
+          .filter(
+            (
+              asset
+            ) =>
+              Boolean(
+                asset.url
+              )
+          );
+    } catch (
+      error
+    ) {
+      // Firestore metadata is optional for code assets.
+      // A missing rule/database must not make public/images disappear.
+      console.warn(
+        'Uploaded asset library unavailable; showing code assets only:',
+        error
       );
+    }
 
     return [
       ...bundled,
