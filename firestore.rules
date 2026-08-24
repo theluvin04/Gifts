@@ -31,7 +31,6 @@ service cloud.firestore {
     }
 
     match /admins/{adminKey} {
-      // Cho user đọc document admin của chính email/UID mình
       allow get: if request.auth != null
         && (
           (
@@ -47,6 +46,14 @@ service cloud.firestore {
 
       allow list: if isAdmin();
       allow create, update, delete: if false;
+    }
+
+    match /templates/{templateId} {
+      // Storefront / checkout cần đọc giá và trạng thái template.
+      allow read: if true;
+
+      // Chỉ Admin được thay giá, sale, visibility và status.
+      allow create, update, delete: if isAdmin();
     }
 
     match /gifts/{giftId} {
@@ -73,16 +80,12 @@ service cloud.firestore {
           );
       }
 
-      // Cho phép get nếu document chưa tồn tại (trả về snapshot.exists = false),
-      // hoặc đã published, hoặc người tạo đang xem, hoặc admin đang xem.
       allow get: if resource == null
         || isPublished()
         || isOwner()
         || isAdmin();
 
-      // Chỉ admin được list/query danh sách gifts
       allow list: if isAdmin();
-
       allow create: if validWrite();
 
       allow update: if (isOwner() || isAdmin())
@@ -93,4 +96,3 @@ service cloud.firestore {
     }
   }
 }
-

@@ -1,15 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+
+import { BRAND } from '../config/brand';
+
 import {
-  ArrowRight,
-  Check,
-  Gift,
-  Heart,
-  Image,
-  Music2,
-  Sparkles,
-  WandSparkles,
-} from 'lucide-react';
+  DEFAULT_LOVE_TEMPLATE_CONFIG,
+  TemplateConfig,
+  getEffectiveTemplatePrice,
+  getPublicTemplateConfig,
+  getTemplateDiscountPercent,
+} from '../services/templateService';
 
 interface HomePageProps {
   onOpenLoveTemplate: () => void;
@@ -17,32 +17,78 @@ interface HomePageProps {
 
 const features = [
   {
-    icon: Image,
+    number: '01',
     title: 'Ảnh của riêng bạn',
     description:
       'Thay ảnh, lời nhắn và những kỷ niệm của hai người.',
   },
   {
-    icon: Music2,
+    number: '02',
     title: 'Nhạc riêng',
     description:
       'Thêm bài hát gắn với câu chuyện của bạn.',
   },
   {
-    icon: WandSparkles,
+    number: '03',
     title: 'Hiệu ứng tương tác',
     description:
       'Không chỉ là một tấm thiệp, mà là một trải nghiệm.',
   },
 ];
 
-export const HomePage: React.FC<HomePageProps> = ({
+const steps = [
+  {
+    step: '01',
+    title: 'Chọn template',
+    text: 'Chọn phong cách phù hợp với dịp và người bạn muốn tặng.',
+  },
+  {
+    step: '02',
+    title: 'Cá nhân hoá',
+    text: 'Thêm ảnh, tên, nhạc, lời nhắn và những chi tiết của riêng hai người.',
+  },
+  {
+    step: '03',
+    title: 'Gửi món quà',
+    text: 'Nhận một đường link riêng để gửi trực tiếp cho người ấy.',
+  },
+];
+
+export const HomePage: React.FC<
+  HomePageProps
+> = ({
   onOpenLoveTemplate,
 }) => {
+  const [template, setTemplate] =
+    useState<TemplateConfig>(
+      DEFAULT_LOVE_TEMPLATE_CONFIG
+    );
+
+  useEffect(() => {
+    void getPublicTemplateConfig()
+      .then(setTemplate);
+  }, []);
+
+  const effectivePrice =
+    getEffectiveTemplatePrice(
+      template
+    );
+
+  const discount =
+    getTemplateDiscountPercent(
+      template
+    );
+
+  const formatVnd = (
+    amount: number
+  ) =>
+    new Intl.NumberFormat(
+      'vi-VN'
+    ).format(amount) + 'đ';
+
   return (
-    <div className="min-h-[100svh] w-full bg-[#fff9fb] text-slate-800">
-      {/* NAV */}
-      <header className="sticky top-0 z-50 border-b border-rose-100/70 bg-[#fff9fb]/85 backdrop-blur-xl">
+    <div className="min-h-[100svh] w-full bg-[#fffaf8] text-[#171717]">
+      <header className="sticky top-0 z-50 border-b border-black/5 bg-[#fffaf8]/92 backdrop-blur-xl">
         <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 sm:px-8">
           <button
             type="button"
@@ -52,28 +98,27 @@ export const HomePage: React.FC<HomePageProps> = ({
                 behavior: 'smooth',
               })
             }
-            className="flex items-center gap-2"
+            className="flex items-center"
+            aria-label="Dearly - về đầu trang"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500 text-white shadow-sm shadow-rose-200">
-              <Heart className="h-4 w-4 fill-current" />
-            </div>
-
-            <span className="text-lg font-bold tracking-[-0.04em] text-slate-900">
-              Gifts
-            </span>
+            <img
+              src={BRAND.logoPath}
+              alt={BRAND.name}
+              className="h-10 w-auto object-contain sm:h-11"
+            />
           </button>
 
-          <nav className="hidden items-center gap-7 text-sm font-semibold text-slate-500 md:flex">
+          <nav className="hidden items-center gap-8 text-sm font-medium text-black/50 md:flex">
             <a
               href="#templates"
-              className="transition hover:text-rose-500"
+              className="transition hover:text-black"
             >
-              Mẫu quà
+              Templates
             </a>
 
             <a
               href="#how-it-works"
-              className="transition hover:text-rose-500"
+              className="transition hover:text-black"
             >
               Cách hoạt động
             </a>
@@ -82,43 +127,39 @@ export const HomePage: React.FC<HomePageProps> = ({
           <button
             type="button"
             onClick={onOpenLoveTemplate}
-            className="rounded-full bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-rose-500 sm:px-5 sm:text-sm"
+            className="rounded-[12px] bg-[#171717] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#e64a67] sm:px-5 sm:text-sm"
           >
-            Xem mẫu quà
+            Xem template
           </button>
         </div>
       </header>
 
       <main>
-        {/* HERO */}
-        <section className="relative overflow-hidden">
-          <div className="pointer-events-none absolute left-1/2 top-[-240px] h-[520px] w-[760px] -translate-x-1/2 rounded-full bg-rose-200/25 blur-[100px]" />
-
-          <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-16 sm:px-8 sm:pt-24 lg:grid-cols-[1fr_0.9fr] lg:gap-16 lg:pb-28 lg:pt-28">
-            {/* HERO TEXT */}
+        <section className="relative overflow-hidden border-b border-black/5">
+          <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-[1fr_0.92fr] lg:gap-16 lg:pb-28 lg:pt-24">
             <div className="mx-auto max-w-2xl text-center lg:mx-0 lg:text-left">
               <motion.div
                 initial={{
                   opacity: 0,
-                  y: 12,
+                  y: 10,
                 }}
                 animate={{
                   opacity: 1,
                   y: 0,
                 }}
-                className="mb-5 inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-3.5 py-2 text-xs font-bold text-rose-500 shadow-sm"
+                className="mb-6 flex items-center justify-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#d94763] lg:justify-start"
               >
-                <Sparkles className="h-3.5 w-3.5" />
+                <span className="h-px w-8 bg-[#d94763]/45" />
 
                 <span>
-                  Món quà kỷ niệm mang đậm dấu ấn riêng
+                  Digital gifts · personal by design
                 </span>
               </motion.div>
 
               <motion.h1
                 initial={{
                   opacity: 0,
-                  y: 18,
+                  y: 16,
                 }}
                 animate={{
                   opacity: 1,
@@ -127,12 +168,12 @@ export const HomePage: React.FC<HomePageProps> = ({
                 transition={{
                   delay: 0.05,
                 }}
-                className="text-[43px] font-bold leading-[1.03] tracking-[-0.055em] text-slate-900 sm:text-[62px] lg:text-[72px]"
+                className="text-[44px] font-black leading-[0.98] tracking-[-0.06em] text-[#171717] sm:text-[64px] lg:text-[76px]"
               >
                 Một món quà
                 <br />
 
-                <span className="text-rose-500">
+                <span className="font-medium italic text-[#d94763]">
                   có câu chuyện.
                 </span>
               </motion.h1>
@@ -140,7 +181,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <motion.p
                 initial={{
                   opacity: 0,
-                  y: 18,
+                  y: 16,
                 }}
                 animate={{
                   opacity: 1,
@@ -149,7 +190,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 transition={{
                   delay: 0.1,
                 }}
-                className="mx-auto mt-6 max-w-xl text-[15px] leading-7 text-slate-500 sm:text-[17px] lg:mx-0"
+                className="mx-auto mt-6 max-w-xl text-[15px] leading-7 text-black/52 sm:text-[17px] lg:mx-0"
               >
                 Chọn một template, thêm ảnh,
                 nhạc và lời nhắn của riêng bạn.
@@ -161,7 +202,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <motion.div
                 initial={{
                   opacity: 0,
-                  y: 18,
+                  y: 16,
                 }}
                 animate={{
                   opacity: 1,
@@ -170,21 +211,19 @@ export const HomePage: React.FC<HomePageProps> = ({
                 transition={{
                   delay: 0.15,
                 }}
-                className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start"
+                className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center lg:justify-start"
               >
                 <button
                   type="button"
                   onClick={onOpenLoveTemplate}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-rose-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-rose-200 transition hover:-translate-y-0.5 hover:bg-rose-600 sm:w-auto"
+                  className="w-full rounded-[14px] bg-[#d94763] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#c83b56] sm:w-auto"
                 >
-                  Xem Love Template
-
-                  <ArrowRight className="h-4 w-4" />
+                  Xem Love Story 01
                 </button>
 
                 <a
                   href="#how-it-works"
-                  className="flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-6 py-3.5 text-sm font-bold text-slate-600 transition hover:border-rose-200 hover:text-rose-500 sm:w-auto"
+                  className="border-b border-black/30 pb-1 text-sm font-semibold text-black/60 transition hover:border-black hover:text-black"
                 >
                   Xem cách hoạt động
                 </a>
@@ -198,142 +237,133 @@ export const HomePage: React.FC<HomePageProps> = ({
                   opacity: 1,
                 }}
                 transition={{
-                  delay: 0.25,
+                  delay: 0.24,
                 }}
-                className="mt-7 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-400 lg:justify-start"
+                className="mt-8 flex flex-wrap justify-center gap-x-3 gap-y-2 text-[11px] font-semibold text-black/38 lg:justify-start"
               >
-                <span className="flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-rose-500" />
+                <span>
                   Không cần cài app
                 </span>
 
-                <span className="flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-rose-500" />
+                <span aria-hidden="true">
+                  /
+                </span>
+
+                <span>
                   Mở trên điện thoại
                 </span>
 
-                <span className="flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-rose-500" />
+                <span aria-hidden="true">
+                  /
+                </span>
+
+                <span>
                   Cá nhân hoá
                 </span>
               </motion.div>
             </div>
 
-            {/* HERO PREVIEW */}
             <motion.div
               initial={{
                 opacity: 0,
-                y: 30,
-                scale: 0.96,
+                y: 24,
               }}
               animate={{
                 opacity: 1,
                 y: 0,
-                scale: 1,
               }}
               transition={{
                 delay: 0.12,
-                type: 'spring',
-                stiffness: 120,
-                damping: 18,
+                duration: 0.55,
               }}
-              className="relative mx-auto w-full max-w-[520px]"
+              className="mx-auto w-full max-w-[520px]"
             >
-              <div className="absolute -left-5 top-12 h-28 w-28 rounded-full bg-pink-200/50 blur-3xl" />
+              <div className="overflow-hidden border border-black/8 bg-white">
+                <div className="flex items-center justify-between border-b border-black/6 px-4 py-3">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-black/35">
+                    Love Story 01
+                  </span>
 
-              <div className="absolute -right-7 bottom-10 h-32 w-32 rounded-full bg-rose-200/60 blur-3xl" />
-
-              <div className="relative overflow-hidden rounded-[34px] border border-rose-100 bg-[#fff0f5] p-5 shadow-[0_30px_80px_rgba(190,70,110,0.16)] sm:p-7">
-                <div className="mb-5 flex items-center justify-between">
-                  <div className="flex gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-pink-200" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-white" />
-                  </div>
-
-                  <span className="rounded-full bg-white/80 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-rose-400">
-                    Live Preview
+                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#d94763]">
+                    Preview
                   </span>
                 </div>
 
-                <div className="flex min-h-[400px] flex-col items-center justify-center rounded-[26px] bg-[#fff7fa] px-5 py-8 text-center sm:min-h-[460px]">
-                  <p className="text-xl font-semibold text-rose-500 sm:text-2xl">
+                <div className="bg-[#fff5f6] px-5 py-8 text-center sm:px-7 sm:py-10">
+                  <p className="text-lg font-semibold tracking-[-0.02em] text-[#d94763] sm:text-xl">
                     I knew you'd say yes 💕
                   </p>
 
                   <img
                     src="/images/gifts/success.gif"
                     alt="Love template preview"
-                    className="mt-4 h-28 w-28 object-contain sm:h-36 sm:w-36"
+                    className="mx-auto mt-4 h-28 w-28 object-contain sm:h-36 sm:w-36"
                   />
 
-                  <div className="mt-6 grid w-full grid-cols-3 gap-3">
+                  <div className="mt-7 grid grid-cols-3 gap-2.5">
                     {[
                       '/images/gifts/gift-1.png',
                       '/images/gifts/gift-2.png',
                       '/images/gifts/gift-3.png',
-                    ].map((src, index) => (
-                      <motion.div
-                        key={src}
-                        whileHover={{
-                          y: -4,
-                        }}
-                        className="flex aspect-square items-center justify-center rounded-2xl bg-[#fce8f1] p-3 shadow-sm sm:p-4"
-                      >
-                        <img
-                          src={src}
-                          alt={`Gift ${
-                            index + 1
-                          }`}
-                          className="h-full w-full object-contain"
-                        />
-                      </motion.div>
-                    ))}
+                    ].map(
+                      (
+                        src,
+                        index
+                      ) => (
+                        <div
+                          key={src}
+                          className="aspect-square border border-black/5 bg-white/70 p-3 sm:p-4"
+                        >
+                          <img
+                            src={src}
+                            alt={`Gift ${
+                              index + 1
+                            }`}
+                            className="h-full w-full object-contain"
+                          />
+                        </div>
+                      )
+                    )}
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-between border-t border-[#d94763]/10 pt-4 text-left">
+                    <div>
+                      <p className="text-[9px] font-bold uppercase tracking-[0.17em] text-black/30">
+                        Includes
+                      </p>
+
+                      <p className="mt-1 text-xs font-semibold text-black/55">
+                        ảnh · nhạc · lời nhắn
+                      </p>
+                    </div>
+
+                    <span className="text-xs font-bold text-[#d94763]">
+                      01
+                    </span>
                   </div>
                 </div>
               </div>
-
-              <motion.div
-                animate={{
-                  y: [0, -7, 0],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
-                className="absolute -bottom-6 -left-3 hidden rounded-2xl border border-rose-100 bg-white px-4 py-3 shadow-xl sm:block"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-400">
-                  Personal
-                </p>
-
-                <p className="mt-0.5 text-xs font-semibold text-slate-600">
-                  ảnh + nhạc + lời nhắn
-                </p>
-              </motion.div>
             </motion.div>
           </div>
         </section>
 
-        {/* TEMPLATES */}
         <section
           id="templates"
-          className="border-y border-rose-100 bg-white py-20 sm:py-24"
+          className="bg-white py-18 sm:py-24"
         >
           <div className="mx-auto max-w-7xl px-5 sm:px-8">
-            <div className="mb-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div className="mb-10 grid gap-4 border-b border-black/8 pb-7 lg:grid-cols-[1fr_auto] lg:items-end">
               <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-rose-400">
-                  Mẫu quà tặng
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d94763]">
+                  Templates
                 </p>
 
-                <h2 className="text-3xl font-bold tracking-[-0.04em] text-slate-900 sm:text-4xl">
+                <h2 className="mt-3 text-3xl font-black tracking-[-0.045em] text-[#171717] sm:text-4xl">
                   Chọn câu chuyện của bạn
                 </h2>
               </div>
 
-              <p className="max-w-md text-sm leading-6 text-slate-500">
+              <p className="max-w-md text-sm leading-6 text-black/48">
                 Bắt đầu với một mẫu, sau đó
                 biến nó thành món quà chỉ thuộc
                 về hai người.
@@ -341,45 +371,78 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
 
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {/* LOVE TEMPLATE */}
               <motion.button
                 type="button"
+                disabled={
+                  template.status !==
+                  'available'
+                }
+                style={{
+                  display: template.visible
+                    ? undefined
+                    : 'none',
+                }}
                 onClick={onOpenLoveTemplate}
                 whileHover={{
-                  y: -6,
+                  y: -3,
                 }}
-                className="group overflow-hidden rounded-[28px] border border-rose-100 bg-[#fff8fa] text-left shadow-sm transition hover:shadow-xl hover:shadow-rose-100/70"
+                className="group overflow-hidden border border-black/8 bg-[#fff9fa] text-left transition hover:border-black/16"
               >
-                <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-[#fdebf2] p-8">
-                  <div className="absolute right-4 top-4 z-10 rounded-full bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-rose-500 shadow-sm">
-                    Có sẵn
-                  </div>
+                <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-[#fae8ec] p-8">
+                  <span className="absolute right-4 top-4 text-[9px] font-bold uppercase tracking-[0.18em] text-[#d94763]">
+                    {template.status ===
+                    'available'
+                      ? 'Available'
+                      : 'Paused'}
+                  </span>
 
                   <img
                     src="/images/gifts/success.gif"
                     alt="Love template"
-                    className="h-[58%] w-[58%] object-contain transition duration-500 group-hover:scale-105"
+                    className="h-[58%] w-[58%] object-contain transition duration-500 group-hover:scale-[1.03]"
                   />
                 </div>
 
                 <div className="p-5 sm:p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-rose-400">
-                        Tình yêu
+                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#d94763]">
+                        Love
                       </p>
 
-                      <h3 className="mt-1.5 text-xl font-bold tracking-[-0.03em] text-slate-900">
+                      <h3 className="mt-1.5 text-xl font-black tracking-[-0.03em] text-[#171717]">
                         Love Story 01
                       </h3>
                     </div>
 
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500 text-white transition group-hover:translate-x-1">
-                      <ArrowRight className="h-4 w-4" />
-                    </div>
+                    <span className="text-lg font-medium text-black/40 transition group-hover:translate-x-1 group-hover:text-black">
+                      →
+                    </span>
                   </div>
 
-                  <p className="mt-3 text-sm leading-6 text-slate-500">
+                  <div className="mt-4 flex items-baseline gap-2">
+                    <span className="text-base font-black text-[#171717]">
+                      {formatVnd(
+                        effectivePrice
+                      )}
+                    </span>
+
+                    {discount > 0 && (
+                      <>
+                        <span className="text-xs text-black/30 line-through">
+                          {formatVnd(
+                            template.basePrice
+                          )}
+                        </span>
+
+                        <span className="text-[10px] font-bold text-[#d94763]">
+                          -{discount}%
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  <p className="mt-3 text-sm leading-6 text-black/48">
                     YES/NO tương tác, album ảnh,
                     đĩa nhạc và một bức thư riêng
                     dành cho người ấy.
@@ -387,47 +450,53 @@ export const HomePage: React.FC<HomePageProps> = ({
                 </div>
               </motion.button>
 
-              {/* COMING SOON 1 */}
-              <div className="overflow-hidden rounded-[28px] border border-slate-100 bg-slate-50/70">
-                <div className="flex aspect-[4/3] items-center justify-center bg-[#fff6e8]">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-[28px] bg-white shadow-sm">
-                    <Gift className="h-9 w-9 text-amber-400" />
-                  </div>
+              <div className="overflow-hidden border border-black/6 bg-[#fafafa]">
+                <div className="flex aspect-[4/3] items-end justify-between bg-[#fff3dd] p-6">
+                  <span className="text-[72px] font-black leading-none tracking-[-0.08em] text-[#bf7c2d]/25">
+                    02
+                  </span>
+
+                  <span className="pb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-black/30">
+                    Coming soon
+                  </span>
                 </div>
 
-                <div className="p-5 opacity-60 sm:p-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-slate-400">
-                    Sinh nhật
+                <div className="p-5 sm:p-6">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-black/30">
+                    Birthday
                   </p>
 
-                  <h3 className="mt-1.5 text-xl font-bold tracking-[-0.03em] text-slate-700">
+                  <h3 className="mt-1.5 text-xl font-black tracking-[-0.03em] text-black/60">
                     Birthday Story
                   </h3>
 
-                  <p className="mt-3 text-sm text-slate-400">
+                  <p className="mt-3 text-sm text-black/35">
                     Sắp ra mắt
                   </p>
                 </div>
               </div>
 
-              {/* COMING SOON 2 */}
-              <div className="overflow-hidden rounded-[28px] border border-slate-100 bg-slate-50/70">
-                <div className="flex aspect-[4/3] items-center justify-center bg-[#f2efff]">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-[28px] bg-white shadow-sm">
-                    <Sparkles className="h-9 w-9 text-violet-400" />
-                  </div>
+              <div className="overflow-hidden border border-black/6 bg-[#fafafa]">
+                <div className="flex aspect-[4/3] items-end justify-between bg-[#f1edff] p-6">
+                  <span className="text-[72px] font-black leading-none tracking-[-0.08em] text-[#745cb9]/22">
+                    03
+                  </span>
+
+                  <span className="pb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-black/30">
+                    Coming soon
+                  </span>
                 </div>
 
-                <div className="p-5 opacity-60 sm:p-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-slate-400">
-                    Kỷ niệm
+                <div className="p-5 sm:p-6">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-black/30">
+                    Anniversary
                   </p>
 
-                  <h3 className="mt-1.5 text-xl font-bold tracking-[-0.03em] text-slate-700">
+                  <h3 className="mt-1.5 text-xl font-black tracking-[-0.03em] text-black/60">
                     Anniversary Story
                   </h3>
 
-                  <p className="mt-3 text-sm text-slate-400">
+                  <p className="mt-3 text-sm text-black/35">
                     Sắp ra mắt
                   </p>
                 </div>
@@ -436,142 +505,121 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </section>
 
-        {/* HOW IT WORKS */}
         <section
           id="how-it-works"
-          className="py-20 sm:py-28"
+          className="border-y border-black/5 bg-[#fffaf8] py-20 sm:py-28"
         >
           <div className="mx-auto max-w-7xl px-5 sm:px-8">
-            <div className="mx-auto max-w-2xl text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-rose-400">
-                Cách hoạt động
-              </p>
-
-              <h2 className="mt-3 text-3xl font-bold tracking-[-0.045em] text-slate-900 sm:text-4xl">
-                Từ template thành món quà của
-                riêng bạn
-              </h2>
-            </div>
-
-            <div className="mt-12 grid gap-5 md:grid-cols-3">
-              {[
-                {
-                  step: '01',
-                  title: 'Chọn template',
-                  text: 'Chọn phong cách phù hợp với dịp và người bạn muốn tặng.',
-                },
-                {
-                  step: '02',
-                  title: 'Cá nhân hoá',
-                  text: 'Thêm ảnh, tên, nhạc, lời nhắn và những chi tiết của riêng hai người.',
-                },
-                {
-                  step: '03',
-                  title: 'Gửi món quà',
-                  text: 'Nhận một đường link riêng để gửi trực tiếp hoặc sau này tạo QR.',
-                },
-              ].map((item) => (
-                <div
-                  key={item.step}
-                  className="rounded-[26px] border border-rose-100 bg-white p-6 sm:p-7"
-                >
-                  <span className="text-xs font-bold text-rose-400">
-                    {item.step}
-                  </span>
-
-                  <h3 className="mt-5 text-lg font-bold text-slate-900">
-                    {item.title}
-                  </h3>
-
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    {item.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* FEATURES */}
-        <section className="px-5 pb-20 sm:px-8 sm:pb-28">
-          <div className="mx-auto max-w-7xl overflow-hidden rounded-[34px] bg-slate-900 px-6 py-10 text-white sm:px-10 sm:py-14 lg:px-14">
-            <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+            <div className="grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:gap-16">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-rose-300">
-                  Hơn cả một tấm thiệp
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d94763]">
+                  How it works
                 </p>
 
-                <h2 className="mt-3 max-w-md text-3xl font-bold tracking-[-0.045em] sm:text-4xl">
-                  Một website nhỏ dành riêng cho
-                  một người.
+                <h2 className="mt-3 max-w-lg text-3xl font-black tracking-[-0.045em] text-[#171717] sm:text-4xl">
+                  Từ template thành món quà của
+                  riêng bạn
                 </h2>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                {features.map((feature) => {
-                  const Icon =
-                    feature.icon;
-
-                  return (
+              <div className="border-t border-black/10">
+                {steps.map(
+                  (item) => (
                     <div
-                      key={feature.title}
-                      className="rounded-2xl bg-white/7 p-5"
+                      key={item.step}
+                      className="grid gap-3 border-b border-black/10 py-6 sm:grid-cols-[64px_180px_1fr] sm:items-start sm:gap-5"
                     >
-                      <Icon className="h-5 w-5 text-rose-300" />
+                      <span className="text-[11px] font-bold tracking-[0.12em] text-[#d94763]">
+                        {item.step}
+                      </span>
 
-                      <h3 className="mt-4 text-sm font-bold">
-                        {feature.title}
+                      <h3 className="text-base font-bold tracking-[-0.02em] text-[#171717]">
+                        {item.title}
                       </h3>
 
-                      <p className="mt-2 text-xs leading-5 text-white/55">
-                        {feature.description}
+                      <p className="text-sm leading-6 text-black/48">
+                        {item.text}
                       </p>
                     </div>
-                  );
-                })}
+                  )
+                )}
               </div>
             </div>
           </div>
         </section>
 
-        {/* FINAL CTA */}
-        <section className="border-t border-rose-100 bg-white py-20 text-center">
-          <div className="mx-auto max-w-2xl px-5">
-            <img
-              src="/images/cat-default.gif"
-              alt=""
-              className="mx-auto h-24 w-24 object-contain"
-            />
+        <section className="bg-[#171717] text-white">
+          <div className="mx-auto grid max-w-7xl gap-12 px-5 py-18 sm:px-8 sm:py-24 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#f18a9d]">
+                More than a card
+              </p>
 
-            <h2 className="mt-5 text-3xl font-bold tracking-[-0.045em] text-slate-900 sm:text-4xl">
+              <h2 className="mt-3 max-w-md text-3xl font-black tracking-[-0.045em] sm:text-4xl">
+                Một website nhỏ dành riêng cho
+                một người.
+              </h2>
+            </div>
+
+            <div className="grid gap-0 border-t border-white/15 sm:grid-cols-3">
+              {features.map(
+                (feature) => (
+                  <div
+                    key={feature.title}
+                    className="border-b border-white/15 py-6 sm:border-r sm:px-5 sm:last:border-r-0"
+                  >
+                    <span className="text-[10px] font-bold tracking-[0.15em] text-[#f18a9d]">
+                      {feature.number}
+                    </span>
+
+                    <h3 className="mt-6 text-sm font-bold">
+                      {feature.title}
+                    </h3>
+
+                    <p className="mt-2 text-xs leading-5 text-white/48">
+                      {feature.description}
+                    </p>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white py-20 sm:py-24">
+          <div className="mx-auto max-w-3xl px-5 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d94763]">
+              Love Story 01
+            </p>
+
+            <h2 className="mt-4 text-3xl font-black tracking-[-0.045em] text-[#171717] sm:text-4xl">
               Thử template đầu tiên?
             </h2>
 
-            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-black/48">
               Mở thử trải nghiệm Love Story 01
-              trước khi mình làm tiếp hệ thống
-              cá nhân hoá.
+              và xem món quà sẽ trông như thế
+              nào trên điện thoại.
             </p>
 
             <button
               type="button"
               onClick={onOpenLoveTemplate}
-              className="mt-7 inline-flex items-center gap-2 rounded-full bg-rose-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-rose-200"
+              className="mt-7 rounded-[14px] bg-[#d94763] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#c83b56]"
             >
               Mở Love Story 01
-
-              <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-rose-100 bg-white py-7">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 text-xs text-slate-400 sm:flex-row sm:px-8">
-          <div className="flex items-center gap-2 font-bold text-slate-700">
-            <Heart className="h-3.5 w-3.5 fill-rose-500 text-rose-500" />
-            Gifts
-          </div>
+      <footer className="border-t border-black/6 bg-white py-7">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 text-xs text-black/35 sm:flex-row sm:px-8">
+          <img
+            src={BRAND.logoPath}
+            alt={BRAND.name}
+            className="h-9 w-auto object-contain"
+          />
 
           <span>
             Digital gifts for special moments.

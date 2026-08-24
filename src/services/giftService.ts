@@ -13,6 +13,12 @@ import {
 
 import { LoveConfig } from '../types';
 
+import {
+  DEFAULT_LOVE_TEMPLATE_CONFIG,
+  getEffectiveTemplatePrice,
+  getPublicTemplateConfig,
+} from './templateService';
+
 export type GiftStatus =
   | 'draft'
   | 'published';
@@ -62,13 +68,42 @@ export interface CheckoutGiftState {
   status: GiftStatus;
   isPublished: boolean;
   paymentStatus: PaymentStatus;
+  price: number;
+  currency: string;
 }
 
 const SAVED_KEYS_STORAGE =
   'gifts:created_ids';
 
-export const LOVE_01_PRICE = 99000;
-export const LOVE_01_CURRENCY = 'VND';
+export const LOVE_01_PRICE =
+  DEFAULT_LOVE_TEMPLATE_CONFIG.salePrice;
+
+export const LOVE_01_CURRENCY =
+  DEFAULT_LOVE_TEMPLATE_CONFIG.currency;
+
+const getCurrentLoveTemplatePrice =
+  async () => {
+    const template =
+      await getPublicTemplateConfig();
+
+    if (
+      !template.visible ||
+      template.status !==
+        'available'
+    ) {
+      throw new Error(
+        'Template này đang tạm ngừng nhận đơn.'
+      );
+    }
+
+    return {
+      price:
+        getEffectiveTemplatePrice(
+          template
+        ),
+      currency: template.currency,
+    };
+  };
 
 const generateGiftId = (
   length = 10
@@ -304,15 +339,18 @@ export const saveGiftDraftToFirestore =
       }
     }
 
+    const pricing =
+      await getCurrentLoveTemplatePrice();
+
     return saveGift(
       config,
       'draft',
       customId,
       {
         templateId: 'love-01',
-        price: LOVE_01_PRICE,
+        price: pricing.price,
         currency:
-          LOVE_01_CURRENCY,
+          pricing.currency,
         paymentStatus: 'unpaid',
       }
     );
@@ -327,15 +365,18 @@ export const publishGiftToFirestore =
     config: LoveConfig,
     customId?: string
   ) => {
+    const pricing =
+      await getCurrentLoveTemplatePrice();
+
     return saveGift(
       config,
       'published',
       customId,
       {
         templateId: 'love-01',
-        price: LOVE_01_PRICE,
+        price: pricing.price,
         currency:
-          LOVE_01_CURRENCY,
+          pricing.currency,
       }
     );
   };
@@ -359,9 +400,6 @@ export const submitBankTransferCheckout =
       giftId,
       {
         templateId: 'love-01',
-        price: LOVE_01_PRICE,
-        currency:
-          LOVE_01_CURRENCY,
         paymentStatus:
           'waiting_bank_transfer',
         paymentMethod:
@@ -403,6 +441,13 @@ export const fetchCheckoutGiftState =
       paymentStatus:
         data.paymentStatus ||
         'unpaid',
+      price:
+        typeof data.price === 'number'
+          ? data.price
+          : LOVE_01_PRICE,
+      currency:
+        data.currency ||
+        LOVE_01_CURRENCY,
     };
   };
 

@@ -7,6 +7,7 @@ import {
   limit,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
 } from 'firebase/firestore';
 
@@ -20,6 +21,12 @@ import {
 import {
   SavedGiftDocument,
 } from './giftService';
+
+import {
+  DEFAULT_LOVE_TEMPLATE_CONFIG,
+  TemplateConfig,
+  normalizeTemplateConfig,
+} from './templateService';
 
 export interface AdminSession {
   uid: string;
@@ -360,4 +367,63 @@ export const deleteAdminOrder =
         giftId
       )
     );
+  };
+
+
+export const getAdminTemplateConfig =
+  async (): Promise<TemplateConfig> => {
+    await assertAdminAccess();
+
+    const templateRef = doc(
+      db,
+      'templates',
+      'love-01'
+    );
+
+    const snapshot =
+      await getDoc(templateRef);
+
+    if (!snapshot.exists()) {
+      return {
+        ...DEFAULT_LOVE_TEMPLATE_CONFIG,
+      };
+    }
+
+    return normalizeTemplateConfig(
+      snapshot.data()
+    );
+  };
+
+export const saveAdminTemplateConfig =
+  async (
+    template: TemplateConfig
+  ) => {
+    await assertAdminAccess();
+
+    const normalized =
+      normalizeTemplateConfig(
+        template as unknown as Record<
+          string,
+          any
+        >
+      );
+
+    await setDoc(
+      doc(
+        db,
+        'templates',
+        'love-01'
+      ),
+      {
+        ...normalized,
+        id: 'love-01',
+        updatedAt:
+          serverTimestamp(),
+      },
+      {
+        merge: true,
+      }
+    );
+
+    return normalized;
   };

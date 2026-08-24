@@ -97,6 +97,9 @@ export const CheckoutPage: React.FC<
   const [giftId, setGiftId] =
     useState('');
 
+  const [checkoutPrice, setCheckoutPrice] =
+    useState(LOVE_01_PRICE);
+
   const [isPreparing, setIsPreparing] =
     useState(true);
 
@@ -159,6 +162,12 @@ export const CheckoutPage: React.FC<
             await fetchCheckoutGiftState(
               result.id
             );
+
+          if (state?.price) {
+            setCheckoutPrice(
+              state.price
+            );
+          }
 
           if (
             state?.paymentStatus ===
@@ -394,7 +403,7 @@ export const CheckoutPage: React.FC<
               </div>
 
               <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">
-                Thanh toán thành công
+                Payment confirmed
               </p>
 
               <h1 className="mt-2 text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
@@ -478,7 +487,7 @@ export const CheckoutPage: React.FC<
     const qrImageUrl =
       buildVietQrImageUrl(
         giftId,
-        LOVE_01_PRICE
+        checkoutPrice
       );
 
     return (
@@ -498,7 +507,7 @@ export const CheckoutPage: React.FC<
 
             <div className="text-center">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-400">
-                Chuyển khoản ngân hàng
+                Bank transfer
               </p>
 
               <p className="text-sm font-bold text-slate-900">
@@ -512,7 +521,7 @@ export const CheckoutPage: React.FC<
               className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-bold text-white"
             >
               <Eye className="h-3.5 w-3.5" />
-              Xem trước
+              Preview
             </button>
           </div>
         </header>
@@ -543,7 +552,7 @@ export const CheckoutPage: React.FC<
 
             <p className="mt-4 text-center text-3xl font-black tracking-[-0.04em] text-rose-500">
               {formatVnd(
-                LOVE_01_PRICE
+                checkoutPrice
               )}
             </p>
           </section>
@@ -597,7 +606,7 @@ export const CheckoutPage: React.FC<
                 <PaymentRow
                   label="Số tiền"
                   value={formatVnd(
-                    LOVE_01_PRICE
+                    checkoutPrice
                   )}
                 />
 
@@ -900,7 +909,7 @@ export const CheckoutPage: React.FC<
 
                 <span className="text-xl font-black tracking-[-0.03em] text-rose-500">
                   {formatVnd(
-                    LOVE_01_PRICE
+                    checkoutPrice
                   )}
                 </span>
               </div>
