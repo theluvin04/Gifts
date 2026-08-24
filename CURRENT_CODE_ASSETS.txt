@@ -1,0 +1,8 @@
+/images/cat-default.gif
+/images/dearly-logo.png
+/images/gifts/gift-1.png
+/images/gifts/gift-2.png
+/images/gifts/gift-3.png
+/images/gifts/success.gif
+/images/letter/envelope-cover.png
+/images/template-assets/proposal/cat-love-sticker.gif

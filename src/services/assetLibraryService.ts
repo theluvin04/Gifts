@@ -18,6 +18,8 @@ import {
   storage,
 } from '../config/firebase';
 
+import codeAssets from 'virtual:dearly-code-assets';
+
 import {
   getAdminSession,
 } from './adminService';
@@ -28,11 +30,16 @@ export interface AssetLibraryFolder {
   builtIn?: boolean;
 }
 
+export type AssetLibrarySource =
+  | 'code'
+  | 'storage';
+
 export interface AssetLibraryItem {
   id: string;
   name: string;
   url: string;
   storagePath: string;
+  sourcePath?: string;
   folderId: string;
   folderName: string;
   mimeType: string;
@@ -40,6 +47,9 @@ export interface AssetLibraryItem {
   tags: string[];
   createdAtMs: number;
   updatedAtMs: number;
+  source:
+    AssetLibrarySource;
+  readOnly?: boolean;
 }
 
 export interface UploadAssetLibraryInput {
@@ -126,6 +136,30 @@ AssetLibraryFolder[] = [
       'gif',
     name:
       'GIF',
+    builtIn:
+      true,
+  },
+  {
+    id:
+      'gifts',
+    name:
+      'Quà / Gifts',
+    builtIn:
+      true,
+  },
+  {
+    id:
+      'proposal',
+    name:
+      'Proposal',
+    builtIn:
+      true,
+  },
+  {
+    id:
+      'brand',
+    name:
+      'Brand',
     builtIn:
       true,
   },
@@ -410,6 +444,23 @@ const normalizeAsset =
           'number'
           ? data.updatedAtMs
           : 0,
+
+      source:
+        data.source ===
+          'code'
+          ? 'code'
+          : 'storage',
+
+      sourcePath:
+        typeof data
+          .sourcePath ===
+          'string'
+          ? data.sourcePath
+          : undefined,
+
+      readOnly:
+        data.readOnly ===
+          true,
     };
   };
 
@@ -446,6 +497,30 @@ export const listAdminAssetFolders =
         string,
         AssetLibraryFolder
       >();
+
+    codeAssets.forEach(
+      (
+        asset
+      ) => {
+        if (
+          !map.has(
+            asset.folderId
+          )
+        ) {
+          map.set(
+            asset.folderId,
+            {
+              id:
+                asset.folderId,
+              name:
+                asset.folderName,
+              builtIn:
+                true,
+            }
+          );
+        }
+      }
+    );
 
     DEFAULT_ASSET_FOLDERS.forEach(
       (
@@ -569,32 +644,71 @@ export const listAdminAssetLibrary =
         )
       );
 
-    return snapshot.docs
-      .map(
-        (
-          assetSnapshot
-        ) =>
-          normalizeAsset(
-            assetSnapshot.id,
-            assetSnapshot.data()
-          )
-      )
-      .filter(
+    const uploaded =
+      snapshot.docs
+        .map(
+          (
+            assetSnapshot
+          ) =>
+            normalizeAsset(
+              assetSnapshot.id,
+              assetSnapshot.data()
+            )
+        )
+        .filter(
+          (
+            asset
+          ) =>
+            Boolean(
+              asset.url
+            )
+        );
+
+    const bundled =
+      codeAssets.map(
         (
           asset
         ) =>
-          Boolean(
-            asset.url
+          normalizeAsset(
+            asset.id,
+            asset
           )
-      )
-      .sort(
-        (
-          left,
-          right
-        ) =>
-          right.createdAtMs -
-          left.createdAtMs
       );
+
+    return [
+      ...bundled,
+      ...uploaded,
+    ].sort(
+      (
+        left,
+        right
+      ) => {
+        if (
+          left.source !==
+          right.source
+        ) {
+          return left.source ===
+            'code'
+            ? -1
+            : 1;
+        }
+
+        if (
+          left.folderName !==
+          right.folderName
+        ) {
+          return left.folderName.localeCompare(
+            right.folderName,
+            'vi'
+          );
+        }
+
+        return left.name.localeCompare(
+          right.name,
+          'vi'
+        );
+      }
+    );
   };
 
 export const uploadAdminAssetLibrary =
@@ -729,6 +843,12 @@ export const uploadAdminAssetLibrary =
 
         updatedAtMs:
           now,
+
+        source:
+          'storage',
+
+        readOnly:
+          false,
       };
 
       try {
@@ -779,6 +899,16 @@ export const updateAdminAssetLibraryItem =
       AssetLibraryItem
     > => {
     await assertAdmin();
+
+    if (
+      item.source ===
+        'code' ||
+      item.readOnly
+    ) {
+      throw new Error(
+        'Tài nguyên trong code là read-only. Muốn đổi nhóm/tên hãy đổi folder hoặc tên file trong public/images.'
+      );
+    }
 
     const folder =
       patch.folder
@@ -851,6 +981,16 @@ export const deleteAdminAssetLibraryItem =
       AssetLibraryItem
   ) => {
     await assertAdmin();
+
+    if (
+      item.source ===
+        'code' ||
+      item.readOnly
+    ) {
+      throw new Error(
+        'Không thể xóa tài nguyên trong code từ Admin. Xóa file trong public/images nếu thật sự muốn bỏ.'
+      );
+    }
 
     if (
       item.storagePath

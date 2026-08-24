@@ -10,8 +10,8 @@
     {
       "path": "src/services/assetLibraryService.ts",
       "old": 0,
-      "new": 884,
-      "diff": 884,
+      "new": 1024,
+      "diff": 1024,
       "new_file": true
     },
     {
@@ -31,8 +31,15 @@
     {
       "path": "src/components/admin/visual-editor/AssetLibraryModal.tsx",
       "old": 0,
-      "new": 1291,
-      "diff": 1291,
+      "new": 1416,
+      "diff": 1416,
+      "new_file": true
+    },
+    {
+      "path": "src/types/dearly-code-assets.d.ts",
+      "old": 0,
+      "new": 21,
+      "diff": 21,
       "new_file": true
     },
     {
@@ -48,6 +55,13 @@
       "new": 28,
       "diff": 28,
       "new_file": true
+    },
+    {
+      "path": "vite.config.ts",
+      "old": 24,
+      "new": 625,
+      "diff": 601,
+      "new_file": false
     }
   ]
 }

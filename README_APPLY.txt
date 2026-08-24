@@ -1,79 +1,76 @@
-DEARLY — ASSET LIBRARY V4
+DEARLY — ASSET LIBRARY V4.1
+CODE ASSETS + UPLOADED ASSETS
 
-MỤC TIÊU
-Thêm kho tài nguyên thật cho Visual Editor:
-- upload ảnh / GIF
-- chia thư mục
-- tìm kiếm
-- chọn asset đã upload
-- thay ảnh hiện tại
-- chọn background
-- dùng lại asset cho nhiều template
+ĐÂY LÀ BẢN CỘNG DỒN.
+Nếu chưa cài V4 thì chỉ cần cài V4.1 này.
 
-KHO MẶC ĐỊNH
-- Ảnh thiệp
-- Background
-- Sticker
-- Nhân vật
-- Hoa & cây
-- Bánh & sinh nhật
-- Tape & scrapbook
-- Icon & decor
-- GIF
-- Khác
+KHO TÀI NGUYÊN SẼ CÓ CẢ
+1. File đang có sẵn trong public/images/**
+2. File upload mới qua Firebase Storage
 
-CÓ THỂ TẠO THƯ MỤC RIÊNG
-VD:
-- Thiệp sinh nhật
-- Thiệp tốt nghiệp
-- Hoa hồng
-- Cake
-- Tape vintage
+QUAN TRỌNG
+vite.config.ts tự quét public/images/** khi dev/build.
+Không phải khai báo từng ảnh.
 
-TRONG VISUAL EDITOR
-1. Nút "Tài nguyên"
-   → mở toàn bộ kho
-   → chọn asset
-   → asset được thêm vào canvas
+Ví dụ:
+public/images/anh-thiep/card-01.png
+→ Ảnh thiệp
 
-2. Properties của Image / Decor
-   → "Chọn từ kho tài nguyên"
-   → thay src của element hiện tại
+public/images/sticker/heart.png
+→ Sticker
 
-3. Properties của Scene
-   → "Chọn ảnh nền từ kho tài nguyên"
+public/images/background/pink-paper.webp
+→ Background
 
-ASSET LIBRARY
-- sidebar thư mục + số lượng
-- search theo tên / folder / tag
-- upload nhiều file một lúc
-- chọn folder trước khi upload
-- tạo folder custom
-- rename asset
-- đổi folder
+public/images/letter/envelope-cover.png
+→ Ảnh thiệp
+
+public/images/template-assets/proposal/cat-love-sticker.gif
+→ Sticker
+
+public/images/gifts/gift-1.png
+→ Quà / Gifts
+
+TRONG MODAL KHO TÀI NGUYÊN
+Filter:
+- Tất cả
+- Trong code
+- Đã upload
+
+Tài nguyên trong code:
+- badge CODE
+- chọn được bình thường
+- dùng URL /images/...
+- read-only trong Admin
+
+Tài nguyên upload:
+- Firebase Storage
+- rename
 - tags
+- đổi folder
 - delete
-- PNG / JPG / WEBP / GIF
-- max 15MB / file
 
-LƯU TRỮ
-- file thật: Firebase Storage /dearly-assets/...
-- metadata: Firestore /assetLibrary/{id}
-- custom folder: Firestore /assetFolders/{id}
+CURRENT MAIN ĐÃ XÁC NHẬN CÓ 8 FILE ẢNH/GIF:
+- /images/cat-default.gif
+- /images/dearly-logo.png
+- /images/gifts/gift-1.png
+- /images/gifts/gift-2.png
+- /images/gifts/gift-3.png
+- /images/gifts/success.gif
+- /images/letter/envelope-cover.png
+- /images/template-assets/proposal/cat-love-sticker.gif
 
-CẦN LÀM 1 LẦN TRONG FIREBASE
-1. Bật Firebase Storage nếu project chưa bật.
-2. Deploy/paste firestore.rules mới vào named Firestore database đang dùng.
-3. Deploy/paste storage.rules vào Firebase Storage Rules.
+CÁCH TỔ CHỨC CODE SAU NÀY
+public/images/
+├── anh-thiep/
+├── background/
+├── sticker/
+├── nhan-vat/
+├── hoa-cay/
+├── banh-sinh-nhat/
+├── tape-scrapbook/
+├── icon-decor/
+├── gif/
+└── ...
 
-LƯU Ý SECURITY
-Project hiện dùng named Firestore database cho Admin allowlist.
-Theo Firebase, Storage Rules chỉ đọc được default Firestore database khi project có nhiều database.
-Vì vậy:
-- app vẫn check Admin allowlist trước mọi upload/delete/update;
-- Storage rule bổ sung chặn Anonymous và chỉ cho Google-authenticated session upload ảnh <=15MB.
-Nếu sau này public lớn hơn, nên chuyển quyền Admin sang Firebase custom claim hoặc backend upload endpoint.
-
-KHÔNG CẦN
-- không nhét base64 vào Firestore
-- không cần copy file thủ công vào public/images
+Sau khi thêm file mới: restart dev hoặc build/deploy lại.

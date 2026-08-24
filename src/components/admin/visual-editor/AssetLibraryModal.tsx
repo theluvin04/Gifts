@@ -81,6 +81,18 @@ React.FC<Props> = ({
     useState('');
 
   const [
+    sourceFilter,
+    setSourceFilter,
+  ] =
+    useState<
+      'all' |
+      'code' |
+      'storage'
+    >(
+      'all'
+    );
+
+  const [
     loading,
     setLoading,
   ] =
@@ -263,6 +275,15 @@ React.FC<Props> = ({
             }
 
             if (
+              sourceFilter !==
+                'all' &&
+              asset.source !==
+                sourceFilter
+            ) {
+              return false;
+            }
+
+            if (
               !keyword
             ) {
               return true;
@@ -290,6 +311,7 @@ React.FC<Props> = ({
         assets,
         activeFolderId,
         search,
+        sourceFilter,
       ]
     );
 
@@ -538,7 +560,7 @@ React.FC<Props> = ({
 
             <p className="mt-0.5 text-[9px] text-black/30">
               {assets.length}{' '}
-              tài nguyên · phân thư mục để tìm nhanh
+              tài nguyên · code + upload · phân thư mục để tìm nhanh
             </p>
           </div>
 
@@ -716,6 +738,47 @@ React.FC<Props> = ({
                 }}
               />
 
+              <div className="flex items-center rounded-[8px] bg-[#f4f1f1] p-0.5">
+                <SourceButton
+                  active={
+                    sourceFilter ===
+                    'all'
+                  }
+                  label="Tất cả"
+                  onClick={() =>
+                    setSourceFilter(
+                      'all'
+                    )
+                  }
+                />
+
+                <SourceButton
+                  active={
+                    sourceFilter ===
+                    'code'
+                  }
+                  label="Trong code"
+                  onClick={() =>
+                    setSourceFilter(
+                      'code'
+                    )
+                  }
+                />
+
+                <SourceButton
+                  active={
+                    sourceFilter ===
+                    'storage'
+                  }
+                  label="Đã upload"
+                  onClick={() =>
+                    setSourceFilter(
+                      'storage'
+                    )
+                  }
+                />
+              </div>
+
               <span className="ml-auto text-[8px] text-black/25">
                 PNG · JPG · WEBP · GIF · tối đa 15MB/file
               </span>
@@ -830,6 +893,37 @@ React.FC<Props> = ({
   );
 };
 
+const SourceButton:
+React.FC<{
+  active:
+    boolean;
+
+  label:
+    string;
+
+  onClick:
+    () => void;
+}> = ({
+  active,
+  label,
+  onClick,
+}) => (
+  <button
+    type="button"
+    onClick={
+      onClick
+    }
+    className={[
+      'rounded-[6px] px-2 py-1.5 text-[8px] font-black transition',
+      active
+        ? 'bg-white text-[#a73551] shadow-sm'
+        : 'text-black/35 hover:text-black/60',
+    ].join(' ')}
+  >
+    {label}
+  </button>
+);
+
 const FolderButton:
 React.FC<{
   active:
@@ -929,6 +1023,13 @@ React.FC<{
           {asset.folderName}
         </span>
 
+        {asset.source ===
+          'code' && (
+          <span className="rounded bg-[#eaf0ff] px-1 py-0.5 text-[6px] font-black text-[#3455a7]">
+            CODE
+          </span>
+        )}
+
         {asset.mimeType ===
           'image/gif' && (
           <span className="rounded bg-[#f7e9ed] px-1 py-0.5 text-[6px] font-black text-[#a73551]">
@@ -937,7 +1038,26 @@ React.FC<{
         )}
       </div>
 
-      <div className="mt-2 grid grid-cols-[1fr_auto_auto] gap-1">
+      {asset.sourcePath && (
+        <p
+          title={
+            asset.sourcePath
+          }
+          className="mt-1 truncate font-mono text-[6px] text-black/20"
+        >
+          {asset.sourcePath}
+        </p>
+      )}
+
+      <div
+        className={[
+          'mt-2 grid gap-1',
+          asset.source ===
+          'code'
+            ? 'grid-cols-1'
+            : 'grid-cols-[1fr_auto_auto]',
+        ].join(' ')}
+      >
         <button
           type="button"
           onClick={
@@ -948,25 +1068,30 @@ React.FC<{
           Chọn
         </button>
 
-        <button
-          type="button"
-          onClick={
-            onEdit
-          }
-          className="rounded-[7px] border border-black/8 px-2 py-1.5 text-[8px] font-black text-black/40"
-        >
-          Sửa
-        </button>
+        {asset.source !==
+          'code' && (
+          <>
+            <button
+              type="button"
+              onClick={
+                onEdit
+              }
+              className="rounded-[7px] border border-black/8 px-2 py-1.5 text-[8px] font-black text-black/40"
+            >
+              Sửa
+            </button>
 
-        <button
-          type="button"
-          onClick={
-            onDelete
-          }
-          className="rounded-[7px] border border-red-100 px-2 py-1.5 text-[8px] font-black text-red-500"
-        >
-          ×
-        </button>
+            <button
+              type="button"
+              onClick={
+                onDelete
+              }
+              className="rounded-[7px] border border-red-100 px-2 py-1.5 text-[8px] font-black text-red-500"
+            >
+              ×
+            </button>
+          </>
+        )}
       </div>
     </div>
   </article>
