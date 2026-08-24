@@ -65,6 +65,97 @@ export interface UpdateAssetLibraryInput {
   tags?: string[];
 }
 
+export interface AssetLibraryRemoteState {
+  available: boolean;
+  code:
+    | 'ok'
+    | 'permission-denied'
+    | 'unavailable';
+  message: string;
+}
+
+let remoteState:
+  AssetLibraryRemoteState = {
+    available: true,
+    code:
+      'ok',
+    message:
+      '',
+  };
+
+const getErrorCode =
+  (
+    error:
+      unknown
+  ) => {
+    if (
+      typeof error ===
+        'object' &&
+      error !==
+        null &&
+      'code' in error &&
+      typeof (
+        error as {
+          code?: unknown;
+        }
+      ).code ===
+        'string'
+    ) {
+      return (
+        error as {
+          code: string;
+        }
+      ).code;
+    }
+
+    return '';
+  };
+
+const markRemoteFailure =
+  (
+    error:
+      unknown
+  ) => {
+    const code =
+      getErrorCode(
+        error
+      );
+
+    const denied =
+      code ===
+        'permission-denied' ||
+      code ===
+        'firestore/permission-denied';
+
+    remoteState = {
+      available: false,
+      code:
+        denied
+          ? 'permission-denied'
+          : 'unavailable',
+      message:
+        denied
+          ? 'Kho upload chưa được Firestore cấp quyền. Ảnh trong code vẫn dùng bình thường.'
+          : 'Kho upload đang tạm thời không truy cập được. Ảnh trong code vẫn dùng bình thường.',
+    };
+  };
+
+const markRemoteAvailable =
+  () => {
+    remoteState = {
+      available: true,
+      code:
+        'ok',
+      message:
+        '',
+    };
+  };
+
+export const getAdminAssetLibraryRemoteState =
+  () => ({
+    ...remoteState,
+  });
+
 export const DEFAULT_ASSET_FOLDERS:
 AssetLibraryFolder[] = [
   {
@@ -546,13 +637,12 @@ export const listAdminAssetFolders =
             folder
           )
       );
+
+      markRemoteAvailable();
     } catch (
       error
     ) {
-      // Uploaded/custom folders are optional.
-      // Never hide folders generated from public/images/**.
-      console.warn(
-        'Asset custom folders unavailable; using code/default folders:',
+      markRemoteFailure(
         error
       );
     }
@@ -704,13 +794,12 @@ export const listAdminAssetLibrary =
                 asset.url
               )
           );
+
+      markRemoteAvailable();
     } catch (
       error
     ) {
-      // Firestore metadata is optional for code assets.
-      // A missing rule/database must not make public/images disappear.
-      console.warn(
-        'Uploaded asset library unavailable; showing code assets only:',
+      markRemoteFailure(
         error
       );
     }

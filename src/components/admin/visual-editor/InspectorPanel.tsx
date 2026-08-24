@@ -1,4 +1,6 @@
-import React from 'react';
+import React, {
+  useState,
+} from 'react';
 
 import type {
   SceneCanvasDefinition,
@@ -422,21 +424,18 @@ React.FC<{
         />
 
         <NumberInput
-          label="Thời gian chuyển cảnh"
+          label="Chuyển cảnh"
           value={
-            (
-              scene.transition
-                ?.durationMs ||
-              420
-            ) /
-            1000
+            scene.transition
+              ?.durationMs ||
+            420
           }
           min={0}
-          max={5}
-          step={0.1}
-          suffix="giây"
+          max={5000}
+          step={20}
+          suffix="ms"
           onChange={(
-            durationSeconds
+            durationMs
           ) =>
             onChange({
               transition: {
@@ -445,11 +444,7 @@ React.FC<{
                   scene.transition
                     ?.preset ||
                   'fade',
-                durationMs:
-                  Math.round(
-                    durationSeconds *
-                    1000
-                  ),
+                durationMs,
                 easing:
                   scene.transition
                     ?.easing ||
@@ -1386,20 +1381,17 @@ React.FC<{
           <NumberInput
             label="Độ trễ"
             value={
-              (
-                element
-                  .animation
-                  ?.delayMs ||
-                0
-              ) /
-              1000
+              element
+                .animation
+                ?.delayMs ||
+              0
             }
             min={0}
-            max={10}
-            step={0.1}
-            suffix="giây"
+            max={10000}
+            step={50}
+            suffix="ms"
             onChange={(
-              delaySeconds
+              delayMs
             ) =>
               onChange(
                 (current) => ({
@@ -1412,11 +1404,7 @@ React.FC<{
                         .animation
                         ?.preset ||
                       'fade',
-                    delayMs:
-                      Math.round(
-                        delaySeconds *
-                        1000
-                      ),
+                    delayMs,
                   },
                 } as
                   SceneElement)
@@ -1447,33 +1435,30 @@ React.FC<{
                     : 'Thời lượng'
             }
             value={
+              element
+                .animation
+                ?.durationMs ||
               (
-                element
-                  .animation
-                  ?.durationMs ||
-                (
-                  element.animation
-                    ?.preset ===
-                    'spin' ||
-                  element.animation
-                    ?.preset ===
-                    'spin-reverse'
-                    ? 4000
+                element.animation
+                  ?.preset ===
+                  'spin' ||
+                element.animation
+                  ?.preset ===
+                  'spin-reverse'
+                  ? 4000
+                  : element.animation
+                        ?.preset ===
+                        'typewriter'
+                    ? 1800
                     : element.animation
                           ?.preset ===
-                          'typewriter'
-                      ? 1800
-                      : element.animation
-                            ?.preset ===
-                            'word-reveal' ||
-                        element.animation
-                            ?.preset ===
-                            'line-reveal'
-                        ? 1000
-                        : 500
-                )
-              ) /
-              1000
+                          'word-reveal' ||
+                      element.animation
+                          ?.preset ===
+                          'line-reveal'
+                      ? 1000
+                      : 500
+              )
             }
             min={
               element.animation
@@ -1482,14 +1467,14 @@ React.FC<{
               element.animation
                 ?.preset ===
                 'spin-reverse'
-                ? 0.3
+                ? 300
                 : 0
             }
-            max={20}
-            step={0.1}
-            suffix="giây"
+            max={20000}
+            step={50}
+            suffix="ms"
             onChange={(
-              durationSeconds
+              durationMs
             ) =>
               onChange(
                 (current) => ({
@@ -1502,11 +1487,7 @@ React.FC<{
                         .animation
                         ?.preset ||
                       'fade',
-                    durationMs:
-                      Math.round(
-                        durationSeconds *
-                        1000
-                      ),
+                    durationMs,
                   },
                 } as
                   SceneElement)
@@ -1905,6 +1886,145 @@ React.FC<{
   );
 };
 
+const FONT_OPTIONS = [
+  {
+    label:
+      'Quicksand',
+    value:
+      '"Quicksand", sans-serif',
+    group:
+      'Hiện đại',
+  },
+  {
+    label:
+      'Be Vietnam Pro',
+    value:
+      '"Be Vietnam Pro", sans-serif',
+    group:
+      'Hiện đại',
+  },
+  {
+    label:
+      'Poppins',
+    value:
+      '"Poppins", sans-serif',
+    group:
+      'Hiện đại',
+  },
+  {
+    label:
+      'Montserrat',
+    value:
+      '"Montserrat", sans-serif',
+    group:
+      'Hiện đại',
+  },
+  {
+    label:
+      'Nunito',
+    value:
+      '"Nunito", sans-serif',
+    group:
+      'Hiện đại',
+  },
+  {
+    label:
+      'Inter',
+    value:
+      '"Inter", sans-serif',
+    group:
+      'Hiện đại',
+  },
+  {
+    label:
+      'Comfortaa',
+    value:
+      '"Comfortaa", sans-serif',
+    group:
+      'Bo tròn',
+  },
+  {
+    label:
+      'Playfair Display',
+    value:
+      '"Playfair Display", serif',
+    group:
+      'Thanh lịch',
+  },
+  {
+    label:
+      'DM Serif Display',
+    value:
+      '"DM Serif Display", serif',
+    group:
+      'Thanh lịch',
+  },
+  {
+    label:
+      'Lora',
+    value:
+      '"Lora", serif',
+    group:
+      'Thanh lịch',
+  },
+  {
+    label:
+      'Libre Baskerville',
+    value:
+      '"Libre Baskerville", serif',
+    group:
+      'Thanh lịch',
+  },
+  {
+    label:
+      'Roboto Slab',
+    value:
+      '"Roboto Slab", serif',
+    group:
+      'Thanh lịch',
+  },
+  {
+    label:
+      'Dancing Script',
+    value:
+      '"Dancing Script", cursive',
+    group:
+      'Viết tay',
+  },
+  {
+    label:
+      'Caveat',
+    value:
+      '"Caveat", cursive',
+    group:
+      'Viết tay',
+  },
+  {
+    label:
+      'Great Vibes',
+    value:
+      '"Great Vibes", cursive',
+    group:
+      'Viết tay',
+  },
+  {
+    label:
+      'Satisfy',
+    value:
+      '"Satisfy", cursive',
+    group:
+      'Viết tay',
+  },
+  {
+    label:
+      'Pacifico',
+    value:
+      '"Pacifico", cursive',
+    group:
+      'Viết tay',
+  },
+] as const;
+
 const TextControls:
 React.FC<{
   element:
@@ -1975,20 +2095,16 @@ React.FC<{
         }
       />
 
-      <TextInput
-        label="Phông chữ"
+      <FontPicker
         value={
           style.fontFamily ||
-          ''
+          '"Quicksand", sans-serif'
         }
-        placeholder='"Quicksand", sans-serif'
         onChange={(
           fontFamily
         ) =>
           patch({
-            fontFamily:
-              fontFamily ||
-              undefined,
+            fontFamily,
           })
         }
       />
@@ -3154,6 +3270,200 @@ React.FC<{
         />
       </div>
     </>
+  );
+};
+
+const FontPicker:
+React.FC<{
+  value:
+    string;
+
+  onChange: (
+    value: string
+  ) => void;
+}> = ({
+  value,
+  onChange,
+}) => {
+  const [
+    open,
+    setOpen,
+  ] =
+    useState(false);
+
+  const [
+    search,
+    setSearch,
+  ] =
+    useState('');
+
+  const current =
+    FONT_OPTIONS.find(
+      (
+        font
+      ) =>
+        font.value ===
+        value
+    );
+
+  const visible =
+    FONT_OPTIONS.filter(
+      (
+        font
+      ) => {
+        const keyword =
+          search
+            .trim()
+            .toLowerCase();
+
+        if (
+          !keyword
+        ) {
+          return true;
+        }
+
+        return (
+          font.label
+            .toLowerCase()
+            .includes(
+              keyword
+            ) ||
+          font.group
+            .toLowerCase()
+            .includes(
+              keyword
+            )
+        );
+      }
+    );
+
+  return (
+    <div className="relative">
+      <p className="mb-1 text-[8px] font-black text-black/35">
+        Phông chữ
+      </p>
+
+      <button
+        type="button"
+        onClick={() =>
+          setOpen(
+            (
+              currentOpen
+            ) =>
+              !currentOpen
+          )
+        }
+        className="flex w-full items-center justify-between gap-3 rounded-[9px] border border-black/10 bg-[#faf9f8] px-3 py-2.5 text-left outline-none transition hover:border-[#cf5068]/30"
+      >
+        <span
+          style={{
+            fontFamily:
+              value,
+          }}
+          className="min-w-0 flex-1 truncate text-[15px] text-black/70"
+        >
+          {current?.label ||
+            value ||
+            'Chọn phông chữ'}
+        </span>
+
+        <span className="shrink-0 text-[9px] text-black/30">
+          {open
+            ? '▲'
+            : '▼'}
+        </span>
+      </button>
+
+      {open && (
+        <div className="mt-2 overflow-hidden rounded-[10px] border border-black/10 bg-white shadow-[0_14px_36px_rgba(0,0,0,0.12)]">
+          <div className="border-b border-black/6 p-2">
+            <input
+              value={
+                search
+              }
+              onChange={(
+                event
+              ) =>
+                setSearch(
+                  event.target
+                    .value
+                )
+              }
+              autoFocus
+              placeholder="Tìm phông chữ..."
+              className="w-full rounded-[8px] border border-black/8 bg-[#faf9f8] px-2.5 py-2 text-[9px] outline-none focus:border-[#cf5068]/35"
+            />
+          </div>
+
+          <div className="max-h-[310px] overflow-y-auto p-1.5">
+            {visible.map(
+              (
+                font
+              ) => {
+                const active =
+                  font.value ===
+                  value;
+
+                return (
+                  <button
+                    key={
+                      font.value
+                    }
+                    type="button"
+                    onClick={() => {
+                      onChange(
+                        font.value
+                      );
+
+                      setOpen(
+                        false
+                      );
+
+                      setSearch(
+                        ''
+                      );
+                    }}
+                    className={[
+                      'flex w-full items-center gap-3 rounded-[8px] px-2.5 py-2 text-left transition',
+                      active
+                        ? 'bg-[#fff0f4]'
+                        : 'hover:bg-[#faf7f7]',
+                    ].join(' ')}
+                  >
+                    <span
+                      style={{
+                        fontFamily:
+                          font.value,
+                      }}
+                      className="min-w-0 flex-1 truncate text-[16px] text-black/75"
+                    >
+                      {font.label}
+                    </span>
+
+                    <span className="shrink-0 text-[7px] font-bold uppercase tracking-[0.06em] text-black/25">
+                      {font.group}
+                    </span>
+
+                    {active && (
+                      <span className="shrink-0 text-[9px] font-black text-[#b83e57]">
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                );
+              }
+            )}
+
+            {visible.length ===
+              0 && (
+              <p className="px-3 py-5 text-center text-[9px] text-black/30">
+                Không tìm thấy phông chữ.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

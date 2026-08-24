@@ -11,6 +11,7 @@ import {
   DEFAULT_ASSET_FOLDERS,
   createAdminAssetFolder,
   deleteAdminAssetLibraryItem,
+  getAdminAssetLibraryRemoteState,
   listAdminAssetFolders,
   listAdminAssetLibrary,
   updateAdminAssetLibraryItem,
@@ -117,6 +118,18 @@ React.FC<Props> = ({
     useState('');
 
   const [
+    remoteAvailable,
+    setRemoteAvailable,
+  ] =
+    useState(true);
+
+  const [
+    remoteMessage,
+    setRemoteMessage,
+  ] =
+    useState('');
+
+  const [
     editing,
     setEditing,
   ] =
@@ -158,6 +171,17 @@ React.FC<Props> = ({
 
         setFolders(
           nextFolders
+        );
+
+        const remote =
+          getAdminAssetLibraryRemoteState();
+
+        setRemoteAvailable(
+          remote.available
+        );
+
+        setRemoteMessage(
+          remote.message
         );
 
         if (
@@ -338,6 +362,16 @@ React.FC<Props> = ({
         return;
       }
 
+      if (
+        !remoteAvailable
+      ) {
+        setError(
+          remoteMessage ||
+          'Kho upload chưa được cấp quyền.'
+        );
+        return;
+      }
+
       setUploading(
         true
       );
@@ -399,6 +433,16 @@ React.FC<Props> = ({
 
   const handleCreateFolder =
     async () => {
+      if (
+        !remoteAvailable
+      ) {
+        setError(
+          remoteMessage ||
+          'Kho upload chưa được cấp quyền.'
+        );
+        return;
+      }
+
       const name =
         window.prompt(
           'Tên thư mục mới\nVD: Thiệp sinh nhật'
@@ -645,10 +689,13 @@ React.FC<Props> = ({
 
             <button
               type="button"
+              disabled={
+                !remoteAvailable
+              }
               onClick={() =>
                 void handleCreateFolder()
               }
-              className="mt-2 whitespace-nowrap rounded-[8px] border border-dashed border-black/15 px-3 py-2 text-[9px] font-black text-black/40 hover:border-[#cf5068]/30 hover:text-[#b83e57] lg:w-full"
+              className="mt-2 whitespace-nowrap rounded-[8px] border border-dashed border-black/15 px-3 py-2 text-[9px] font-black text-black/40 hover:border-[#cf5068]/30 hover:text-[#b83e57] disabled:cursor-not-allowed disabled:opacity-35 lg:w-full"
             >
               + Thư mục
             </button>
@@ -665,7 +712,8 @@ React.FC<Props> = ({
                   uploadFolder.id
                 }
                 disabled={
-                  uploading
+                  uploading ||
+                  !remoteAvailable
                 }
                 onChange={(
                   event
@@ -698,7 +746,8 @@ React.FC<Props> = ({
               <button
                 type="button"
                 disabled={
-                  uploading
+                  uploading ||
+                  !remoteAvailable
                 }
                 onClick={() =>
                   inputRef.current
@@ -783,6 +832,13 @@ React.FC<Props> = ({
                 PNG · JPG · WEBP · GIF · tối đa 15MB/file
               </span>
             </div>
+
+            {!remoteAvailable && (
+              <div className="shrink-0 border-b border-amber-100 bg-amber-50 px-3 py-2.5 text-[9px] font-bold text-amber-700">
+                {remoteMessage ||
+                  'Kho upload chưa được Firestore cấp quyền. Ảnh trong code vẫn dùng bình thường.'}
+              </div>
+            )}
 
             {error && (
               <div className="shrink-0 border-b border-red-100 bg-red-50 px-3 py-2.5 text-[10px] font-bold text-red-600">
