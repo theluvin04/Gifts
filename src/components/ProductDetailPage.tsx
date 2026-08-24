@@ -77,23 +77,25 @@ React.FC<
   onPersonalize,
 }) => {
   return (
-    <div className="min-h-[100svh] bg-[#fffaf8] text-[#191919]">
+    <div className="min-h-[100svh] w-full max-w-full overflow-x-hidden bg-[#fffaf8] text-[#191919]">
       <header className="sticky top-0 z-50 border-b border-black/[0.055] bg-[#fffaf8]/90 backdrop-blur-xl">
-        <div className="mx-auto grid h-[72px] max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-5 sm:px-8">
+        <div className="mx-auto grid h-[64px] w-full max-w-7xl grid-cols-[44px_minmax(0,1fr)_44px] items-center px-3 sm:h-[72px] sm:grid-cols-[1fr_auto_1fr] sm:px-8">
           <button
             type="button"
             onClick={onBackHome}
-            className="inline-flex w-fit items-center gap-2 text-sm font-bold text-black/55 transition hover:text-[#c9435d]"
+            className="inline-flex h-10 w-10 items-center justify-center text-sm font-bold text-black/55 transition hover:text-[#c9435d] sm:h-auto sm:w-fit sm:justify-start sm:gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Trang chủ
+            <span className="hidden sm:inline">
+              Trang chủ
+            </span>
           </button>
 
           <BrandLogo
             onClick={
               onBackHome
             }
-            imageClassName="h-11 w-auto sm:h-12"
+            imageClassName="h-9 w-auto max-w-[104px] sm:h-12 sm:max-w-none"
           />
 
           <div />
@@ -102,7 +104,7 @@ React.FC<
 
       <main>
         <section className="relative overflow-hidden border-b border-black/[0.055] bg-[radial-gradient(circle_at_72%_30%,rgba(244,200,210,0.36),transparent_32%)]">
-          <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-16 lg:pb-28">
+          <div className="mx-auto grid w-full min-w-0 max-w-7xl gap-10 px-4 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-16 lg:pb-28">
             <motion.div
               initial={{
                 opacity: 0,
@@ -123,7 +125,7 @@ React.FC<
                 </span>
               </div>
 
-              <h1 className="mt-6 text-[48px] font-black leading-[0.98] tracking-[-0.065em] sm:text-[66px]">
+              <h1 className="mt-6 text-[40px] font-black leading-[0.98] tracking-[-0.055em] min-[360px]:text-[44px] sm:text-[66px]">
                 Love Story 01
               </h1>
 

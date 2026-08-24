@@ -328,10 +328,10 @@ React.FC<
           stiffness: 160,
           damping: 20,
         }}
-        className="w-full max-w-[920px] rounded-[28px] border border-pink-200/70 bg-white/55 p-3 shadow-[0_20px_60px_rgba(244,114,182,0.15)] backdrop-blur-sm sm:p-5 lg:p-6"
+        className="w-full min-w-0 max-w-[920px] overflow-hidden rounded-[24px] min-[360px]:rounded-[28px] border border-pink-200/70 bg-white/55 p-3 shadow-[0_20px_60px_rgba(244,114,182,0.15)] backdrop-blur-sm sm:p-5 lg:p-6"
       >
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[0.82fr_1.35fr] lg:gap-5">
-          <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-[22px] bg-[#f8a9c4] px-5 py-8 sm:min-h-[380px] lg:min-h-[430px]">
+        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[0.82fr_1.35fr] lg:gap-5">
+          <div className="relative flex min-h-[270px] min-w-0 items-center justify-center overflow-hidden rounded-[20px] bg-[#f8a9c4] px-3 py-6 min-[360px]:min-h-[300px] min-[360px]:rounded-[22px] min-[360px]:px-5 min-[360px]:py-8 sm:min-h-[380px] lg:min-h-[430px]">
             <motion.div
               animate={
                 usesYouTube ||
@@ -355,7 +355,7 @@ React.FC<
                       duration: 0.35,
                     }
               }
-              className="relative flex aspect-square w-[210px] items-center justify-center rounded-full bg-black shadow-[0_18px_35px_rgba(0,0,0,0.24)] sm:w-[280px] lg:w-[300px]"
+              className="relative flex aspect-square w-[190px] max-w-full items-center justify-center rounded-full min-[360px]:w-[210px] bg-black shadow-[0_18px_35px_rgba(0,0,0,0.24)] sm:w-[280px] lg:w-[300px]"
               style={{
                 backgroundImage:
                   'repeating-radial-gradient(circle at center, #111 0px, #111 4px, #191919 5px, #191919 7px)',
@@ -388,7 +388,7 @@ React.FC<
             </span>
           </div>
 
-          <div className="flex min-h-[430px] flex-col overflow-hidden rounded-[22px] bg-[#e874a1]">
+          <div className="flex min-h-[390px] min-w-0 flex-col overflow-hidden rounded-[20px] bg-[#e874a1] min-[360px]:min-h-[430px] min-[360px]:rounded-[22px]">
             {usesYouTube &&
             youtubeEmbedUrl ? (
               <>
@@ -428,7 +428,7 @@ React.FC<
                     YouTube video
                   </p>
 
-                  <div className="mt-5 grid grid-cols-[48px_1fr_48px] items-center">
+                  <div className="mt-5 grid min-w-0 grid-cols-[42px_minmax(0,1fr)_42px] items-center min-[360px]:grid-cols-[48px_minmax(0,1fr)_48px]">
                     <div />
 
                     <div className="flex items-center justify-center gap-5">
@@ -538,7 +538,7 @@ React.FC<
                     </span>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-[48px_1fr_48px] items-center">
+                  <div className="mt-4 grid min-w-0 grid-cols-[42px_minmax(0,1fr)_42px] items-center min-[360px]:grid-cols-[48px_minmax(0,1fr)_48px]">
                     <button
                       type="button"
                       onClick={() =>
@@ -681,7 +681,7 @@ React.FC<
                         )
                       }
                       className={[
-                        'flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left transition',
+                        'flex min-w-0 w-full items-center gap-2 rounded-[14px] px-2.5 py-2.5 text-left transition min-[360px]:gap-3 min-[360px]:px-3',
                         isCurrent
                           ? 'bg-rose-50'
                           : 'hover:bg-pink-50/60',

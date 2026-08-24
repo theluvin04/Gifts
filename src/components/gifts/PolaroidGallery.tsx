@@ -283,7 +283,7 @@ const CrossedFilmStrips: React.FC<{
   <div
     className={
       compact
-        ? 'relative mx-auto h-[220px] w-[218px]'
+        ? 'relative mx-auto h-[220px] w-[218px] max-w-full'
         : 'relative left-1/2 h-[330px] w-[364px] -translate-x-1/2'
     }
   >
@@ -503,14 +503,14 @@ export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
       </div>
 
       {/* MOBILE */}
-      <div className="mx-auto w-full max-w-[390px] sm:hidden">
+      <div className="mx-auto w-full min-w-0 max-w-[390px] overflow-hidden sm:hidden">
         <div
           style={{
             background:
               design.memories
                 .background,
           }}
-          className="relative overflow-hidden rounded-[26px] px-3 py-5"
+          className="relative w-full min-w-0 overflow-hidden rounded-[24px] px-2.5 py-4 min-[360px]:px-3 min-[360px]:py-5"
         >
           <p
             style={{
@@ -542,7 +542,7 @@ export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid min-w-0 grid-cols-2 gap-2.5 min-[360px]:gap-3">
             <PolaroidCard
               photo={leftTop}
               caption={visibleCaptions.leftTop}

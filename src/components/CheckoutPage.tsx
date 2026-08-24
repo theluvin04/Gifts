@@ -923,8 +923,8 @@ export const CheckoutPage: React.FC<
                 <UserRound className="h-5 w-5" />
               </span>
 
-              <div>
-                <h1 className="text-xl font-bold tracking-[-0.03em] text-slate-900">
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold tracking-[-0.03em] text-slate-900 min-[360px]:text-xl">
                   Thông tin người mua
                 </h1>
 
@@ -983,8 +983,8 @@ export const CheckoutPage: React.FC<
                 <CreditCard className="h-5 w-5" />
               </span>
 
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-slate-900 min-[360px]:text-lg">
                   Chuyển khoản ngân hàng
                 </h2>
 
@@ -997,7 +997,7 @@ export const CheckoutPage: React.FC<
 
             <div className="mt-5 rounded-[22px] border-2 border-rose-200 bg-rose-50/60 p-4">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500 text-white">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500 text-white">
                   <Landmark className="h-4 w-4" />
                 </span>
 
@@ -1102,12 +1102,12 @@ export const CheckoutPage: React.FC<
 
               <div className="my-5 h-px bg-slate-100" />
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-700">
+              <div className="flex min-w-0 items-center justify-between gap-3">
+                <span className="min-w-0 text-sm font-bold text-slate-700">
                   Tổng thanh toán
                 </span>
 
-                <span className="text-xl font-black tracking-[-0.03em] text-rose-500">
+                <span className="shrink-0 text-lg font-black tracking-[-0.03em] text-rose-500 min-[360px]:text-xl">
                   {formatVnd(
                     checkoutPrice
                   )}

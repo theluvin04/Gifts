@@ -1,29 +1,30 @@
-DEARLY — FIX TEMPLATE SAVE + CUSTOMER ASSET REFRESH
+DEARLY — MOBILE OVERFLOW FIX
 
-THAY ĐÚNG 3 FILE:
-- src/components/admin/AdminOrdersPage.tsx
-- src/components/admin/AdminTemplatesTab.tsx
+Mục tiêu: sửa layout mobile bị tràn/cắt sang phải, không chỉ che bằng overflow-x-hidden.
+
+THAY 7 FILE:
+- src/index.css
+- src/components/Homepage.tsx
+- src/components/ProductDetailPage.tsx
 - src/components/CreateLovePage.tsx
+- src/components/CheckoutPage.tsx
+- src/components/gifts/PolaroidGallery.tsx
+- src/components/gifts/VinylMusicPlayer.tsx
 
-FIX 1 — ADMIN KHÔNG CÒN QUÊN LƯU
-- Bất kỳ thay đổi nào trong Templates đều đánh dấu dirty.
-- Sticky bar dưới màn hình: Có thay đổi chưa lưu.
-- Nút Lưu luôn nhìn thấy khi kéo xuống GIF & ảnh.
-- Lưu xong hiện Đã lưu thay đổi ✓.
-- Nếu rời tab Templates khi chưa lưu sẽ hỏi trước.
-- Nếu đóng/reload browser khi chưa lưu, browser cảnh báo.
-
-FIX 2 — /create/love-01 NHẬN ASSET MỚI
-- Không dùng hàm fallback-cache để refresh asset nữa.
-- Dùng getRequiredPublicTemplateConfigById để đọc Firestore thật.
-- Khi quay lại tab/browser focus, template tự refresh.
-- Khi document trở lại visible, template tự refresh.
-- Vì vậy sau khi Admin bật 'Khách được chọn' + Lưu, quay lại /create/love-01 sẽ tự thấy lựa chọn.
-
-KHÔNG CẦN SỬA FIREBASE RULES.
-KHÔNG CẦN SỬA adminService.ts.
+ĐÃ SỬA:
+- Global viewport clamp cho html/body/#root và media.
+- Home header rút gọn trên mobile, không ép logo + 2 nút dài trên cùng một hàng.
+- Product header chuyển sang 44px / center / 44px ở mobile, chỉ hiện mũi tên.
+- Create page dùng grid header mobile chuẩn; tab ngang không kéo body rộng; các card/input có min-w-0.
+- Checkout bổ sung min-w-0 và typography nhỏ hơn ở màn rất hẹp.
+- Polaroid mobile dùng max-width thật của viewport và giảm gap/padding ở màn <360px.
+- Vinyl player co được xuống màn 320–359px; đĩa, controls và panel không ép viewport.
 
 LINE COUNTS:
-src/components/admin/AdminOrdersPage.tsx: 1245 -> 1319 (+74)
-src/components/admin/AdminTemplatesTab.tsx: 521 -> 587 (+66)
-src/components/CreateLovePage.tsx: 1662 -> 1706 (+44)
+src/index.css: 58 -> 84 (+26)
+src/components/Homepage.tsx: 714 -> 716 (+2)
+src/components/ProductDetailPage.tsx: 383 -> 385 (+2)
+src/components/CreateLovePage.tsx: 1706 -> 1706 (+0)
+src/components/CheckoutPage.tsx: 1261 -> 1261 (+0)
+src/components/gifts/PolaroidGallery.tsx: 618 -> 618 (+0)
+src/components/gifts/VinylMusicPlayer.tsx: 738 -> 738 (+0)

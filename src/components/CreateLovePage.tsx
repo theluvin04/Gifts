@@ -573,9 +573,9 @@ export const CreateLovePage: React.FC<
   };
 
   return (
-    <div className="min-h-[100svh] bg-[#fff9fb] text-slate-800">
+    <div className="min-h-[100svh] w-full max-w-full overflow-x-hidden bg-[#fff9fb] text-slate-800">
       <header className="sticky top-0 z-50 border-b border-rose-100 bg-[#fff9fb]/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-[68px] max-w-[1440px] items-center justify-between px-4 sm:px-7">
+        <div className="mx-auto grid h-[64px] w-full max-w-[1440px] grid-cols-[44px_minmax(0,1fr)_44px] items-center px-3 sm:flex sm:h-[68px] sm:justify-between sm:px-7">
           <button
             type="button"
             onClick={onBack}
@@ -587,7 +587,7 @@ export const CreateLovePage: React.FC<
             </span>
           </button>
 
-          <div className="text-center">
+          <div className="min-w-0 px-1 text-center sm:px-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-400">
               Personalize
             </p>
@@ -617,18 +617,18 @@ export const CreateLovePage: React.FC<
             </button>
           </div>
 
-          <div className="w-8 sm:hidden" />
+          <div className="h-8 w-8 sm:hidden" />
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1440px] px-3 pb-24 pt-5 sm:px-7 sm:py-8">
+      <main className="mx-auto w-full min-w-0 max-w-[1440px] px-3 pb-24 pt-4 sm:px-7 sm:py-8">
         <div className="mb-6 rounded-[24px] border border-rose-100 bg-white px-5 py-4 shadow-sm">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-500">
               <Sparkles className="h-4 w-4" />
             </span>
 
-            <div>
+            <div className="min-w-0">
               <h1 className="text-base font-bold text-slate-900 sm:text-lg">
                 Cá nhân hóa Love Story 01
               </h1>
@@ -648,9 +648,9 @@ export const CreateLovePage: React.FC<
           </div>
         )}
 
-        <div className="grid gap-6 xl:grid-cols-[210px_minmax(0,1fr)]">
-          <aside>
-            <div className="sticky top-[92px] flex gap-2 overflow-x-auto rounded-[22px] border border-rose-100 bg-white p-2 shadow-sm xl:flex-col">
+        <div className="grid w-full min-w-0 gap-5 xl:grid-cols-[210px_minmax(0,1fr)] xl:gap-6">
+          <aside className="min-w-0 max-w-full">
+            <div className="sticky top-[76px] flex w-full max-w-full gap-2 overflow-x-auto rounded-[22px] border border-rose-100 bg-white p-2 shadow-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:top-[92px] xl:flex-col">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const active =
@@ -689,7 +689,7 @@ export const CreateLovePage: React.FC<
                 opacity: 1,
                 y: 0,
               }}
-              className="rounded-[26px] border border-rose-100 bg-white p-5 shadow-sm sm:p-7"
+              className="min-w-0 overflow-hidden rounded-[24px] border border-rose-100 bg-white p-4 shadow-sm sm:rounded-[26px] sm:p-7"
             >
               {activeTab === 'basic' && (
                 <BasicSection
@@ -774,7 +774,7 @@ export const CreateLovePage: React.FC<
         </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-rose-100 bg-white/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-50 w-full max-w-[100vw] overflow-hidden border-t border-rose-100 bg-white/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
           <button
             type="button"
@@ -893,7 +893,7 @@ React.FC<
                             )
                           }
                           className={[
-                            'overflow-hidden rounded-[18px] border bg-white p-2 text-left transition',
+                            'min-w-0 overflow-hidden rounded-[18px] border bg-white p-2 text-left transition',
                             selected
                               ? 'border-rose-400 shadow-[0_0_0_2px_rgba(251,113,133,0.16)]'
                               : 'border-slate-100 hover:border-rose-200',
@@ -1291,7 +1291,7 @@ React.FC<{
   onUrlChange,
   children,
 }) => (
-  <div className="grid gap-4 rounded-[22px] border border-slate-100 bg-slate-50/60 p-4 sm:grid-cols-[150px_minmax(0,1fr)]">
+  <div className="grid min-w-0 gap-4 rounded-[22px] border border-slate-100 bg-slate-50/60 p-3 sm:grid-cols-[150px_minmax(0,1fr)] sm:p-4">
     <div>
       <div className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-white">
         {photo.url ? (
@@ -1334,7 +1334,7 @@ React.FC<{
       </label>
     </div>
 
-    <div className="grid content-start gap-3">
+    <div className="grid min-w-0 content-start gap-3">
       <div>
         <p className="text-xs font-bold text-slate-700">
           {label}
@@ -1393,7 +1393,7 @@ const MusicSection: React.FC<
         (track, index) => (
           <div
             key={track.id}
-            className="grid gap-4 rounded-[22px] border border-slate-100 bg-slate-50/60 p-4 sm:grid-cols-[150px_1fr]"
+            className="grid min-w-0 gap-4 rounded-[22px] border border-slate-100 bg-slate-50/60 p-3 sm:grid-cols-[150px_minmax(0,1fr)] sm:p-4"
           >
             <div>
               <div className="aspect-square overflow-hidden rounded-2xl bg-slate-900">
@@ -1421,8 +1421,8 @@ const MusicSection: React.FC<
               </label>
             </div>
 
-            <div className="grid gap-3">
-              <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-3">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                 <InputField
                   label={`Bài ${index + 1}`}
                   value={track.title}

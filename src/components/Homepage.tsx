@@ -130,9 +130,9 @@ export const HomePage: React.FC<
   }, []);
 
   return (
-    <div className="min-h-[100svh] w-full bg-[#fffaf8] text-[#171717]">
+    <div className="min-h-[100svh] w-full max-w-full overflow-x-hidden bg-[#fffaf8] text-[#171717]">
       <header className="sticky top-0 z-50 border-b border-black/5 bg-[#fffaf8]/92 backdrop-blur-xl">
-        <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 sm:px-8">
+        <div className="mx-auto flex h-[64px] w-full max-w-7xl items-center justify-between gap-2 px-3 sm:h-[68px] sm:px-8">
           <button
             type="button"
             onClick={() =>
@@ -147,7 +147,7 @@ export const HomePage: React.FC<
             <img
               src={BRAND.logoPath}
               alt={BRAND.name}
-              className="h-10 w-auto object-contain sm:h-11"
+              className="h-9 w-auto max-w-[92px] object-contain sm:h-11 sm:max-w-none"
             />
           </button>
 
@@ -187,7 +187,7 @@ export const HomePage: React.FC<
             </button>
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={
@@ -195,7 +195,8 @@ export const HomePage: React.FC<
               }
               className="rounded-[12px] px-2.5 py-2.5 text-[11px] font-bold text-black/48 transition hover:bg-black/[0.04] hover:text-black sm:px-3 sm:text-xs"
             >
-              Tra cứu
+              <span className="sm:hidden">Đơn</span>
+              <span className="hidden sm:inline">Tra cứu</span>
             </button>
 
             <button
@@ -203,7 +204,8 @@ export const HomePage: React.FC<
               onClick={onOpenLoveTemplate}
               className="rounded-[12px] bg-[#171717] px-3 py-2.5 text-[11px] font-bold text-white transition hover:bg-[#e64a67] sm:px-5 sm:text-sm"
             >
-              Xem template
+              <span className="sm:hidden">Template</span>
+              <span className="hidden sm:inline">Xem template</span>
             </button>
           </div>
         </div>
@@ -211,8 +213,8 @@ export const HomePage: React.FC<
 
       <main>
         <section className="relative overflow-hidden border-b border-black/5">
-          <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-[1fr_0.92fr] lg:gap-16 lg:pb-28 lg:pt-24">
-            <div className="mx-auto max-w-2xl text-center lg:mx-0 lg:text-left">
+          <div className="mx-auto grid w-full min-w-0 max-w-7xl items-center gap-10 px-4 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-[1fr_0.92fr] lg:gap-16 lg:pb-28 lg:pt-24">
+            <div className="mx-auto min-w-0 max-w-2xl text-center lg:mx-0 lg:text-left">
               <motion.div
                 initial={{
                   opacity: 0,
@@ -243,7 +245,7 @@ export const HomePage: React.FC<
                 transition={{
                   delay: 0.05,
                 }}
-                className="text-[44px] font-black leading-[0.98] tracking-[-0.06em] text-[#171717] sm:text-[64px] lg:text-[76px]"
+                className="text-[40px] font-black leading-[0.98] tracking-[-0.055em] text-[#171717] min-[360px]:text-[44px] sm:text-[64px] lg:text-[76px]"
               >
                 Một món quà
                 <br />
