@@ -6,17 +6,20 @@ import {
   TemplateDesignConfig,
 } from '../../templates/design';
 
-interface AdminTemplateDesignEditorProps {
-  design: TemplateDesignConfig;
+interface Props {
+  design:
+    TemplateDesignConfig;
   onChange: (
     design:
       TemplateDesignConfig
   ) => void;
 }
 
+type SectionKey =
+  keyof TemplateDesignConfig;
+
 const updateSection = <
-  K extends keyof
-    TemplateDesignConfig
+  K extends SectionKey
 >(
   design:
     TemplateDesignConfig,
@@ -25,81 +28,64 @@ const updateSection = <
     Partial<
       TemplateDesignConfig[K]
     >
-) => {
-  return {
-    ...design,
-    [section]: {
-      ...design[section],
-      ...patch,
-    },
-  };
-};
+) => ({
+  ...design,
+  [section]: {
+    ...design[section],
+    ...patch,
+  },
+});
 
 export const AdminTemplateDesignEditor:
-React.FC<
-  AdminTemplateDesignEditorProps
-> = ({
+React.FC<Props> = ({
   design,
   onChange,
-}) => {
-  const resetDesign =
-    () => {
-      onChange(
-        JSON.parse(
-          JSON.stringify(
-            DEFAULT_LOVE_TEMPLATE_DESIGN
-          )
-        )
-      );
-    };
+}) => (
+  <div>
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <div>
+        <h3 className="text-base font-black">
+          Giao diện mẫu gốc
+        </h3>
 
-  return (
-    <div className="mt-7 border-t border-black/8 pt-7">
-      <div className="flex flex-col gap-3 border-b border-black/8 pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#b83e57]">
-            Template Design
-          </p>
-
-          <h3 className="mt-2 text-xl font-black">
-            Chỉnh mẫu gốc
-          </h3>
-
-          <p className="mt-1 max-w-2xl text-xs leading-5 text-black/40">
-            Khách không thấy các control này. Design được snapshot khi checkout nên chỉ đơn mới dùng thay đổi mới.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={
-            resetDesign
-          }
-          className="w-fit border border-black/10 bg-white px-3.5 py-2.5 text-[11px] font-bold text-black/45 transition hover:border-[#cf5068] hover:text-[#b83e57]"
-        >
-          Reset design mặc định
-        </button>
+        <p className="mt-1 text-xs leading-5 text-black/38">
+          Admin chỉnh style. Khách chỉ chỉnh nội dung.
+        </p>
       </div>
 
-      <DesignSection
-        title="Toàn bộ template"
-        description="Font và màu nền/chữ dùng chung."
+      <button
+        type="button"
+        onClick={() =>
+          onChange(
+            JSON.parse(
+              JSON.stringify(
+                DEFAULT_LOVE_TEMPLATE_DESIGN
+              )
+            )
+          )
+        }
+        className="shrink-0 rounded-[10px] border border-black/10 px-3 py-2 text-[10px] font-bold text-black/45 hover:text-[#b83e57]"
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        Reset mặc định
+      </button>
+    </div>
+
+    <div className="space-y-3">
+      <DesignGroup
+        title="Font & màu chung"
+        description="Nền, chữ và font xuyên suốt template."
+        open
+      >
+        <FieldGrid>
           <FontField
             label="Font chữ thường"
-            value={
-              design.fonts.body
-            }
-            onChange={(value) =>
+            value={design.fonts.body}
+            onChange={(body) =>
               onChange(
                 updateSection(
                   design,
                   'fonts',
-                  {
-                    body:
-                      value,
-                  }
+                  { body }
                 )
               )
             }
@@ -107,18 +93,13 @@ React.FC<
 
           <FontField
             label="Font tiêu đề"
-            value={
-              design.fonts.heading
-            }
-            onChange={(value) =>
+            value={design.fonts.heading}
+            onChange={(heading) =>
               onChange(
                 updateSection(
                   design,
                   'fonts',
-                  {
-                    heading:
-                      value,
-                  }
+                  { heading }
                 )
               )
             }
@@ -126,18 +107,13 @@ React.FC<
 
           <FontField
             label="Font viết tay"
-            value={
-              design.fonts.script
-            }
-            onChange={(value) =>
+            value={design.fonts.script}
+            onChange={(script) =>
               onChange(
                 updateSection(
                   design,
                   'fonts',
-                  {
-                    script:
-                      value,
-                  }
+                  { script }
                 )
               )
             }
@@ -149,34 +125,26 @@ React.FC<
               design.colors
                 .pageBackground
             }
-            onChange={(value) =>
+            onChange={(pageBackground) =>
               onChange(
                 updateSection(
                   design,
                   'colors',
-                  {
-                    pageBackground:
-                      value,
-                  }
+                  { pageBackground }
                 )
               )
             }
           />
 
           <ColorField
-            label="Màu chữ chính"
-            value={
-              design.colors.text
-            }
-            onChange={(value) =>
+            label="Chữ chính"
+            value={design.colors.text}
+            onChange={(text) =>
               onChange(
                 updateSection(
                   design,
                   'colors',
-                  {
-                    text:
-                      value,
-                  }
+                  { text }
                 )
               )
             }
@@ -187,34 +155,28 @@ React.FC<
             value={
               design.colors.accent
             }
-            onChange={(value) =>
+            onChange={(accent) =>
               onChange(
                 updateSection(
                   design,
                   'colors',
-                  {
-                    accent:
-                      value,
-                  }
+                  { accent }
                 )
               )
             }
           />
 
           <ColorField
-            label="Màu card"
+            label="Nền card"
             value={
               design.colors.surface
             }
-            onChange={(value) =>
+            onChange={(surface) =>
               onChange(
                 updateSection(
                   design,
                   'colors',
-                  {
-                    surface:
-                      value,
-                  }
+                  { surface }
                 )
               )
             }
@@ -226,15 +188,12 @@ React.FC<
               design.colors
                 .surfaceSoft
             }
-            onChange={(value) =>
+            onChange={(surfaceSoft) =>
               onChange(
                 updateSection(
                   design,
                   'colors',
-                  {
-                    surfaceSoft:
-                      value,
-                  }
+                  { surfaceSoft }
                 )
               )
             }
@@ -246,42 +205,36 @@ React.FC<
               design.colors
                 .mutedText
             }
-            onChange={(value) =>
+            onChange={(mutedText) =>
               onChange(
                 updateSection(
                   design,
                   'colors',
-                  {
-                    mutedText:
-                      value,
-                  }
+                  { mutedText }
                 )
               )
             }
           />
-        </div>
-      </DesignSection>
+        </FieldGrid>
+      </DesignGroup>
 
-      <DesignSection
-        title="Màn YES / NO"
-        description="Style câu hỏi và hai nút tương tác."
+      <DesignGroup
+        title="YES / NO"
+        description="Câu hỏi và hai nút tương tác."
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <FieldGrid>
           <ColorField
             label="Màu câu hỏi"
             value={
               design.proposal
                 .questionColor
             }
-            onChange={(value) =>
+            onChange={(questionColor) =>
               onChange(
                 updateSection(
                   design,
                   'proposal',
-                  {
-                    questionColor:
-                      value,
-                  }
+                  { questionColor }
                 )
               )
             }
@@ -295,123 +248,104 @@ React.FC<
             }
             min={18}
             max={72}
-            suffix="px"
-            onChange={(value) =>
+            onChange={(questionSize) =>
               onChange(
                 updateSection(
                   design,
                   'proposal',
-                  {
-                    questionSize:
-                      value,
-                  }
+                  { questionSize }
                 )
               )
             }
           />
 
           <ColorField
-            label="Nền nút YES"
+            label="Nền YES"
             value={
               design.proposal
                 .yesButtonBackground
             }
-            onChange={(value) =>
+            onChange={(yesButtonBackground) =>
               onChange(
                 updateSection(
                   design,
                   'proposal',
-                  {
-                    yesButtonBackground:
-                      value,
-                  }
+                  { yesButtonBackground }
                 )
               )
             }
           />
 
           <ColorField
-            label="Chữ nút YES"
+            label="Chữ YES"
             value={
               design.proposal
                 .yesButtonText
             }
-            onChange={(value) =>
+            onChange={(yesButtonText) =>
               onChange(
                 updateSection(
                   design,
                   'proposal',
-                  {
-                    yesButtonText:
-                      value,
-                  }
+                  { yesButtonText }
                 )
               )
             }
           />
 
           <ColorField
-            label="Nền nút NO"
+            label="Nền NO"
             value={
               design.proposal
                 .noButtonBackground
             }
-            onChange={(value) =>
+            onChange={(noButtonBackground) =>
               onChange(
                 updateSection(
                   design,
                   'proposal',
-                  {
-                    noButtonBackground:
-                      value,
-                  }
+                  { noButtonBackground }
                 )
               )
             }
           />
 
           <ColorField
-            label="Chữ nút NO"
+            label="Chữ NO"
             value={
               design.proposal
                 .noButtonText
             }
-            onChange={(value) =>
+            onChange={(noButtonText) =>
               onChange(
                 updateSection(
                   design,
                   'proposal',
-                  {
-                    noButtonText:
-                      value,
-                  }
+                  { noButtonText }
                 )
               )
             }
           />
-        </div>
-      </DesignSection>
+        </FieldGrid>
+      </DesignGroup>
 
-      <DesignSection
-        title="Màn 3 món quà"
-        description="Tiêu đề sau khi bấm YES và màu hộp quà."
+      <DesignGroup
+        title="3 món quà"
+        description="Tiêu đề và màu card chọn quà."
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <FieldGrid>
           <ColorField
             label="Màu tiêu đề"
             value={
               design.gifts
                 .headingColor
             }
-            onChange={(value) =>
+            onChange={(headingColor) =>
               onChange(
                 updateSection(
                   design,
                   'gifts',
-                  {
-                    headingColor:
-                      value,
-                  }
+                  { headingColor }
                 )
               )
             }
@@ -425,16 +359,12 @@ React.FC<
             }
             min={18}
             max={64}
-            suffix="px"
-            onChange={(value) =>
+            onChange={(headingSize) =>
               onChange(
                 updateSection(
                   design,
                   'gifts',
-                  {
-                    headingSize:
-                      value,
-                  }
+                  { headingSize }
                 )
               )
             }
@@ -446,168 +376,141 @@ React.FC<
               design.gifts
                 .cardBackground
             }
-            onChange={(value) =>
+            onChange={(cardBackground) =>
               onChange(
                 updateSection(
                   design,
                   'gifts',
-                  {
-                    cardBackground:
-                      value,
-                  }
+                  { cardBackground }
                 )
               )
             }
           />
-        </div>
-      </DesignSection>
+        </FieldGrid>
+      </DesignGroup>
 
-      <DesignSection
+      <DesignGroup
         title="Album ảnh"
-        description="Chỉnh toàn bộ chữ, caption và màu Polaroid."
+        description="Tiêu đề, caption và màu Polaroid."
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <FieldGrid>
           <TextField
             label="Tiêu đề album"
             value={
-              design.memories
-                .title
+              design.memories.title
             }
-            onChange={(value) =>
+            onChange={(title) =>
               onChange(
                 updateSection(
                   design,
                   'memories',
-                  {
-                    title:
-                      value,
-                  }
+                  { title }
                 )
               )
             }
           />
 
           <FontField
-            label="Font tiêu đề album"
+            label="Font tiêu đề"
             value={
               design.memories
                 .titleFont
             }
-            onChange={(value) =>
+            onChange={(titleFont) =>
               onChange(
                 updateSection(
                   design,
                   'memories',
-                  {
-                    titleFont:
-                      value,
-                  }
+                  { titleFont }
                 )
               )
             }
           />
 
           <NumberField
-            label="Cỡ tiêu đề album"
+            label="Cỡ tiêu đề"
             value={
               design.memories
                 .titleSize
             }
             min={18}
             max={72}
-            suffix="px"
-            onChange={(value) =>
+            onChange={(titleSize) =>
               onChange(
                 updateSection(
                   design,
                   'memories',
-                  {
-                    titleSize:
-                      value,
-                  }
+                  { titleSize }
                 )
               )
             }
           />
 
           <ColorField
-            label="Màu tiêu đề album"
+            label="Màu tiêu đề"
             value={
               design.memories
                 .titleColor
             }
-            onChange={(value) =>
+            onChange={(titleColor) =>
               onChange(
                 updateSection(
                   design,
                   'memories',
-                  {
-                    titleColor:
-                      value,
-                  }
+                  { titleColor }
                 )
               )
             }
           />
 
           <FontField
-            label="Font caption ảnh"
+            label="Font caption"
             value={
               design.memories
                 .captionFont
             }
-            onChange={(value) =>
+            onChange={(captionFont) =>
               onChange(
                 updateSection(
                   design,
                   'memories',
-                  {
-                    captionFont:
-                      value,
-                  }
+                  { captionFont }
                 )
               )
             }
           />
 
           <NumberField
-            label="Cỡ caption ảnh"
+            label="Cỡ caption"
             value={
               design.memories
                 .captionSize
             }
             min={9}
             max={24}
-            suffix="px"
-            onChange={(value) =>
+            onChange={(captionSize) =>
               onChange(
                 updateSection(
                   design,
                   'memories',
-                  {
-                    captionSize:
-                      value,
-                  }
+                  { captionSize }
                 )
               )
             }
           />
 
           <ColorField
-            label="Màu caption ảnh"
+            label="Màu caption"
             value={
               design.memories
                 .captionColor
             }
-            onChange={(value) =>
+            onChange={(captionColor) =>
               onChange(
                 updateSection(
                   design,
                   'memories',
-                  {
-                    captionColor:
-                      value,
-                  }
+                  { captionColor }
                 )
               )
             }
@@ -619,15 +522,12 @@ React.FC<
               design.memories
                 .background
             }
-            onChange={(value) =>
+            onChange={(background) =>
               onChange(
                 updateSection(
                   design,
                   'memories',
-                  {
-                    background:
-                      value,
-                  }
+                  { background }
                 )
               )
             }
@@ -639,15 +539,12 @@ React.FC<
               design.memories
                 .polaroidBackground
             }
-            onChange={(value) =>
+            onChange={(polaroidBackground) =>
               onChange(
                 updateSection(
                   design,
                   'memories',
-                  {
-                    polaroidBackground:
-                      value,
-                  }
+                  { polaroidBackground }
                 )
               )
             }
@@ -659,152 +556,107 @@ React.FC<
               design.memories
                 .filmBorder
             }
-            onChange={(value) =>
+            onChange={(filmBorder) =>
               onChange(
                 updateSection(
                   design,
                   'memories',
-                  {
-                    filmBorder:
-                      value,
-                  }
+                  { filmBorder }
                 )
               )
             }
           />
+        </FieldGrid>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              [
+                'leftTop',
+                'Caption trái trên',
+              ],
+              [
+                'leftBottom',
+                'Caption trái dưới',
+              ],
+              [
+                'rightTop',
+                'Caption phải trên',
+              ],
+              [
+                'rightBottom',
+                'Caption phải dưới',
+              ],
+            ] as const
+          ).map(
+            ([
+              key,
+              label,
+            ]) => (
+              <TextField
+                key={key}
+                label={label}
+                value={
+                  design.memories
+                    .captions[
+                    key
+                  ]
+                }
+                onChange={(value) =>
+                  onChange({
+                    ...design,
+                    memories: {
+                      ...design.memories,
+                      captions: {
+                        ...design
+                          .memories
+                          .captions,
+                        [key]:
+                          value,
+                      },
+                    },
+                  })
+                }
+              />
+            )
+          )}
         </div>
+      </DesignGroup>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <MemoryCaptionField
-            label="Caption trái trên"
-            value={
-              design.memories
-                .captions.leftTop
-            }
-            onChange={(value) =>
-              onChange({
-                ...design,
-                memories: {
-                  ...design.memories,
-                  captions: {
-                    ...design.memories
-                      .captions,
-                    leftTop:
-                      value,
-                  },
-                },
-              })
-            }
-          />
-
-          <MemoryCaptionField
-            label="Caption phải trên"
-            value={
-              design.memories
-                .captions.rightTop
-            }
-            onChange={(value) =>
-              onChange({
-                ...design,
-                memories: {
-                  ...design.memories,
-                  captions: {
-                    ...design.memories
-                      .captions,
-                    rightTop:
-                      value,
-                  },
-                },
-              })
-            }
-          />
-
-          <MemoryCaptionField
-            label="Caption trái dưới"
-            value={
-              design.memories
-                .captions.leftBottom
-            }
-            onChange={(value) =>
-              onChange({
-                ...design,
-                memories: {
-                  ...design.memories,
-                  captions: {
-                    ...design.memories
-                      .captions,
-                    leftBottom:
-                      value,
-                  },
-                },
-              })
-            }
-          />
-
-          <MemoryCaptionField
-            label="Caption phải dưới"
-            value={
-              design.memories
-                .captions.rightBottom
-            }
-            onChange={(value) =>
-              onChange({
-                ...design,
-                memories: {
-                  ...design.memories,
-                  captions: {
-                    ...design.memories
-                      .captions,
-                    rightBottom:
-                      value,
-                  },
-                },
-              })
-            }
-          />
-        </div>
-      </DesignSection>
-
-      <DesignSection
-        title="Màn nhạc"
-        description="Font tiêu đề và hai mảng màu chính."
+      <DesignGroup
+        title="Âm nhạc"
+        description="Tiêu đề, nền đĩa và player."
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <FieldGrid>
           <FontField
-            label="Font tiêu đề nhạc"
+            label="Font tiêu đề"
             value={
               design.music
                 .titleFont
             }
-            onChange={(value) =>
+            onChange={(titleFont) =>
               onChange(
                 updateSection(
                   design,
                   'music',
-                  {
-                    titleFont:
-                      value,
-                  }
+                  { titleFont }
                 )
               )
             }
           />
 
           <ColorField
-            label="Màu tiêu đề nhạc"
+            label="Màu tiêu đề"
             value={
               design.music
                 .titleColor
             }
-            onChange={(value) =>
+            onChange={(titleColor) =>
               onChange(
                 updateSection(
                   design,
                   'music',
-                  {
-                    titleColor:
-                      value,
-                  }
+                  { titleColor }
                 )
               )
             }
@@ -816,15 +668,12 @@ React.FC<
               design.music
                 .vinylBackground
             }
-            onChange={(value) =>
+            onChange={(vinylBackground) =>
               onChange(
                 updateSection(
                   design,
                   'music',
-                  {
-                    vinylBackground:
-                      value,
-                  }
+                  { vinylBackground }
                 )
               )
             }
@@ -836,15 +685,12 @@ React.FC<
               design.music
                 .playerBackground
             }
-            onChange={(value) =>
+            onChange={(playerBackground) =>
               onChange(
                 updateSection(
                   design,
                   'music',
-                  {
-                    playerBackground:
-                      value,
-                  }
+                  { playerBackground }
                 )
               )
             }
@@ -856,82 +702,70 @@ React.FC<
               design.music
                 .controlAccent
             }
-            onChange={(value) =>
+            onChange={(controlAccent) =>
               onChange(
                 updateSection(
                   design,
                   'music',
-                  {
-                    controlAccent:
-                      value,
-                  }
+                  { controlAccent }
                 )
               )
             }
           />
-        </div>
-      </DesignSection>
+        </FieldGrid>
+      </DesignGroup>
 
-      <DesignSection
+      <DesignGroup
         title="Bức thư"
-        description="Font viết tay, font nội dung, giấy và màu chữ."
+        description="Font, giấy và màu chữ."
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <FieldGrid>
           <FontField
-            label="Font viết tay thư"
+            label="Font viết tay"
             value={
               design.letter
                 .scriptFont
             }
-            onChange={(value) =>
+            onChange={(scriptFont) =>
               onChange(
                 updateSection(
                   design,
                   'letter',
-                  {
-                    scriptFont:
-                      value,
-                  }
+                  { scriptFont }
                 )
               )
             }
           />
 
           <FontField
-            label="Font nội dung thư"
+            label="Font nội dung"
             value={
               design.letter
                 .bodyFont
             }
-            onChange={(value) =>
+            onChange={(bodyFont) =>
               onChange(
                 updateSection(
                   design,
                   'letter',
-                  {
-                    bodyFont:
-                      value,
-                  }
+                  { bodyFont }
                 )
               )
             }
           />
 
           <ColorField
-            label="Màu tiêu đề thư"
+            label="Màu tiêu đề"
             value={
               design.letter
                 .titleColor
             }
-            onChange={(value) =>
+            onChange={(titleColor) =>
               onChange(
                 updateSection(
                   design,
                   'letter',
-                  {
-                    titleColor:
-                      value,
-                  }
+                  { titleColor }
                 )
               )
             }
@@ -943,105 +777,122 @@ React.FC<
               design.letter
                 .paperBackground
             }
-            onChange={(value) =>
+            onChange={(paperBackground) =>
               onChange(
                 updateSection(
                   design,
                   'letter',
-                  {
-                    paperBackground:
-                      value,
-                  }
+                  { paperBackground }
                 )
               )
             }
           />
 
           <ColorField
-            label="Màu nội dung thư"
+            label="Màu nội dung"
             value={
               design.letter
                 .bodyText
             }
-            onChange={(value) =>
+            onChange={(bodyText) =>
               onChange(
                 updateSection(
                   design,
                   'letter',
-                  {
-                    bodyText:
-                      value,
-                  }
+                  { bodyText }
                 )
               )
             }
           />
 
           <ColorField
-            label="Màu chữ ký / accent"
+            label="Màu chữ ký"
             value={
-              design.letter
-                .accent
+              design.letter.accent
             }
-            onChange={(value) =>
+            onChange={(accent) =>
               onChange(
                 updateSection(
                   design,
                   'letter',
-                  {
-                    accent:
-                      value,
-                  }
+                  { accent }
                 )
               )
             }
           />
-        </div>
-      </DesignSection>
+        </FieldGrid>
+      </DesignGroup>
     </div>
-  );
-};
+  </div>
+);
 
-const DesignSection:
+const DesignGroup:
 React.FC<{
   title: string;
   description: string;
+  open?: boolean;
   children:
     React.ReactNode;
 }> = ({
   title,
   description,
+  open = false,
   children,
 }) => (
-  <section className="border-b border-black/8 py-6 last:border-b-0">
-    <div className="mb-4">
-      <h4 className="text-sm font-black">
-        {title}
-      </h4>
+  <details
+    open={open}
+    className="group rounded-[16px] border border-black/8 bg-white"
+  >
+    <summary className="cursor-pointer list-none px-4 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-black">
+            {title}
+          </p>
 
-      <p className="mt-1 text-[11px] leading-5 text-black/35">
-        {description}
-      </p>
+          <p className="mt-1 text-[11px] text-black/35">
+            {description}
+          </p>
+        </div>
+
+        <span className="text-lg leading-none text-black/25 transition group-open:rotate-45">
+          +
+        </span>
+      </div>
+    </summary>
+
+    <div className="border-t border-black/6 px-4 py-4">
+      {children}
     </div>
+  </details>
+);
 
+const FieldGrid:
+React.FC<{
+  children:
+    React.ReactNode;
+}> = ({
+  children,
+}) => (
+  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     {children}
-  </section>
+  </div>
 );
 
 const TextField:
 React.FC<{
   label: string;
   value: string;
-  onChange:
-    (value: string) =>
-      void;
+  onChange: (
+    value: string
+  ) => void;
 }> = ({
   label,
   value,
   onChange,
 }) => (
   <label className="block">
-    <span className="mb-1.5 block text-[11px] font-bold text-black/55">
+    <span className="mb-1.5 block text-[10px] font-bold text-black/45">
       {label}
     </span>
 
@@ -1052,53 +903,8 @@ React.FC<{
           event.target.value
         )
       }
-      className="w-full border border-black/10 px-3.5 py-3 text-sm outline-none focus:border-[#cf5068]"
+      className="w-full rounded-[10px] border border-black/10 bg-[#faf9f8] px-3 py-2.5 text-xs outline-none focus:border-[#cf5068]"
     />
-  </label>
-);
-
-const MemoryCaptionField =
-  TextField;
-
-const ColorField:
-React.FC<{
-  label: string;
-  value: string;
-  onChange:
-    (value: string) =>
-      void;
-}> = ({
-  label,
-  value,
-  onChange,
-}) => (
-  <label className="block">
-    <span className="mb-1.5 block text-[11px] font-bold text-black/55">
-      {label}
-    </span>
-
-    <div className="flex items-center gap-2 border border-black/10 bg-white p-2">
-      <input
-        type="color"
-        value={value}
-        onChange={(event) =>
-          onChange(
-            event.target.value
-          )
-        }
-        className="h-9 w-11 cursor-pointer border-0 bg-transparent p-0"
-      />
-
-      <input
-        value={value}
-        onChange={(event) =>
-          onChange(
-            event.target.value
-          )
-        }
-        className="min-w-0 flex-1 bg-transparent px-1 text-xs font-bold uppercase outline-none"
-      />
-    </div>
   </label>
 );
 
@@ -1106,16 +912,16 @@ const FontField:
 React.FC<{
   label: string;
   value: string;
-  onChange:
-    (value: string) =>
-      void;
+  onChange: (
+    value: string
+  ) => void;
 }> = ({
   label,
   value,
   onChange,
 }) => (
   <label className="block">
-    <span className="mb-1.5 block text-[11px] font-bold text-black/55">
+    <span className="mb-1.5 block text-[10px] font-bold text-black/45">
       {label}
     </span>
 
@@ -1130,7 +936,7 @@ React.FC<{
         fontFamily:
           value,
       }}
-      className="w-full border border-black/10 bg-white px-3.5 py-3 text-sm outline-none focus:border-[#cf5068]"
+      className="w-full rounded-[10px] border border-black/10 bg-[#faf9f8] px-3 py-2.5 text-xs outline-none focus:border-[#cf5068]"
     >
       {TEMPLATE_FONT_OPTIONS.map(
         (font) => (
@@ -1150,35 +956,75 @@ React.FC<{
   </label>
 );
 
+const ColorField:
+React.FC<{
+  label: string;
+  value: string;
+  onChange: (
+    value: string
+  ) => void;
+}> = ({
+  label,
+  value,
+  onChange,
+}) => (
+  <label className="block">
+    <span className="mb-1.5 block text-[10px] font-bold text-black/45">
+      {label}
+    </span>
+
+    <div className="flex items-center gap-2 rounded-[10px] border border-black/10 bg-[#faf9f8] p-2">
+      <input
+        type="color"
+        value={value}
+        onChange={(event) =>
+          onChange(
+            event.target.value
+          )
+        }
+        className="h-8 w-10 cursor-pointer border-0 bg-transparent p-0"
+      />
+
+      <input
+        value={value}
+        onChange={(event) =>
+          onChange(
+            event.target.value
+          )
+        }
+        className="min-w-0 flex-1 bg-transparent font-mono text-[10px] uppercase outline-none"
+      />
+    </div>
+  </label>
+);
+
 const NumberField:
 React.FC<{
   label: string;
   value: number;
   min: number;
   max: number;
-  suffix: string;
-  onChange:
-    (value: number) =>
-      void;
+  onChange: (
+    value: number
+  ) => void;
 }> = ({
   label,
   value,
   min,
   max,
-  suffix,
   onChange,
 }) => (
   <label className="block">
-    <span className="mb-1.5 block text-[11px] font-bold text-black/55">
+    <span className="mb-1.5 block text-[10px] font-bold text-black/45">
       {label}
     </span>
 
-    <div className="flex items-center border border-black/10 bg-white">
+    <div className="flex items-center rounded-[10px] border border-black/10 bg-[#faf9f8]">
       <input
         type="number"
+        value={value}
         min={min}
         max={max}
-        value={value}
         onChange={(event) =>
           onChange(
             Math.min(
@@ -1186,19 +1032,17 @@ React.FC<{
               Math.max(
                 min,
                 Number(
-                  event.target
-                    .value
-                ) ||
-                  min
+                  event.target.value
+                ) || min
               )
             )
           )
         }
-        className="min-w-0 flex-1 px-3.5 py-3 text-sm font-bold outline-none"
+        className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-xs font-bold outline-none"
       />
 
-      <span className="pr-3 text-[10px] font-bold text-black/30">
-        {suffix}
+      <span className="pr-3 text-[9px] font-bold text-black/25">
+        px
       </span>
     </div>
   </label>

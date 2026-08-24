@@ -3,48 +3,27 @@ import {
 } from '../../services/adminService';
 
 export type AdminTab =
-  | 'dashboard'
   | 'orders'
-  | 'templates'
-  | 'customers'
-  | 'discounts'
-  | 'settings';
+  | 'templates';
 
 export type PaymentFilter =
   | 'all'
-  | 'paid'
-  | 'unpaid';
-
-export type GiftFilter =
-  | 'all'
-  | 'draft'
-  | 'published';
-
-export interface CustomerSummary {
-  key: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  orderCount: number;
-  paidOrders: number;
-  totalSpent: number;
-  lastOrderAt: number;
-}
+  | 'waiting'
+  | 'paid';
 
 export const ADMIN_TABS: Array<{
   key: AdminTab;
   label: string;
 }> = [
-  ['dashboard', 'Dashboard'],
-  ['orders', 'Đơn hàng'],
-  ['templates', 'Templates'],
-  ['customers', 'Khách hàng'],
-  ['discounts', 'Khuyến mãi'],
-  ['settings', 'Cài đặt'],
-].map(([key, label]) => ({
-  key: key as AdminTab,
-  label,
-}));
+  {
+    key: 'orders',
+    label: 'Đơn hàng',
+  },
+  {
+    key: 'templates',
+    label: 'Templates',
+  },
+];
 
 export const formatVnd = (
   amount: number
@@ -74,7 +53,9 @@ export const formatDateTime = (
       hour: '2-digit',
       minute: '2-digit',
     }
-  ).format(new Date(timestamp));
+  ).format(
+    new Date(timestamp)
+  );
 };
 
 export const isPaidOrder = (
@@ -88,75 +69,38 @@ export const isPaidOrder = (
   );
 };
 
-export const buildCustomers = (
-  orders: AdminOrderRecord[]
-): CustomerSummary[] => {
-  const map = new Map<
-    string,
-    CustomerSummary
-  >();
-
-  for (const order of orders) {
-    const customer =
-      order.customer;
-
-    if (!customer) {
-      continue;
-    }
-
-    const email =
-      customer.email
-        ?.trim()
-        .toLowerCase() || '';
-
-    const phone =
-      customer.phone?.trim() || '';
-
-    const key = email || phone;
-
-    if (!key) {
-      continue;
-    }
-
-    const current =
-      map.get(key) || {
-        key,
-        fullName:
-          customer.fullName || '—',
-        email:
-          customer.email || '',
-        phone,
-        orderCount: 0,
-        paidOrders: 0,
-        totalSpent: 0,
-        lastOrderAt: 0,
-      };
-
-    current.orderCount += 1;
-
-    if (isPaidOrder(order)) {
-      current.paidOrders += 1;
-      current.totalSpent +=
-        typeof order.price ===
-        'number'
-          ? order.price
-          : 0;
-    }
-
-    current.lastOrderAt =
-      Math.max(
-        current.lastOrderAt,
-        order.createdAtMs
-      );
-
-    map.set(key, current);
+export const getPaymentLabel = (
+  order: AdminOrderRecord
+) => {
+  if (isPaidOrder(order)) {
+    return 'Đã thanh toán';
   }
 
-  return Array.from(
-    map.values()
-  ).sort(
-    (left, right) =>
-      right.lastOrderAt -
-      left.lastOrderAt
+  if (
+    order.paymentStatus ===
+    'waiting_bank_transfer'
+  ) {
+    return 'Chờ chuyển khoản';
+  }
+
+  return 'Chưa thanh toán';
+};
+
+export const getGiftLabel = (
+  order: AdminOrderRecord
+) => {
+  return order.status ===
+    'published'
+    ? 'Đã publish'
+    : 'Draft';
+};
+
+export const getOrderCode = (
+  order: AdminOrderRecord
+) => {
+  return (
+    order.orderCode ||
+    order.paymentReference ||
+    `Dearly${order.orderNumber || order.id.slice(0, 4)}`
   );
 };

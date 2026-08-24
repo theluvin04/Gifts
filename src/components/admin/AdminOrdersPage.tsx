@@ -4,11 +4,14 @@ import React, {
   useState,
 } from 'react';
 
-import { BRAND } from '../../config/brand';
+import {
+  BRAND,
+} from '../../config/brand';
 
 import {
   AdminOrderRecord,
   AdminSession,
+  deleteAdminOrder,
   getAdminSession,
   getAdminTemplateConfig,
   listAdminOrders,
@@ -25,29 +28,28 @@ import {
 import {
   ADMIN_TABS,
   AdminTab,
-  GiftFilter,
   PaymentFilter,
-  buildCustomers,
+  getOrderCode,
   isPaidOrder,
 } from './adminUi';
 
-import { AdminDashboardTab } from './AdminDashboardTab';
-import { AdminOrdersTab } from './AdminOrdersTab';
 import {
-  AdminDiscountsTab,
+  AdminOrdersTab,
+} from './AdminOrdersTab';
+
+import {
   AdminTemplatesTab,
 } from './AdminTemplatesTab';
-import { AdminCustomersTab } from './AdminCustomersTab';
-import { AdminSettingsTab } from './AdminSettingsTab';
 
-interface AdminOrdersPageProps {
+interface Props {
   onBackHome: () => void;
   onOpenOrder: (
     giftId: string
   ) => void;
 }
 
-const EMPTY_SESSION: AdminSession = {
+const EMPTY_SESSION:
+AdminSession = {
   uid: '',
   email: '',
   displayName: '',
@@ -57,58 +59,13 @@ const EMPTY_SESSION: AdminSession = {
   isAdmin: false,
 };
 
-const ADMIN_TAB_PATHS:
-Record<AdminTab, string> = {
-  dashboard: '/admin',
-  orders: '/admin/orders',
-  templates: '/admin/templates',
-  customers: '/admin/customers',
-  discounts: '/admin/discounts',
-  settings: '/admin/settings',
-};
-
 const getInitialTab =
   (): AdminTab => {
-    const path =
-      window.location.pathname
-        .replace(/\/$/, '') ||
-      '/';
-
-    const matched =
-      (
-        Object.entries(
-          ADMIN_TAB_PATHS
-        ) as [
-          AdminTab,
-          string,
-        ][]
-      ).find(
-        ([, value]) =>
-          value === path
-      );
-
-    if (matched) {
-      return matched[0];
-    }
-
-    const legacyHash =
-      window.location.hash
-        .replace(
-          '#',
-          ''
-        ) as AdminTab;
-
-    if (
-      ADMIN_TABS.some(
-        (item) =>
-          item.key ===
-          legacyHash
-      )
-    ) {
-      return legacyHash;
-    }
-
-    return 'dashboard';
+    return window.location
+      .pathname ===
+      '/admin/templates'
+      ? 'templates'
+      : 'orders';
   };
 
 const getAuthErrorMessage = (
@@ -135,15 +92,16 @@ const getAuthErrorMessage = (
     code ===
     'auth/unauthorized-domain'
   ) {
-    return 'Domain hiện tại chưa được thêm vào Firebase Authentication → Settings → Authorized domains.';
+    return 'Domain hiện tại chưa được thêm vào Firebase Authentication.';
   }
 
   if (
-    code === 'permission-denied' ||
+    code ===
+      'permission-denied' ||
     code ===
       'firestore/permission-denied'
   ) {
-    return 'Firestore đang chặn quyền. Hãy publish firestore.rules mới vào đúng database.';
+    return 'Firestore đang chặn quyền Admin. Kiểm tra lại firestore.rules.';
   }
 
   return (
@@ -153,179 +111,238 @@ const getAuthErrorMessage = (
 };
 
 export const AdminOrdersPage:
-React.FC<
-  AdminOrdersPageProps
-> = ({
+React.FC<Props> = ({
   onBackHome,
   onOpenOrder,
 }) => {
-  const [session, setSession] =
+  const [
+    session,
+    setSession,
+  ] =
     useState<AdminSession>(
       EMPTY_SESSION
     );
 
-  const [orders, setOrders] =
-    useState<AdminOrderRecord[]>([]);
+  const [
+    orders,
+    setOrders,
+  ] =
+    useState<
+      AdminOrderRecord[]
+    >([]);
 
-  const [template, setTemplate] =
+  const [
+    templateDraft,
+    setTemplateDraft,
+  ] =
     useState<TemplateConfig>(
       DEFAULT_LOVE_TEMPLATE_CONFIG
     );
 
-  const [templateDraft, setTemplateDraft] =
-    useState<TemplateConfig>(
-      DEFAULT_LOVE_TEMPLATE_CONFIG
-    );
-
-  const [tab, setTab] =
+  const [
+    tab,
+    setTab,
+  ] =
     useState<AdminTab>(
       getInitialTab
     );
 
-  const [isLoading, setIsLoading] =
+  const [
+    isLoading,
+    setIsLoading,
+  ] =
     useState(true);
 
-  const [isSigningIn, setIsSigningIn] =
+  const [
+    isSigningIn,
+    setIsSigningIn,
+  ] =
     useState(false);
 
-  const [isSavingTemplate, setIsSavingTemplate] =
+  const [
+    isSavingTemplate,
+    setIsSavingTemplate,
+  ] =
     useState(false);
 
-  const [templateSaved, setTemplateSaved] =
+  const [
+    templateSaved,
+    setTemplateSaved,
+  ] =
     useState(false);
 
-  const [error, setError] =
+  const [
+    error,
+    setError,
+  ] =
     useState('');
 
-  const [search, setSearch] =
+  const [
+    search,
+    setSearch,
+  ] =
     useState('');
 
-  const [paymentFilter, setPaymentFilter] =
-    useState<PaymentFilter>('all');
+  const [
+    paymentFilter,
+    setPaymentFilter,
+  ] =
+    useState<PaymentFilter>(
+      'all'
+    );
 
-  const [giftFilter, setGiftFilter] =
-    useState<GiftFilter>('all');
+  const [
+    selectedOrderIds,
+    setSelectedOrderIds,
+  ] =
+    useState<string[]>([]);
 
-  const loadAdmin = async () => {
-    setIsLoading(true);
-    setError('');
+  const [
+    isDeletingOrders,
+    setIsDeletingOrders,
+  ] =
+    useState(false);
 
-    try {
-      const nextSession =
-        await getAdminSession();
+  const [
+    notice,
+    setNotice,
+  ] =
+    useState('');
 
-      setSession(nextSession);
+  const loadAdmin =
+    async () => {
+      setIsLoading(true);
+      setError('');
 
-      if (!nextSession.isAdmin) {
-        setOrders([]);
-        return;
-      }
+      try {
+        const nextSession =
+          await getAdminSession();
 
-      const [
-        nextOrders,
-        nextTemplate,
-      ] = await Promise.all([
-        listAdminOrders(),
-        getAdminTemplateConfig(),
-      ]);
+        setSession(
+          nextSession
+        );
 
-      setOrders(nextOrders);
-      setTemplate(nextTemplate);
-      setTemplateDraft(
-        nextTemplate
-      );
-    } catch (loadError: any) {
-      console.error(loadError);
-      setError(
-        getAuthErrorMessage(
+        if (
+          !nextSession
+            .isAdmin
+        ) {
+          setOrders([]);
+          return;
+        }
+
+        const [
+          nextOrders,
+          nextTemplate,
+        ] =
+          await Promise.all([
+            listAdminOrders(),
+            getAdminTemplateConfig(),
+          ]);
+
+        setOrders(
+          nextOrders
+        );
+
+        setSelectedOrderIds(
+          []
+        );
+
+        setTemplateDraft(
+          nextTemplate
+        );
+      } catch (
+        loadError: any
+      ) {
+        console.error(
           loadError
-        )
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        );
+
+        setError(
+          getAuthErrorMessage(
+            loadError
+          )
+        );
+      } finally {
+        setIsLoading(
+          false
+        );
+      }
+    };
 
   useEffect(() => {
+    const path =
+      window.location
+        .pathname;
+
+    const allowed = [
+      '/admin',
+      '/admin/orders',
+      '/admin/templates',
+    ];
+
+    if (
+      !allowed.includes(
+        path
+      )
+    ) {
+      window.history
+        .replaceState(
+          {},
+          '',
+          '/admin/orders'
+        );
+    }
+
     void loadAdmin();
   }, []);
 
   useEffect(() => {
-    const syncTabFromUrl =
-      () => {
+    const onPopState =
+      () =>
         setTab(
           getInitialTab()
         );
-      };
 
     window.addEventListener(
       'popstate',
-      syncTabFromUrl
+      onPopState
     );
 
-    return () => {
+    return () =>
       window.removeEventListener(
         'popstate',
-        syncTabFromUrl
+        onPopState
       );
-    };
-  }, []);
-
-  useEffect(() => {
-    const legacyHash =
-      window.location.hash
-        .replace(
-          '#',
-          ''
-        ) as AdminTab;
-
-    if (
-      ADMIN_TABS.some(
-        (item) =>
-          item.key ===
-          legacyHash
-      )
-    ) {
-      const cleanPath =
-        ADMIN_TAB_PATHS[
-          legacyHash
-        ];
-
-      window.history.replaceState(
-        {},
-        '',
-        cleanPath
-      );
-
-      setTab(legacyHash);
-    }
   }, []);
 
   const openTab = (
-    nextTab: AdminTab
+    next:
+      AdminTab
   ) => {
-    setTab(nextTab);
+    setTab(next);
 
-    const nextPath =
-      ADMIN_TAB_PATHS[
-        nextTab
-      ];
+    const path =
+      next ===
+      'templates'
+        ? '/admin/templates'
+        : '/admin/orders';
 
     if (
-      window.location.pathname !==
-      nextPath ||
-      window.location.hash
+      window.location
+        .pathname !== path
     ) {
-      window.history.pushState(
-        {},
-        '',
-        nextPath
-      );
+      window.history
+        .pushState(
+          {},
+          '',
+          path
+        );
     }
 
     window.scrollTo({
       top: 0,
-      behavior: 'instant',
+      behavior:
+        'instant',
     });
   };
 
@@ -337,33 +354,52 @@ React.FC<
       try {
         await loginAdminWithGoogle();
         await loadAdmin();
-      } catch (loginError: any) {
-        console.error(loginError);
+      } catch (
+        loginError: any
+      ) {
         setError(
           getAuthErrorMessage(
             loginError
           )
         );
       } finally {
-        setIsSigningIn(false);
+        setIsSigningIn(
+          false
+        );
       }
     };
 
-  const handleLogout = async () => {
-    try {
-      await logoutAdmin();
-    } catch (logoutError) {
-      console.error(logoutError);
-    }
+  const handleLogout =
+    async () => {
+      try {
+        await logoutAdmin();
+      } catch (
+        logoutError
+      ) {
+        console.error(
+          logoutError
+        );
+      }
 
-    setSession(EMPTY_SESSION);
-    setOrders([]);
-  };
+      setSession(
+        EMPTY_SESSION
+      );
+      setOrders([]);
+      setSelectedOrderIds(
+        []
+      );
+    };
 
   const handleSaveTemplate =
     async () => {
-      setIsSavingTemplate(true);
-      setTemplateSaved(false);
+      setIsSavingTemplate(
+        true
+      );
+
+      setTemplateSaved(
+        false
+      );
+
       setError('');
 
       try {
@@ -372,24 +408,33 @@ React.FC<
             templateDraft
           );
 
-        setTemplate(saved);
-        setTemplateDraft(saved);
-        setTemplateSaved(true);
+        setTemplateDraft(
+          saved
+        );
+
+        setTemplateSaved(
+          true
+        );
 
         window.setTimeout(
           () =>
-            setTemplateSaved(false),
-          2200
+            setTemplateSaved(
+              false
+            ),
+          1800
         );
-      } catch (saveError: any) {
-        console.error(saveError);
+      } catch (
+        saveError: any
+      ) {
         setError(
           getAuthErrorMessage(
             saveError
           )
         );
       } finally {
-        setIsSavingTemplate(false);
+        setIsSavingTemplate(
+          false
+        );
       }
     };
 
@@ -399,17 +444,21 @@ React.FC<
         orders.filter(
           (order) =>
             Boolean(
-              order.customer?.fullName ||
-              order.customer?.email ||
-              order.customer?.phone ||
-              order.paymentReference
+              order.customer
+                ?.fullName ||
+              order.customer
+                ?.email ||
+              order.customer
+                ?.phone ||
+              order
+                .paymentReference
             ) ||
-            order.paymentStatus ===
+            order
+              .paymentStatus ===
               'waiting_bank_transfer' ||
-            order.paymentStatus ===
-              'paid' ||
-            order.paymentStatus ===
-              'paid_test'
+            isPaidOrder(
+              order
+            )
         ),
       [orders]
     );
@@ -417,108 +466,71 @@ React.FC<
   const filteredOrders =
     useMemo(() => {
       const keyword =
-        search.trim().toLowerCase();
+        search
+          .trim()
+          .toLowerCase();
 
-      const normalizedKeyword =
-        keyword.startsWith(
-          'dearly'
-        )
-          ? keyword
-              .slice(
-                'dearly'.length
+      return checkoutOrders
+        .filter(
+          (order) => {
+            if (
+              paymentFilter ===
+                'waiting' &&
+              order
+                .paymentStatus !==
+                'waiting_bank_transfer'
+            ) {
+              return false;
+            }
+
+            if (
+              paymentFilter ===
+                'paid' &&
+              !isPaidOrder(
+                order
               )
-              .replace(
-                /\D/g,
-                ''
-              )
-          : keyword;
+            ) {
+              return false;
+            }
 
-      return checkoutOrders.filter(
-        (order) => {
-          const paid =
-            isPaidOrder(order);
+            if (
+              !keyword
+            ) {
+              return true;
+            }
 
-          if (
-            paymentFilter ===
-              'paid' &&
-            !paid
-          ) {
-            return false;
-          }
-
-          if (
-            paymentFilter ===
-              'unpaid' &&
-            paid
-          ) {
-            return false;
-          }
-
-          if (
-            giftFilter !== 'all' &&
-            order.status !==
-              giftFilter
-          ) {
-            return false;
-          }
-
-          if (!keyword) {
-            return true;
-          }
-
-          const customer =
-            order.customer;
-
-          const orderCode =
-            order.orderCode ||
-            order.paymentReference ||
-            `Dearly${order.id}`;
-
-          const haystack = [
-            order.id,
-            orderCode,
-            order.orderCode,
-            order.paymentReference,
-            order.senderName,
-            order.receiverName,
-            customer?.fullName,
-            customer?.email,
-            customer?.phone,
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
-
-          return (
-            haystack.includes(
-              keyword
-            ) ||
-            (
-              normalizedKeyword &&
-              order.id
-                .toLowerCase()
-                .includes(
-                  normalizedKeyword
+            const haystack =
+              [
+                order.id,
+                order.orderCode,
+                order
+                  .paymentReference,
+                order.customer
+                  ?.fullName,
+                order.customer
+                  ?.email,
+                order.customer
+                  ?.phone,
+                order.senderName,
+                order.receiverName,
+              ]
+                .filter(
+                  Boolean
                 )
-            )
-          );
-        }
-      );
+                .join(' ')
+                .toLowerCase();
+
+            return haystack
+              .includes(
+                keyword
+              );
+          }
+        );
     }, [
       checkoutOrders,
       search,
       paymentFilter,
-      giftFilter,
     ]);
-
-  const customers =
-    useMemo(
-      () =>
-        buildCustomers(
-          checkoutOrders
-        ),
-      [checkoutOrders]
-    );
 
   const paidOrders =
     checkoutOrders.filter(
@@ -528,112 +540,475 @@ React.FC<
   const pendingOrders =
     checkoutOrders.filter(
       (order) =>
-        order.paymentStatus ===
+        order
+          .paymentStatus ===
         'waiting_bank_transfer'
     );
 
   const revenue =
     paidOrders.reduce(
-      (sum, order) =>
+      (
+        sum,
+        order
+      ) =>
         sum +
-        (typeof order.price ===
-        'number'
-          ? order.price
-          : 0),
+        (
+          typeof order
+            .price ===
+          'number'
+            ? order.price
+            : 0
+        ),
       0
     );
 
+  const showNotice = (
+    message: string
+  ) => {
+    setNotice(
+      message
+    );
+
+    window.setTimeout(
+      () =>
+        setNotice(''),
+      2200
+    );
+  };
+
+  const toggleOrderSelection = (
+    orderId: string
+  ) => {
+    setSelectedOrderIds(
+      (current) =>
+        current.includes(
+          orderId
+        )
+          ? current.filter(
+              (id) =>
+                id !==
+                orderId
+            )
+          : [
+              ...current,
+              orderId,
+            ]
+    );
+  };
+
+  const toggleAllVisibleOrders =
+    () => {
+      const visibleIds =
+        filteredOrders.map(
+          (order) =>
+            order.id
+        );
+
+      if (
+        visibleIds.length ===
+        0
+      ) {
+        return;
+      }
+
+      setSelectedOrderIds(
+        (current) => {
+          const selected =
+            new Set(
+              current
+            );
+
+          const allVisibleSelected =
+            visibleIds.every(
+              (id) =>
+                selected.has(
+                  id
+                )
+            );
+
+          if (
+            allVisibleSelected
+          ) {
+            visibleIds.forEach(
+              (id) =>
+                selected.delete(
+                  id
+                )
+            );
+          } else {
+            visibleIds.forEach(
+              (id) =>
+                selected.add(
+                  id
+                )
+            );
+          }
+
+          return Array.from(
+            selected
+          );
+        }
+      );
+    };
+
+  const removeDeletedOrders = (
+    deletedIds:
+      string[]
+  ) => {
+    const deletedSet =
+      new Set(
+        deletedIds
+      );
+
+    setOrders(
+      (current) =>
+        current.filter(
+          (order) =>
+            !deletedSet.has(
+              order.id
+            )
+        )
+    );
+
+    setSelectedOrderIds(
+      (current) =>
+        current.filter(
+          (id) =>
+            !deletedSet.has(
+              id
+            )
+        )
+    );
+  };
+
+  const handleDeleteOne =
+    async (
+      order:
+        AdminOrderRecord
+    ) => {
+      const paid =
+        isPaidOrder(
+          order
+        );
+
+      const extraWarning =
+        paid
+          ? '\n\nĐơn này ĐÃ THANH TOÁN.'
+          : order.status ===
+              'published'
+            ? '\n\nGift này đang được publish.'
+            : '';
+
+      const confirmed =
+        window.confirm(
+          `Xóa vĩnh viễn ${getOrderCode(order)}?${extraWarning}\n\nHành động này không thể hoàn tác.`
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setIsDeletingOrders(
+        true
+      );
+      setError('');
+
+      try {
+        await deleteAdminOrder(
+          order.id
+        );
+
+        removeDeletedOrders(
+          [
+            order.id,
+          ]
+        );
+
+        showNotice(
+          `Đã xóa ${getOrderCode(order)}.`
+        );
+      } catch (
+        deleteError: any
+      ) {
+        console.error(
+          deleteError
+        );
+
+        setError(
+          getAuthErrorMessage(
+            deleteError
+          )
+        );
+      } finally {
+        setIsDeletingOrders(
+          false
+        );
+      }
+    };
+
+  const handleDeleteSelected =
+    async () => {
+      const selectedSet =
+        new Set(
+          selectedOrderIds
+        );
+
+      const selectedOrders =
+        checkoutOrders.filter(
+          (order) =>
+            selectedSet.has(
+              order.id
+            )
+        );
+
+      if (
+        selectedOrders.length ===
+        0
+      ) {
+        setSelectedOrderIds(
+          []
+        );
+        return;
+      }
+
+      const selectedPaidCount =
+        selectedOrders.filter(
+          isPaidOrder
+        ).length;
+
+      const selectedPublishedCount =
+        selectedOrders.filter(
+          (order) =>
+            order.status ===
+            'published'
+        ).length;
+
+      const warnings = [
+        selectedPaidCount > 0
+          ? `${selectedPaidCount} đơn đã thanh toán`
+          : '',
+        selectedPublishedCount > 0
+          ? `${selectedPublishedCount} gift đang publish`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' · ');
+
+      const confirmed =
+        window.confirm(
+          `Xóa vĩnh viễn ${selectedOrders.length} đơn?` +
+          (
+            warnings
+              ? `\n\nCảnh báo: ${warnings}.`
+              : ''
+          ) +
+          '\n\nHành động này không thể hoàn tác.'
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setIsDeletingOrders(
+        true
+      );
+      setError('');
+
+      const deletedIds:
+        string[] = [];
+
+      const failedIds:
+        string[] = [];
+
+      try {
+        const batchSize =
+          8;
+
+        for (
+          let index = 0;
+          index <
+          selectedOrders.length;
+          index +=
+            batchSize
+        ) {
+          const batch =
+            selectedOrders.slice(
+              index,
+              index +
+                batchSize
+            );
+
+          const results =
+            await Promise.allSettled(
+              batch.map(
+                (order) =>
+                  deleteAdminOrder(
+                    order.id
+                  )
+              )
+            );
+
+          results.forEach(
+            (
+              result,
+              resultIndex
+            ) => {
+              const id =
+                batch[
+                  resultIndex
+                ].id;
+
+              if (
+                result.status ===
+                'fulfilled'
+              ) {
+                deletedIds.push(
+                  id
+                );
+              } else {
+                failedIds.push(
+                  id
+                );
+              }
+            }
+          );
+        }
+
+        removeDeletedOrders(
+          deletedIds
+        );
+
+        if (
+          failedIds.length >
+          0
+        ) {
+          setError(
+            `Đã xóa ${deletedIds.length}/${selectedOrders.length} đơn. ${failedIds.length} đơn xóa lỗi, hãy thử lại.`
+          );
+        } else {
+          showNotice(
+            `Đã xóa ${deletedIds.length} đơn.`
+          );
+        }
+      } finally {
+        setIsDeletingOrders(
+          false
+        );
+      }
+    };
+
   if (isLoading) {
     return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#f5f5f3]">
+      <main className="flex min-h-[100svh] items-center justify-center bg-[#f6f5f3]">
         <div className="h-7 w-7 animate-spin rounded-full border-2 border-black/10 border-t-[#cf5068]" />
       </main>
     );
   }
 
-  if (!session.isGoogleUser) {
+  if (
+    !session
+      .isGoogleUser
+  ) {
     return (
       <AccessScreen
         title="Đăng nhập Dearly Admin"
-        description="Khu vực quản trị dành cho tài khoản Google đã được cấp quyền."
+        description="Dùng tài khoản Google đã được cấp quyền."
         buttonLabel={
           isSigningIn
             ? 'Đang đăng nhập...'
             : 'Đăng nhập với Google'
         }
-        disabled={isSigningIn}
-        error={error}
+        disabled={
+          isSigningIn
+        }
+        error={
+          error
+        }
         onAction={() =>
           void handleGoogleLogin()
         }
-        onBackHome={onBackHome}
+        onBackHome={
+          onBackHome
+        }
       />
     );
   }
 
-  if (!session.isAdmin) {
+  if (
+    !session.isAdmin
+  ) {
     return (
       <AccessScreen
         title="Gmail này chưa có quyền Admin"
-        description={`Đang đăng nhập: ${session.email || 'Không xác định'}. Tạo admins/{email} với enabled = true trong Firestore.`}
+        description={`Đang đăng nhập: ${session.email || 'Không xác định'}`}
         buttonLabel="Đổi tài khoản Google"
-        error={error}
+        error={
+          error
+        }
         onAction={() => {
           void logoutAdmin()
             .then(
               handleGoogleLogin
             );
         }}
-        onBackHome={onBackHome}
+        onBackHome={
+          onBackHome
+        }
       />
     );
   }
 
   return (
-    <div className="min-h-[100svh] bg-[#f5f5f3] text-[#191919] lg:grid lg:grid-cols-[230px_1fr]">
+    <div className="min-h-[100svh] bg-[#f6f5f3] text-[#191919] lg:grid lg:grid-cols-[210px_minmax(0,1fr)]">
       <aside className="border-b border-black/8 bg-white lg:sticky lg:top-0 lg:h-[100svh] lg:border-b-0 lg:border-r">
-        <div className="flex items-center justify-between px-5 py-4 lg:block lg:px-5 lg:py-6">
+        <div className="flex items-center justify-between px-4 py-4 lg:block lg:px-5 lg:py-6">
           <button
             type="button"
-            onClick={onBackHome}
-            className="inline-flex items-center"
+            onClick={
+              onBackHome
+            }
           >
             <img
-              src={BRAND.logoPath}
-              alt={`${BRAND.name} Admin`}
-              className="h-11 w-auto object-contain"
+              src={
+                BRAND.logoPath
+              }
+              alt={
+                BRAND.name
+              }
+              className="h-10 w-auto object-contain"
             />
           </button>
-
-          <p className="hidden text-[9px] font-bold uppercase tracking-[0.18em] text-black/30 lg:mt-2 lg:block">
-            Admin workspace
-          </p>
 
           <button
             type="button"
             onClick={() =>
               void handleLogout()
             }
-            className="text-xs font-semibold text-black/45 hover:text-[#cf5068] lg:hidden"
+            className="text-[11px] font-bold text-black/35 hover:text-[#b83e57] lg:hidden"
           >
             Đăng xuất
           </button>
         </div>
 
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:block lg:space-y-1 lg:px-3 lg:pb-0">
+        <nav className="flex gap-1 px-3 pb-3 lg:block lg:space-y-1">
           {ADMIN_TABS.map(
             (item) => (
               <button
-                key={item.key}
+                key={
+                  item.key
+                }
                 type="button"
                 onClick={() =>
-                  openTab(item.key)
+                  openTab(
+                    item.key
+                  )
                 }
                 className={[
-                  'shrink-0 border px-3.5 py-2.5 text-left text-xs font-bold transition lg:block lg:w-full lg:border-transparent',
-                  tab === item.key
-                    ? 'border-black/10 bg-[#f3ecee] text-[#b83e57] lg:border-transparent'
-                    : 'border-transparent text-black/45 hover:bg-black/[0.03] hover:text-black/75',
+                  'flex-1 rounded-[10px] px-3.5 py-2.5 text-left text-xs font-bold transition lg:block lg:w-full',
+                  tab ===
+                  item.key
+                    ? 'bg-[#f5ebed] text-[#b83e57]'
+                    : 'text-black/42 hover:bg-black/[0.03] hover:text-black/70',
                 ].join(' ')}
               >
                 {item.label}
@@ -644,117 +1019,153 @@ React.FC<
 
         <div className="hidden lg:absolute lg:bottom-0 lg:left-0 lg:right-0 lg:block lg:border-t lg:border-black/8 lg:p-4">
           <p className="truncate text-xs font-bold text-black/65">
-            {session.displayName ||
+            {session
+              .displayName ||
               'Google Admin'}
           </p>
+
           <p className="mt-1 truncate text-[10px] text-black/35">
             {session.email}
           </p>
+
           <button
             type="button"
             onClick={() =>
               void handleLogout()
             }
-            className="mt-3 text-[11px] font-bold text-[#b83e57]"
+            className="mt-3 text-[10px] font-bold text-[#b83e57]"
           >
             Đăng xuất
           </button>
         </div>
       </aside>
 
-      <main className="min-w-0 px-4 py-6 sm:px-7 lg:px-9 lg:py-8">
-        <div className="mx-auto max-w-[1450px]">
-          <header className="mb-7 flex flex-col justify-between gap-3 border-b border-black/8 pb-5 sm:flex-row sm:items-end">
+      <main className="min-w-0 px-3 py-5 sm:px-6 lg:px-8 lg:py-7">
+        <div className="mx-auto max-w-[1280px]">
+          <header className="mb-5 flex items-end justify-between gap-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#b83e57]">
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#b83e57]">
                 Dearly Admin
               </p>
-              <h1 className="mt-2 text-3xl font-black tracking-[-0.045em]">
-                {ADMIN_TABS.find(
-                  (item) =>
-                    item.key === tab
-                )?.label}
+
+              <h1 className="mt-1.5 text-2xl font-black tracking-[-0.04em] sm:text-3xl">
+                {tab ===
+                'templates'
+                  ? 'Templates'
+                  : 'Đơn hàng'}
               </h1>
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                void loadAdmin()
-              }
-              className="self-start border border-black/10 bg-white px-3.5 py-2.5 text-xs font-bold text-black/55 transition hover:border-black/25 hover:text-black"
-            >
-              Làm mới dữ liệu
-            </button>
+            {tab ===
+              'orders' && (
+              <button
+                type="button"
+                onClick={() =>
+                  void loadAdmin()
+                }
+                className="rounded-[10px] border border-black/10 bg-white px-3 py-2 text-[10px] font-bold text-black/45 hover:text-black/70"
+              >
+                Làm mới
+              </button>
+            )}
           </header>
 
+          {notice && (
+            <div className="mb-4 rounded-[12px] border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700">
+              {notice}
+            </div>
+          )}
+
           {error && (
-            <div className="mb-5 border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-600">
+            <div className="mb-4 rounded-[12px] border border-red-100 bg-red-50 px-4 py-3 text-xs font-semibold text-red-600">
               {error}
             </div>
           )}
 
-          {tab === 'dashboard' && (
-            <AdminDashboardTab
-              orders={orders}
-              customers={customers}
-              paidCount={paidOrders.length}
-              pendingCount={pendingOrders.length}
-              revenue={revenue}
-              template={template}
-              onOpenOrders={() =>
-                openTab('orders')
-              }
-            />
-          )}
-
-          {tab === 'orders' && (
+          {tab ===
+            'orders' && (
             <AdminOrdersTab
-              orders={filteredOrders}
-              totalOrders={checkoutOrders.length}
-              search={search}
-              paymentFilter={paymentFilter}
-              giftFilter={giftFilter}
-              onSearch={setSearch}
-              onPaymentFilter={setPaymentFilter}
-              onGiftFilter={setGiftFilter}
-              onOpenOrder={onOpenOrder}
+              orders={
+                filteredOrders
+              }
+              totalOrders={
+                checkoutOrders
+                  .length
+              }
+              paidCount={
+                paidOrders
+                  .length
+              }
+              pendingCount={
+                pendingOrders
+                  .length
+              }
+              revenue={
+                revenue
+              }
+              search={
+                search
+              }
+              paymentFilter={
+                paymentFilter
+              }
+              onSearch={
+                setSearch
+              }
+              onPaymentFilter={
+                setPaymentFilter
+              }
+              selectedOrderIds={
+                selectedOrderIds
+              }
+              deleting={
+                isDeletingOrders
+              }
+              onToggleOrder={
+                toggleOrderSelection
+              }
+              onToggleAllVisible={
+                toggleAllVisibleOrders
+              }
+              onClearSelection={() =>
+                setSelectedOrderIds(
+                  []
+                )
+              }
+              onDeleteOne={(
+                order
+              ) =>
+                void handleDeleteOne(
+                  order
+                )
+              }
+              onDeleteSelected={() =>
+                void handleDeleteSelected()
+              }
+              onOpenOrder={
+                onOpenOrder
+              }
             />
           )}
 
-          {tab === 'templates' && (
+          {tab ===
+            'templates' && (
             <AdminTemplatesTab
-              template={templateDraft}
-              saved={templateSaved}
-              saving={isSavingTemplate}
-              onChange={setTemplateDraft}
+              template={
+                templateDraft
+              }
+              saved={
+                templateSaved
+              }
+              saving={
+                isSavingTemplate
+              }
+              onChange={
+                setTemplateDraft
+              }
               onSave={() =>
                 void handleSaveTemplate()
               }
-            />
-          )}
-
-          {tab === 'customers' && (
-            <AdminCustomersTab
-              customers={customers}
-            />
-          )}
-
-          {tab === 'discounts' && (
-            <AdminDiscountsTab
-              template={templateDraft}
-              saved={templateSaved}
-              saving={isSavingTemplate}
-              onChange={setTemplateDraft}
-              onSave={() =>
-                void handleSaveTemplate()
-              }
-            />
-          )}
-
-          {tab === 'settings' && (
-            <AdminSettingsTab
-              session={session}
             />
           )}
         </div>
@@ -763,7 +1174,8 @@ React.FC<
   );
 };
 
-const AccessScreen: React.FC<{
+const AccessScreen:
+React.FC<{
   title: string;
   description: string;
   buttonLabel: string;
@@ -780,41 +1192,51 @@ const AccessScreen: React.FC<{
   onAction,
   onBackHome,
 }) => (
-  <main className="min-h-[100svh] bg-[#f5f5f3] px-4 py-10">
-    <div className="mx-auto max-w-lg border border-black/8 bg-white p-7 sm:p-9">
+  <main className="min-h-[100svh] bg-[#f6f5f3] px-4 py-10">
+    <div className="mx-auto max-w-md rounded-[20px] border border-black/8 bg-white p-7">
       <button
         type="button"
-        onClick={onBackHome}
-        className="text-xs font-bold text-black/40 hover:text-[#b83e57]"
+        onClick={
+          onBackHome
+        }
+        className="text-xs font-bold text-black/40"
       >
         ← Về trang chủ
       </button>
 
       <img
-        src={BRAND.logoPath}
-        alt={BRAND.name}
-        className="mt-8 h-14 w-auto object-contain"
+        src={
+          BRAND.logoPath
+        }
+        alt={
+          BRAND.name
+        }
+        className="mt-7 h-12 w-auto"
       />
 
-      <h1 className="mt-7 text-2xl font-black tracking-[-0.04em]">
+      <h1 className="mt-6 text-2xl font-black tracking-[-0.04em]">
         {title}
       </h1>
 
-      <p className="mt-3 text-sm leading-6 text-black/45">
+      <p className="mt-2 text-sm leading-6 text-black/45">
         {description}
       </p>
 
       {error && (
-        <p className="mt-4 border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-600">
+        <p className="mt-4 rounded-[10px] bg-red-50 p-3 text-xs font-semibold text-red-600">
           {error}
         </p>
       )}
 
       <button
         type="button"
-        disabled={disabled}
-        onClick={onAction}
-        className="mt-7 w-full bg-[#181818] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#b83e57] disabled:opacity-50"
+        disabled={
+          disabled
+        }
+        onClick={
+          onAction
+        }
+        className="mt-6 w-full rounded-[12px] bg-[#191919] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-50"
       >
         {buttonLabel}
       </button>

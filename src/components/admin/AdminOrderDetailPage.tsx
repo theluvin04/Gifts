@@ -6,22 +6,11 @@ import React, {
 import {
   ArrowLeft,
   Check,
-  CheckCircle2,
   Copy,
   ExternalLink,
-  Eye,
-  Gift,
-  Image as ImageIcon,
   Loader2,
-  LockKeyhole,
-  LogIn,
-  Mail,
-  Music2,
   RefreshCw,
-  Send,
   Trash2,
-  UserRound,
-  WalletCards,
 } from 'lucide-react';
 
 import {
@@ -37,13 +26,23 @@ import {
   setAdminGiftPublished,
 } from '../../services/adminService';
 
-interface AdminOrderDetailPageProps {
+import {
+  formatDateTime,
+  formatVnd,
+  getGiftLabel,
+  getOrderCode,
+  getPaymentLabel,
+  isPaidOrder,
+} from './adminUi';
+
+interface Props {
   giftId: string;
   onBack: () => void;
   onBackHome: () => void;
 }
 
-const EMPTY_SESSION: AdminSession = {
+const EMPTY_SESSION:
+AdminSession = {
   uid: '',
   email: '',
   displayName: '',
@@ -51,54 +50,6 @@ const EMPTY_SESSION: AdminSession = {
   isSignedIn: false,
   isGoogleUser: false,
   isAdmin: false,
-};
-
-const formatVnd = (
-  amount?: number
-) => {
-  if (
-    typeof amount !== 'number'
-  ) {
-    return '—';
-  }
-
-  return new Intl.NumberFormat(
-    'vi-VN',
-    {
-      style: 'currency',
-      currency: 'VND',
-    }
-  ).format(amount);
-};
-
-const formatDateTime = (
-  timestamp: number
-) => {
-  if (!timestamp) {
-    return '—';
-  }
-
-  return new Intl.DateTimeFormat(
-    'vi-VN',
-    {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }
-  ).format(new Date(timestamp));
-};
-
-const isPaidOrder = (
-  order: AdminOrderRecord
-) => {
-  return (
-    order.paymentStatus ===
-      'paid_test' ||
-    (order.paymentStatus as string) ===
-      'paid'
-  );
 };
 
 const getErrorMessage = (
@@ -120,7 +71,7 @@ const getErrorMessage = (
     code ===
       'firestore/permission-denied'
   ) {
-    return 'Firestore đang chặn quyền Admin. Kiểm tra lại firestore.rules.';
+    return 'Firestore đang chặn quyền Admin.';
   }
 
   return (
@@ -130,240 +81,136 @@ const getErrorMessage = (
 };
 
 export const AdminOrderDetailPage:
-React.FC<
-  AdminOrderDetailPageProps
-> = ({
+React.FC<Props> = ({
   giftId,
   onBack,
   onBackHome,
 }) => {
-  const [session, setSession] =
+  const [
+    session,
+    setSession,
+  ] =
     useState<AdminSession>(
       EMPTY_SESSION
     );
 
-  const [order, setOrder] =
+  const [
+    order,
+    setOrder,
+  ] =
     useState<
-      AdminOrderRecord | null
+      AdminOrderRecord |
+      null
     >(null);
 
-  const [isLoading, setIsLoading] =
+  const [
+    isLoading,
+    setIsLoading,
+  ] =
     useState(true);
 
-  const [action, setAction] =
+  const [
+    action,
+    setAction,
+  ] =
     useState<
       | ''
+      | 'confirm'
       | 'paid'
-      | 'confirm_bank'
       | 'publish'
       | 'unpublish'
       | 'delete'
     >('');
 
-  const [error, setError] =
+  const [
+    error,
+    setError,
+  ] =
     useState('');
 
-  const [copied, setCopied] =
+  const [
+    copied,
+    setCopied,
+  ] =
     useState(false);
 
-  const loadPage = async () => {
-    setIsLoading(true);
-    setError('');
+  const loadPage =
+    async () => {
+      setIsLoading(true);
+      setError('');
 
-    try {
-      const nextSession =
-        await getAdminSession();
+      try {
+        const nextSession =
+          await getAdminSession();
 
-      setSession(nextSession);
-
-      if (!nextSession.isAdmin) {
-        setOrder(null);
-        return;
-      }
-
-      const nextOrder =
-        await getAdminOrderById(
-          giftId
+        setSession(
+          nextSession
         );
 
-      setOrder(nextOrder);
-    } catch (loadError: any) {
-      console.error(loadError);
+        if (
+          !nextSession
+            .isAdmin
+        ) {
+          setOrder(null);
+          return;
+        }
 
-      setError(
-        getErrorMessage(
-          loadError
-        )
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        setOrder(
+          await getAdminOrderById(
+            giftId
+          )
+        );
+      } catch (
+        loadError: any
+      ) {
+        setError(
+          getErrorMessage(
+            loadError
+          )
+        );
+      } finally {
+        setIsLoading(
+          false
+        );
+      }
+    };
 
   const refreshOrder =
     async () => {
-      const nextOrder =
+      setOrder(
         await getAdminOrderById(
           giftId
-        );
-
-      setOrder(nextOrder);
+        )
+      );
     };
 
   useEffect(() => {
     void loadPage();
   }, [giftId]);
 
-  const handleGoogleLogin =
-    async () => {
-      setError('');
-      setIsLoading(true);
-
-      try {
-        await loginAdminWithGoogle();
-        await loadPage();
-      } catch (loginError: any) {
-        console.error(loginError);
-
-        setError(
-          getErrorMessage(
-            loginError
-          )
-        );
-
-        setIsLoading(false);
-      }
-    };
-
-  const handleSwitchGoogle =
-    async () => {
-      try {
-        await logoutAdmin();
-      } catch {
-        // Vẫn mở popup Google tiếp.
-      }
-
-      await handleGoogleLogin();
-    };
-
-  const handleConfirmBankPayment =
-    async () => {
-      if (!order) {
-        return;
-      }
-
-      setAction(
-        'confirm_bank'
-      );
-      setError('');
-
-      try {
-        await confirmAdminBankPayment(
-          order.id
-        );
-
-        await refreshOrder();
-      } catch (actionError: any) {
-        setError(
-          getErrorMessage(
-            actionError
-          )
-        );
-      } finally {
-        setAction('');
-      }
-    };
-
-  const handleMarkPaid =
-    async () => {
-      if (!order) {
-        return;
-      }
-
-      setAction('paid');
-      setError('');
-
-      try {
-        await markAdminOrderPaid(
-          order.id
-        );
-
-        await refreshOrder();
-      } catch (actionError: any) {
-        setError(
-          getErrorMessage(
-            actionError
-          )
-        );
-      } finally {
-        setAction('');
-      }
-    };
-
-  const handlePublish =
+  const runAction =
     async (
-      published: boolean
+      name:
+        typeof action,
+      callback:
+        () =>
+          Promise<void>
     ) => {
-      if (!order) {
-        return;
-      }
-
-      setAction(
-        published
-          ? 'publish'
-          : 'unpublish'
-      );
+      setAction(name);
       setError('');
 
       try {
-        await setAdminGiftPublished(
-          order.id,
-          published
-        );
-
+        await callback();
         await refreshOrder();
-      } catch (actionError: any) {
+      } catch (
+        actionError: any
+      ) {
         setError(
           getErrorMessage(
             actionError
           )
         );
       } finally {
-        setAction('');
-      }
-    };
-
-  const handleDelete =
-    async () => {
-      if (!order) {
-        return;
-      }
-
-      const confirmed =
-        window.confirm(
-          `Xóa vĩnh viễn đơn ${order.id}? Hành động này không thể hoàn tác.`
-        );
-
-      if (!confirmed) {
-        return;
-      }
-
-      setAction('delete');
-      setError('');
-
-      try {
-        await deleteAdminOrder(
-          order.id
-        );
-
-        onBack();
-      } catch (actionError: any) {
-        setError(
-          getErrorMessage(
-            actionError
-          )
-        );
-
         setAction('');
       }
     };
@@ -374,19 +221,21 @@ React.FC<
         return;
       }
 
-      const url =
-        `${window.location.origin}/gift/${order.id}`;
-
       try {
-        await navigator.clipboard.writeText(
-          url
-        );
+        await navigator
+          .clipboard
+          .writeText(
+            `${window.location.origin}/gift/${order.id}`
+          );
 
         setCopied(true);
 
         window.setTimeout(
-          () => setCopied(false),
-          2000
+          () =>
+            setCopied(
+              false
+            ),
+          1600
         );
       } catch {
         setError(
@@ -395,68 +244,120 @@ React.FC<
       }
     };
 
+  const handleDelete =
+    async () => {
+      if (!order) {
+        return;
+      }
+
+      if (
+        !window.confirm(
+          `Xóa vĩnh viễn ${getOrderCode(order)}?`
+        )
+      ) {
+        return;
+      }
+
+      setAction(
+        'delete'
+      );
+
+      try {
+        await deleteAdminOrder(
+          order.id
+        );
+
+        onBack();
+      } catch (
+        deleteError: any
+      ) {
+        setError(
+          getErrorMessage(
+            deleteError
+          )
+        );
+
+        setAction('');
+      }
+    };
+
   if (isLoading) {
     return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#f7f8fb] px-5">
-        <div className="text-center">
-          <Loader2 className="mx-auto h-7 w-7 animate-spin text-rose-500" />
-
-          <p className="mt-3 text-sm font-semibold text-slate-500">
-            Đang tải chi tiết đơn...
-          </p>
-        </div>
+      <main className="flex min-h-[100svh] items-center justify-center bg-[#f6f5f3]">
+        <Loader2 className="h-6 w-6 animate-spin text-[#b83e57]" />
       </main>
     );
   }
 
-  if (!session.isGoogleUser) {
+  if (
+    !session
+      .isGoogleUser
+  ) {
     return (
       <AccessCard
-        title="Đăng nhập Admin bằng Google"
-        description="Đăng nhập Gmail Admin để xem chi tiết đơn hàng."
+        title="Đăng nhập Admin"
+        description="Đăng nhập Google để xem đơn hàng."
         buttonLabel="Đăng nhập với Google"
-        onAction={() =>
-          void handleGoogleLogin()
+        error={
+          error
         }
-        onBackHome={onBackHome}
-        error={error}
+        onAction={() =>
+          void loginAdminWithGoogle()
+            .then(
+              loadPage
+            )
+        }
+        onBackHome={
+          onBackHome
+        }
       />
     );
   }
 
-  if (!session.isAdmin) {
+  if (
+    !session.isAdmin
+  ) {
     return (
       <AccessCard
-        title="Gmail này chưa có quyền Admin"
-        description={`Đang đăng nhập: ${session.email || 'Không xác định'}`}
-        buttonLabel="Đổi Gmail"
-        onAction={() =>
-          void handleSwitchGoogle()
+        title="Gmail chưa có quyền Admin"
+        description={
+          session.email
         }
-        onBackHome={onBackHome}
-        error={error}
+        buttonLabel="Đổi Gmail"
+        error={
+          error
+        }
+        onAction={() =>
+          void logoutAdmin()
+            .then(
+              () =>
+                loginAdminWithGoogle()
+            )
+            .then(
+              loadPage
+            )
+        }
+        onBackHome={
+          onBackHome
+        }
       />
     );
   }
 
   if (!order) {
     return (
-      <main className="min-h-[100svh] bg-[#f7f8fb] px-4 py-8 sm:px-7">
-        <div className="mx-auto max-w-xl rounded-[28px] border border-slate-200 bg-white p-7 text-center shadow-sm">
-          <Gift className="mx-auto h-8 w-8 text-slate-300" />
-
-          <h1 className="mt-4 text-xl font-bold text-slate-900">
+      <main className="min-h-[100svh] bg-[#f6f5f3] px-4 py-10">
+        <div className="mx-auto max-w-md rounded-[18px] border border-black/8 bg-white p-7 text-center">
+          <h1 className="text-xl font-black">
             Không tìm thấy đơn
           </h1>
 
-          <p className="mt-2 text-sm text-slate-500">
-            Gift ID: {giftId}
-          </p>
-
           <button
             type="button"
-            onClick={onBack}
-            className="mt-5 rounded-full bg-slate-900 px-5 py-3 text-xs font-bold text-white"
+            onClick={
+              onBack
+            }
+            className="mt-5 rounded-[10px] bg-[#191919] px-4 py-3 text-xs font-bold text-white"
           >
             Về danh sách đơn
           </button>
@@ -468,328 +369,355 @@ React.FC<
   const paid =
     isPaidOrder(order);
 
-  const giftUrl =
-    `/gift/${order.id}`;
+  const published =
+    order.status ===
+    'published';
+
+  const code =
+    getOrderCode(order);
 
   const config =
     order.config;
 
+  const giftUrl =
+    `/gift/${order.id}`;
+
   return (
-    <div className="min-h-[100svh] bg-[#f7f8fb] text-slate-800">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex min-h-[68px] max-w-[1500px] items-center justify-between gap-3 px-4 py-3 sm:px-7">
+    <div className="min-h-[100svh] bg-[#f6f5f3] text-[#191919]">
+      <header className="sticky top-0 z-40 border-b border-black/8 bg-white/95 backdrop-blur-xl">
+        <div className="mx-auto flex min-h-[62px] max-w-[1200px] items-center justify-between gap-3 px-3 sm:px-6">
           <button
             type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 transition hover:text-rose-500"
+            onClick={
+              onBack
+            }
+            className="inline-flex items-center gap-2 text-xs font-bold text-black/45 hover:text-[#b83e57]"
           >
             <ArrowLeft className="h-4 w-4" />
+
             <span className="hidden sm:inline">
               Danh sách đơn
             </span>
           </button>
 
-          <div className="min-w-0 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-400">
-              Chi tiết đơn hàng
-            </p>
-
-            <p className="truncate font-mono text-xs font-bold text-slate-800 sm:text-sm">
-              {order.id}
-            </p>
-          </div>
+          <p className="font-mono text-sm font-black text-[#b83e57]">
+            {code}
+          </p>
 
           <button
             type="button"
             onClick={() =>
               void refreshOrder()
             }
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:text-rose-500"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-black/8 text-black/40"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">
-              Làm mới
-            </span>
           </button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1500px] px-4 py-7 sm:px-7">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge
-                label={
-                  order.paymentStatus ||
-                  'unpaid'
-                }
-                active={paid}
-              />
+      <main className="mx-auto max-w-[1200px] px-3 py-5 sm:px-6 sm:py-7">
+        <section className="rounded-[18px] border border-black/8 bg-white p-5">
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
+            <div>
+              <div className="flex flex-wrap gap-2">
+                <StatusPill
+                  label={
+                    getPaymentLabel(
+                      order
+                    )
+                  }
+                  tone={
+                    paid
+                      ? 'green'
+                      : order
+                          .paymentStatus ===
+                        'waiting_bank_transfer'
+                        ? 'amber'
+                        : 'gray'
+                  }
+                />
 
-              <StatusBadge
-                label={order.status}
-                active={
-                  order.status ===
-                  'published'
-                }
-              />
+                <StatusPill
+                  label={
+                    getGiftLabel(
+                      order
+                    )
+                  }
+                  tone={
+                    published
+                      ? 'green'
+                      : 'gray'
+                  }
+                />
+              </div>
+
+              <h1 className="mt-4 text-2xl font-black tracking-[-0.04em]">
+                {order.customer
+                  ?.fullName ||
+                  'Chưa có tên khách'}
+              </h1>
+
+              <p className="mt-1 text-sm text-black/45">
+                {order.customer
+                  ?.phone ||
+                  'Chưa có SĐT'}
+                {' · '}
+                {order.customer
+                  ?.email ||
+                  'Chưa có email'}
+              </p>
             </div>
 
-            <h1 className="mt-3 text-3xl font-bold tracking-[-0.05em] text-slate-900">
-              Chi tiết đơn hàng
-            </h1>
+            <div className="lg:text-right">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-black/30">
+                Tổng đơn
+              </p>
 
-            <p className="mt-2 text-sm text-slate-500">
-              {order.senderName}
-              {' → '}
-              {order.receiverName}
-            </p>
+              <p className="mt-1 text-2xl font-black">
+                {typeof order.price ===
+                'number'
+                  ? formatVnd(
+                      order.price
+                    )
+                  : '—'}
+              </p>
+
+              <p className="mt-1 text-[10px] text-black/35">
+                {formatDateTime(
+                  order.createdAtMs
+                )}
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={copyGiftLink}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:text-rose-500"
-            >
-              {copied ? (
-                <Check className="h-3.5 w-3.5" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
+          <div className="mt-5 border-t border-black/7 pt-4">
+            <div className="flex flex-wrap gap-2">
+              {!paid &&
+              order.paymentStatus ===
+                'waiting_bank_transfer' && (
+                <PrimaryAction
+                  label="Xác nhận CK & Publish"
+                  loading={
+                    action ===
+                    'confirm'
+                  }
+                  disabled={
+                    action !== ''
+                  }
+                  onClick={() =>
+                    void runAction(
+                      'confirm',
+                      () =>
+                        confirmAdminBankPayment(
+                          order.id
+                        )
+                    )
+                  }
+                />
               )}
 
-              {copied
-                ? 'Đã copy'
-                : 'Copy link'}
-            </button>
+              {!paid &&
+              order.paymentStatus !==
+                'waiting_bank_transfer' && (
+                <PrimaryAction
+                  label="Đánh dấu đã thanh toán"
+                  loading={
+                    action ===
+                    'paid'
+                  }
+                  disabled={
+                    action !== ''
+                  }
+                  onClick={() =>
+                    void runAction(
+                      'paid',
+                      () =>
+                        markAdminOrderPaid(
+                          order.id
+                        )
+                    )
+                  }
+                />
+              )}
 
-            {order.status ===
-              'published' && (
-              <a
-                href={giftUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-rose-500"
+              {paid &&
+              !published && (
+                <PrimaryAction
+                  label="Publish gift"
+                  loading={
+                    action ===
+                    'publish'
+                  }
+                  disabled={
+                    action !== ''
+                  }
+                  onClick={() =>
+                    void runAction(
+                      'publish',
+                      () =>
+                        setAdminGiftPublished(
+                          order.id,
+                          true
+                        )
+                    )
+                  }
+                />
+              )}
+
+              {published && (
+                <a
+                  href={
+                    giftUrl
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#191919] px-4 py-2.5 text-xs font-bold text-white"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Mở gift
+                </a>
+              )}
+
+              <button
+                type="button"
+                onClick={() =>
+                  void copyGiftLink()
+                }
+                className="inline-flex items-center gap-1.5 rounded-[10px] border border-black/10 bg-white px-3.5 py-2.5 text-xs font-bold text-black/50"
               >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Mở gift
-              </a>
-            )}
+                {copied ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+
+                {copied
+                  ? 'Đã copy'
+                  : 'Copy link'}
+              </button>
+
+              {published && (
+                <button
+                  type="button"
+                  disabled={
+                    action !== ''
+                  }
+                  onClick={() =>
+                    void runAction(
+                      'unpublish',
+                      () =>
+                        setAdminGiftPublished(
+                          order.id,
+                          false
+                        )
+                    )
+                  }
+                  className="rounded-[10px] border border-black/10 px-3.5 py-2.5 text-xs font-bold text-black/40"
+                >
+                  Unpublish
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        </section>
 
         {error && (
-          <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-semibold text-red-600">
+          <div className="mt-4 rounded-[12px] bg-red-50 px-4 py-3 text-xs font-semibold text-red-600">
             {error}
           </div>
         )}
 
-        <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <InfoCard
-            icon={UserRound}
-            label="Khách hàng"
-            title={
-              order.customer
-                ?.fullName || '—'
-            }
-            lines={[
-              order.customer?.email ||
-                'Chưa có email',
-              order.customer?.phone ||
-                'Chưa có SĐT',
-            ]}
-          />
+        <div className="mt-4 grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <section className="rounded-[18px] border border-black/8 bg-white p-5">
+            <h2 className="text-sm font-black">
+              Thông tin đơn
+            </h2>
 
-          <InfoCard
-            icon={Gift}
-            label="Món quà"
-            title={
-              order.templateId ||
-              'love-01'
-            }
-            lines={[
-              `${order.senderName} → ${order.receiverName}`,
-              giftUrl,
-            ]}
-          />
-
-          <InfoCard
-            icon={WalletCards}
-            label="Thanh toán"
-            title={formatVnd(
-              order.price
-            )}
-            lines={[
-              order.paymentStatus ||
-                'unpaid',
-              `Paid: ${formatDateTime(order.paidAtMs)}`,
-            ]}
-          />
-
-          <InfoCard
-            icon={CheckCircle2}
-            label="Trạng thái"
-            title={order.status}
-            lines={[
-              `Tạo: ${formatDateTime(order.createdAtMs)}`,
-              `Cập nhật: ${formatDateTime(order.updatedAtMs)}`,
-            ]}
-          />
-        </div>
-
-        <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-400">
-                Thao tác quản trị
-              </p>
-
-              <h2 className="mt-1 text-xl font-bold text-slate-900">
-                Quản lý đơn
-              </h2>
-            </div>
-
-            <p className="text-xs text-slate-400">
-              Admin: {session.email}
-            </p>
-          </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {order.paymentStatus ===
-            'waiting_bank_transfer' &&
-            !paid ? (
-              <ActionButton
-                icon={WalletCards}
-                label="Xác nhận CK & Publish"
-                disabled={action !== ''}
-                loading={
-                  action ===
-                  'confirm_bank'
-                }
-                onClick={() =>
-                  void handleConfirmBankPayment()
+            <div className="mt-4">
+              <DetailRow
+                label="Mã đơn"
+                value={
+                  code
                 }
               />
-            ) : (
-              <ActionButton
-                icon={WalletCards}
-                label={
-                  paid
-                    ? 'Đã thanh toán'
-                    : 'Đánh dấu Paid'
-                }
-                disabled={
-                  paid ||
-                  action !== ''
-                }
-                loading={
-                  action === 'paid'
-                }
-                onClick={() =>
-                  void handleMarkPaid()
+
+              <DetailRow
+                label="Template"
+                value={
+                  order.templateId ||
+                  'love-01'
                 }
               />
-            )}
 
-            {order.status ===
-            'published' ? (
-              <ActionButton
-                icon={Eye}
-                label="Unpublish"
-                disabled={action !== ''}
-                loading={
-                  action ===
-                  'unpublish'
-                }
-                onClick={() =>
-                  void handlePublish(
-                    false
-                  )
-                }
-                secondary
-              />
-            ) : (
-              <ActionButton
-                icon={Send}
-                label="Publish gift"
-                disabled={action !== ''}
-                loading={
-                  action === 'publish'
-                }
-                onClick={() =>
-                  void handlePublish(
-                    true
-                  )
-                }
-              />
-            )}
-
-            <button
-              type="button"
-              onClick={copyGiftLink}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-700 transition hover:border-rose-200 hover:text-rose-500"
-            >
-              <Copy className="h-4 w-4" />
-              Copy link
-            </button>
-
-            <button
-              type="button"
-              disabled={action !== ''}
-              onClick={() =>
-                void handleDelete()
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
-            >
-              {action === 'delete' ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-              Xóa đơn
-            </button>
-          </div>
-        </section>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-          <section className="space-y-6">
-            <ContentCard
-              icon={UserRound}
-              title="Thông tin cơ bản"
-            >
               <DetailRow
                 label="Người gửi"
                 value={
-                  config.couple
-                    .senderName
+                  order.senderName ||
+                  '—'
                 }
               />
 
               <DetailRow
                 label="Người nhận"
                 value={
-                  config.couple
-                    .receiverName
-                }
-              />
-
-              <DetailRow
-                label="Biệt danh"
-                value={
-                  config.couple
-                    .nickname || '—'
-                }
-              />
-
-              <DetailRow
-                label="Ngày đặc biệt"
-                value={
-                  config.couple
-                    .anniversaryDate ||
+                  order.receiverName ||
                   '—'
                 }
               />
 
+              <DetailRow
+                label="Nội dung CK"
+                value={
+                  order.paymentReference ||
+                  code
+                }
+              />
+
+              <DetailRow
+                label="Gift ID"
+                value={
+                  order.id
+                }
+                mono
+              />
+
+              <DetailRow
+                label="Đã thanh toán lúc"
+                value={
+                  formatDateTime(
+                    order.paidAtMs
+                  )
+                }
+              />
+            </div>
+
+            <button
+              type="button"
+              disabled={
+                action !== ''
+              }
+              onClick={() =>
+                void handleDelete()
+              }
+              className="mt-6 inline-flex items-center gap-1.5 text-[10px] font-bold text-red-500"
+            >
+              {action ===
+              'delete' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+
+              Xóa đơn
+            </button>
+          </section>
+
+          <section className="space-y-3">
+            <ContentDetails
+              title="Nội dung cơ bản"
+              open
+            >
               <DetailRow
                 label="Câu hỏi"
                 value={
@@ -805,149 +733,134 @@ React.FC<
                     .yesBtnText
                 }
               />
-            </ContentCard>
 
-            <ContentCard
-              icon={Music2}
-              title="Playlist"
+              <DetailRow
+                label="Biệt danh"
+                value={
+                  config.couple
+                    .nickname ||
+                  '—'
+                }
+              />
+            </ContentDetails>
+
+            <ContentDetails
+              title={`Ảnh kỷ niệm (${config.gifts.gift1.photos.length})`}
             >
-              <div className="space-y-3">
-                {config.gifts.gift2.playlist.map(
-                  (track, index) => (
-                    <div
-                      key={track.id}
-                      className="flex gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3"
-                    >
-                      <img
-                        src={
-                          track.coverUrl
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {config.gifts
+                  .gift1.photos
+                  .map(
+                    (
+                      photo,
+                      index
+                    ) => (
+                      <div
+                        key={
+                          photo.id ||
+                          index
                         }
-                        alt=""
-                        className="h-14 w-14 shrink-0 rounded-xl bg-slate-200 object-cover"
-                      />
+                        className="overflow-hidden rounded-[10px] bg-[#f4f1f1]"
+                      >
+                        {photo.url ? (
+                          <img
+                            src={
+                              photo.url
+                            }
+                            alt=""
+                            className="aspect-square w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex aspect-square items-center justify-center text-[10px] text-black/25">
+                            Trống
+                          </div>
+                        )}
 
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-rose-400">
-                          Bài {index + 1}
+                        <p className="px-2 py-1.5 text-[9px] font-bold text-black/35">
+                          Ảnh{' '}
+                          {index +
+                            1}
+                        </p>
+                      </div>
+                    )
+                  )}
+              </div>
+            </ContentDetails>
+
+            <ContentDetails
+              title={`Playlist (${config.gifts.gift2.playlist.length})`}
+            >
+              <div className="divide-y divide-black/6">
+                {config.gifts
+                  .gift2
+                  .playlist
+                  .map(
+                    (
+                      track,
+                      index
+                    ) => (
+                      <div
+                        key={
+                          track.id ||
+                          index
+                        }
+                        className="py-3 first:pt-0 last:pb-0"
+                      >
+                        <p className="text-xs font-bold">
+                          {track.title ||
+                            `Bài ${index + 1}`}
                         </p>
 
-                        <p className="mt-1 truncate text-sm font-bold text-slate-800">
-                          {track.title}
+                        <p className="mt-1 text-[10px] text-black/35">
+                          {track.artist ||
+                            '—'}
                         </p>
 
-                        <p className="truncate text-xs text-slate-400">
-                          {track.artist}
-                        </p>
-
-                        {track.audioUrl && (
-                          <p className="mt-1 truncate text-[10px] text-slate-300">
-                            {track.audioUrl}
+                        {track.youtubeUrl && (
+                          <p className="mt-1 truncate text-[9px] text-black/25">
+                            {track.youtubeUrl}
                           </p>
                         )}
                       </div>
-                    </div>
-                  )
-                )}
+                    )
+                  )}
               </div>
-            </ContentCard>
-          </section>
+            </ContentDetails>
 
-          <section className="space-y-6">
-            <ContentCard
-              icon={ImageIcon}
-              title="Ảnh kỷ niệm"
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
-                {config.gifts.gift1.photos.map(
-                  (photo, index) => (
-                    <div
-                      key={photo.id}
-                      className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50"
-                    >
-                      <div className="aspect-[4/3] bg-slate-100">
-                        <img
-                          src={photo.url}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-
-                      <div className="p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-rose-400">
-                          Ảnh {index + 1}
-                        </p>
-
-                        <p className="mt-1 text-xs font-semibold leading-5 text-slate-700">
-                          {photo.caption ||
-                            'Không có caption'}
-                        </p>
-
-                        <p className="mt-1 text-[10px] text-slate-400">
-                          {[
-                            photo.date,
-                            photo.location,
-                          ]
-                            .filter(
-                              Boolean
-                            )
-                            .join(' · ') ||
-                            '—'}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-            </ContentCard>
-
-            <ContentCard
-              icon={Mail}
+            <ContentDetails
               title="Bức thư"
             >
-              <div className="rounded-2xl bg-[#fff9fb] p-4">
-                <p className="font-bold text-rose-500">
-                  {
-                    config.gifts
-                      .gift3.letter
-                      .salutation
-                  }
-                </p>
+              <p className="text-xs font-bold text-[#b83e57]">
+                {
+                  config.gifts
+                    .gift3
+                    .letter
+                    .salutation
+                }
+              </p>
 
-                <div className="mt-4 space-y-3">
-                  {config.gifts.gift3.letter.paragraphs.map(
+              <div className="mt-3 space-y-2">
+                {config.gifts
+                  .gift3
+                  .letter
+                  .paragraphs
+                  .map(
                     (
                       paragraph,
                       index
                     ) => (
                       <p
-                        key={index}
-                        className="text-sm leading-6 text-slate-600"
+                        key={
+                          index
+                        }
+                        className="text-xs leading-5 text-black/55"
                       >
                         {paragraph}
                       </p>
                     )
                   )}
-                </div>
-
-                <div className="mt-5 border-t border-rose-100 pt-4">
-                  <p className="text-sm text-slate-500">
-                    {
-                      config.gifts
-                        .gift3.letter
-                        .closing
-                    }
-                  </p>
-
-                  <p className="mt-1 text-sm font-bold text-slate-800">
-                    {
-                      config.gifts
-                        .gift3.letter
-                        .signature
-                    }
-                  </p>
-                </div>
               </div>
-            </ContentCard>
+            </ContentDetails>
           </section>
         </div>
       </main>
@@ -955,218 +868,175 @@ React.FC<
   );
 };
 
-interface AccessCardProps {
+const AccessCard:
+React.FC<{
   title: string;
   description: string;
   buttonLabel: string;
+  error: string;
   onAction: () => void;
   onBackHome: () => void;
-  error: string;
-}
-
-const AccessCard: React.FC<
-  AccessCardProps
-> = ({
+}> = ({
   title,
   description,
   buttonLabel,
+  error,
   onAction,
   onBackHome,
-  error,
 }) => (
-  <main className="min-h-[100svh] bg-[#f7f8fb] px-4 py-8 sm:px-7">
-    <div className="mx-auto max-w-xl">
+  <main className="min-h-[100svh] bg-[#f6f5f3] px-4 py-10">
+    <div className="mx-auto max-w-md rounded-[18px] border border-black/8 bg-white p-7">
       <button
         type="button"
-        onClick={onBackHome}
-        className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 transition hover:text-rose-500"
+        onClick={
+          onBackHome
+        }
+        className="text-xs font-bold text-black/40"
       >
-        <ArrowLeft className="h-4 w-4" />
-        Về trang chủ
+        ← Về trang chủ
       </button>
 
-      <div className="mt-6 rounded-[30px] border border-slate-200 bg-white p-7 shadow-sm">
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white">
-          <LockKeyhole className="h-5 w-5" />
-        </span>
+      <h1 className="mt-7 text-2xl font-black">
+        {title}
+      </h1>
 
-        <h1 className="mt-5 text-2xl font-bold tracking-[-0.04em] text-slate-900">
-          {title}
-        </h1>
+      <p className="mt-2 text-sm text-black/45">
+        {description}
+      </p>
 
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          {description}
+      {error && (
+        <p className="mt-4 text-xs font-semibold text-red-500">
+          {error}
         </p>
+      )}
 
-        {error && (
-          <p className="mt-4 text-xs font-semibold leading-5 text-red-500">
-            {error}
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={onAction}
-          className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-rose-500 px-5 py-3 text-sm font-bold text-white"
-        >
-          <LogIn className="h-4 w-4" />
-          {buttonLabel}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={
+          onAction
+        }
+        className="mt-6 w-full rounded-[12px] bg-[#191919] px-4 py-3 text-sm font-bold text-white"
+      >
+        {buttonLabel}
+      </button>
     </div>
   </main>
 );
 
-interface InfoCardProps {
-  icon: React.ComponentType<{
-    className?: string;
-  }>;
+const PrimaryAction:
+React.FC<{
   label: string;
-  title: string;
-  lines: string[];
-}
-
-const InfoCard: React.FC<
-  InfoCardProps
-> = ({
-  icon: Icon,
-  label,
-  title,
-  lines,
-}) => (
-  <div className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm">
-    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-500">
-      <Icon className="h-4 w-4" />
-    </span>
-
-    <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-      {label}
-    </p>
-
-    <p className="mt-1 break-words text-base font-bold text-slate-900">
-      {title}
-    </p>
-
-    {lines.map(
-      (line, index) => (
-        <p
-          key={`${line}-${index}`}
-          className="mt-1 break-words text-[11px] leading-5 text-slate-400"
-        >
-          {line}
-        </p>
-      )
-    )}
-  </div>
-);
-
-interface ContentCardProps {
-  icon: React.ComponentType<{
-    className?: string;
-  }>;
-  title: string;
-  children: React.ReactNode;
-}
-
-const ContentCard: React.FC<
-  ContentCardProps
-> = ({
-  icon: Icon,
-  title,
-  children,
-}) => (
-  <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-    <div className="flex items-center gap-3">
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-500">
-        <Icon className="h-4 w-4" />
-      </span>
-
-      <h2 className="text-lg font-bold text-slate-900">
-        {title}
-      </h2>
-    </div>
-
-    <div className="mt-5">
-      {children}
-    </div>
-  </div>
-);
-
-const DetailRow: React.FC<{
-  label: string;
-  value: string;
+  loading: boolean;
+  disabled: boolean;
+  onClick: () => void;
 }> = ({
   label,
-  value,
-}) => (
-  <div className="border-b border-slate-100 py-3 last:border-b-0">
-    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-      {label}
-    </p>
-
-    <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-      {value}
-    </p>
-  </div>
-);
-
-interface ActionButtonProps {
-  icon: React.ComponentType<{
-    className?: string;
-  }>;
-  label: string;
-  disabled: boolean;
-  loading: boolean;
-  onClick: () => void;
-  secondary?: boolean;
-}
-
-const ActionButton: React.FC<
-  ActionButtonProps
-> = ({
-  icon: Icon,
-  label,
-  disabled,
   loading,
+  disabled,
   onClick,
-  secondary = false,
 }) => (
   <button
     type="button"
-    disabled={disabled}
-    onClick={onClick}
-    className={[
-      'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50',
-      secondary
-        ? 'border border-slate-200 bg-white text-slate-700 hover:border-rose-200 hover:text-rose-500'
-        : 'bg-rose-500 text-white shadow-sm shadow-rose-100 hover:bg-rose-600',
-    ].join(' ')}
+    disabled={
+      disabled
+    }
+    onClick={
+      onClick
+    }
+    className="inline-flex items-center gap-2 rounded-[10px] bg-[#b83e57] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"
   >
-    {loading ? (
-      <Loader2 className="h-4 w-4 animate-spin" />
-    ) : (
-      <Icon className="h-4 w-4" />
+    {loading && (
+      <Loader2 className="h-3.5 w-3.5 animate-spin" />
     )}
 
     {label}
   </button>
 );
 
-const StatusBadge: React.FC<{
+const StatusPill:
+React.FC<{
   label: string;
-  active: boolean;
+  tone:
+    | 'green'
+    | 'amber'
+    | 'gray';
 }> = ({
   label,
-  active,
+  tone,
 }) => (
   <span
     className={[
-      'inline-flex rounded-full px-3 py-1.5 text-[10px] font-bold',
-      active
-        ? 'bg-emerald-50 text-emerald-600'
-        : 'bg-amber-50 text-amber-600',
+      'rounded-full px-2.5 py-1 text-[9px] font-bold',
+      tone ===
+      'green'
+        ? 'bg-emerald-50 text-emerald-700'
+        : tone ===
+            'amber'
+          ? 'bg-amber-50 text-amber-700'
+          : 'bg-slate-100 text-slate-500',
     ].join(' ')}
   >
     {label}
   </span>
+);
+
+const DetailRow:
+React.FC<{
+  label: string;
+  value: string;
+  mono?: boolean;
+}> = ({
+  label,
+  value,
+  mono = false,
+}) => (
+  <div className="border-b border-black/6 py-3 last:border-b-0">
+    <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/28">
+      {label}
+    </p>
+
+    <p
+      className={[
+        'mt-1 break-words text-xs font-semibold leading-5 text-black/62',
+        mono
+          ? 'font-mono'
+          : '',
+      ].join(' ')}
+    >
+      {value}
+    </p>
+  </div>
+);
+
+const ContentDetails:
+React.FC<{
+  title: string;
+  open?: boolean;
+  children:
+    React.ReactNode;
+}> = ({
+  title,
+  open = false,
+  children,
+}) => (
+  <details
+    open={open}
+    className="group rounded-[18px] border border-black/8 bg-white"
+  >
+    <summary className="cursor-pointer list-none px-5 py-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-black">
+          {title}
+        </h2>
+
+        <span className="text-lg text-black/25 transition group-open:rotate-45">
+          +
+        </span>
+      </div>
+    </summary>
+
+    <div className="border-t border-black/6 px-5 py-4">
+      {children}
+    </div>
+  </details>
 );

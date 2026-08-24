@@ -1,7 +1,8 @@
-import React from 'react';
+import React, {
+  useState,
+} from 'react';
 
 import {
-  Image as ImageIcon,
   Plus,
   Trash2,
 } from 'lucide-react';
@@ -16,7 +17,7 @@ import {
   getEnabledAssetChoices,
 } from '../../templates/assets';
 
-interface AdminTemplateAssetEditorProps {
+interface Props {
   assets:
     TemplateAssetLibrary;
   onChange: (
@@ -34,43 +35,26 @@ const makeAssetId = () => {
       .slice(0, 18);
   }
 
-  return `asset-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
+  return `asset-${Date.now()}`;
 };
 
-const updateSlotInLibrary = (
+const updateSlot = (
   library:
     TemplateAssetLibrary,
   slotId: string,
-  updater: (
-    slot:
-      TemplateAssetSlot
-  ) => TemplateAssetSlot
-): TemplateAssetLibrary => {
-  const current =
-    library.slots[
-      slotId
-    ];
-
-  if (!current) {
-    return library;
-  }
-
-  return {
-    ...library,
-    slots: {
-      ...library.slots,
-      [slotId]:
-        updater(current),
-    },
-  };
-};
+  next:
+    TemplateAssetSlot
+) => ({
+  ...library,
+  slots: {
+    ...library.slots,
+    [slotId]:
+      next,
+  },
+});
 
 export const AdminTemplateAssetEditor:
-React.FC<
-  AdminTemplateAssetEditorProps
-> = ({
+React.FC<Props> = ({
   assets,
   onChange,
 }) => {
@@ -87,38 +71,43 @@ React.FC<
     );
 
   return (
-    <div className="mt-8 border-t border-black/8 pt-7">
-      <div className="border-b border-black/8 pb-5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#b83e57]">
-          Asset Library
-        </p>
-
-        <h3 className="mt-2 text-xl font-black">
-          GIF & ảnh của mẫu gốc
-        </h3>
-
-        <p className="mt-1 max-w-3xl text-xs leading-5 text-black/40">
-          Thêm nhiều asset bằng URL hoặc đường dẫn /images/...
-          Chọn asset mặc định và bật “Khách được chọn” cho từng giai đoạn.
-          Khi nối Firebase Storage sau này, cấu trúc này giữ nguyên.
-        </p>
+    <div>
+      <div className="rounded-[14px] bg-[#fff4f6] px-4 py-3 text-[11px] leading-5 text-[#9f4054]">
+        Asset được khai báo trong code sẽ tự xuất hiện ở đây.
+        Nếu preview báo “Thiếu file / sai path” thì path đã có nhưng file chưa nằm đúng trong{' '}
+        <strong>
+          public/images/template-assets/
+        </strong>
+        .
       </div>
 
-      <div className="mt-6 space-y-8">
+      <div className="mt-4 space-y-3">
         {groups.map(
-          (group) => (
-            <section
+          (
+            group,
+            groupIndex
+          ) => (
+            <details
               key={group}
+              open={
+                groupIndex ===
+                0
+              }
+              className="group rounded-[16px] border border-black/8 bg-white"
             >
-              <div className="mb-3 flex items-center gap-2">
-                <span className="h-2 w-2 bg-[#cf5068]" />
+              <summary className="cursor-pointer list-none px-4 py-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-black">
+                    {group}
+                  </p>
 
-                <h4 className="text-sm font-black">
-                  {group}
-                </h4>
-              </div>
+                  <span className="text-lg text-black/25 transition group-open:rotate-45">
+                    +
+                  </span>
+                </div>
+              </summary>
 
-              <div className="grid gap-4">
+              <div className="space-y-3 border-t border-black/6 p-3">
                 {Object.values(
                   assets.slots
                 )
@@ -129,7 +118,7 @@ React.FC<
                   )
                   .map(
                     (slot) => (
-                      <AssetSlotEditor
+                      <AssetSlot
                         key={
                           slot.id
                         }
@@ -140,11 +129,10 @@ React.FC<
                           next
                         ) =>
                           onChange(
-                            updateSlotInLibrary(
+                            updateSlot(
                               assets,
                               slot.id,
-                              () =>
-                                next
+                              next
                             )
                           )
                         }
@@ -152,7 +140,7 @@ React.FC<
                     )
                   )}
               </div>
-            </section>
+            </details>
           )
         )}
       </div>
@@ -160,7 +148,7 @@ React.FC<
   );
 };
 
-const AssetSlotEditor:
+const AssetSlot:
 React.FC<{
   slot:
     TemplateAssetSlot;
@@ -178,7 +166,7 @@ React.FC<{
     ).length;
 
   const updateChoice = (
-    assetId: string,
+    id: string,
     patch:
       Partial<
         TemplateAssetChoice
@@ -187,8 +175,7 @@ React.FC<{
     const choices =
       slot.choices.map(
         (choice) =>
-          choice.id ===
-          assetId
+          choice.id === id
             ? {
                 ...choice,
                 ...patch,
@@ -196,28 +183,24 @@ React.FC<{
             : choice
       );
 
-    let defaultAssetId =
-      slot.defaultAssetId;
-
-    const defaultChoice =
+    const currentDefault =
       choices.find(
         (choice) =>
           choice.id ===
-          defaultAssetId
+          slot.defaultAssetId
       );
 
-    if (
-      !defaultChoice ||
-      !defaultChoice.enabled
-    ) {
-      defaultAssetId =
-        choices.find(
-          (choice) =>
-            choice.enabled
-        )?.id ||
-        choices[0]?.id ||
-        '';
-    }
+    const defaultAssetId =
+      currentDefault
+        ?.enabled
+        ? slot.defaultAssetId
+        : (
+            choices.find(
+              (choice) =>
+                choice.enabled
+            ) ||
+            choices[0]
+          )?.id || '';
 
     onChange({
       ...slot,
@@ -226,8 +209,25 @@ React.FC<{
     });
   };
 
+  const addChoice = () => {
+    onChange({
+      ...slot,
+      choices: [
+        ...slot.choices,
+        {
+          id:
+            makeAssetId(),
+          label:
+            `Asset ${slot.choices.length + 1}`,
+          url: '',
+          enabled: true,
+        },
+      ],
+    });
+  };
+
   const removeChoice = (
-    assetId: string
+    id: string
   ) => {
     if (
       slot.choices.length <=
@@ -239,21 +239,19 @@ React.FC<{
     const choices =
       slot.choices.filter(
         (choice) =>
-          choice.id !==
-          assetId
+          choice.id !== id
       );
 
     const defaultAssetId =
       slot.defaultAssetId ===
-      assetId
+      id
         ? (
             choices.find(
               (choice) =>
                 choice.enabled
             ) ||
             choices[0]
-          )?.id ||
-          ''
+          )?.id || ''
         : slot.defaultAssetId;
 
     onChange({
@@ -263,252 +261,262 @@ React.FC<{
     });
   };
 
-  const addChoice = () => {
-    const id =
-      makeAssetId();
-
-    onChange({
-      ...slot,
-      choices: [
-        ...slot.choices,
-        {
-          id,
-          label:
-            `Asset ${slot.choices.length + 1}`,
-          url: '',
-          enabled: true,
-        },
-      ],
-    });
-  };
-
   return (
-    <div className="border border-black/8 bg-[#fffdfc]">
-      <div className="flex flex-col gap-4 border-b border-black/8 p-4 sm:flex-row sm:items-start sm:justify-between">
+    <section className="rounded-[14px] bg-[#faf9f8] p-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <ImageIcon className="h-4 w-4 text-[#b83e57]" />
+          <p className="text-xs font-black text-black/70">
+            {slot.label}
+          </p>
 
-            <h5 className="text-sm font-black">
-              {slot.label}
-            </h5>
-
-            <span className="border border-black/8 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-black/35">
-              {slot.kind}
-            </span>
-          </div>
-
-          <p className="mt-1.5 max-w-2xl text-[11px] leading-5 text-black/38">
+          <p className="mt-1 text-[10px] leading-4 text-black/35">
             {slot.description}
           </p>
         </div>
 
-        <label className="flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            checked={
-              slot
-                .customerCanChoose
-            }
-            onChange={(
-              event
-            ) =>
-              onChange({
-                ...slot,
-                customerCanChoose:
-                  event.target
-                    .checked,
-              })
-            }
-            className="h-4 w-4 accent-[#b83e57]"
-          />
+        <div className="flex items-center gap-3">
+          <p className="text-[9px] font-semibold text-black/30">
+            {enabledCount}{' '}
+            đang bật
+          </p>
 
-          <span className="text-[11px] font-bold text-black/58">
+          <label className="flex items-center gap-1.5 text-[10px] font-bold text-black/50">
+            <input
+              type="checkbox"
+              checked={
+                slot
+                  .customerCanChoose
+              }
+              onChange={(
+                event
+              ) =>
+                onChange({
+                  ...slot,
+                  customerCanChoose:
+                    event.target
+                      .checked,
+                })
+              }
+              className="h-4 w-4 accent-[#b83e57]"
+            />
+
             Khách được chọn
-          </span>
-        </label>
+          </label>
+        </div>
       </div>
 
-      <div className="grid gap-3 p-4">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {slot.choices.map(
-          (
-            choice,
-            index
-          ) => (
-            <div
+          (choice) => (
+            <AssetCard
               key={
                 choice.id
               }
-              className="grid gap-3 border border-black/8 bg-white p-3 lg:grid-cols-[76px_minmax(0,180px)_minmax(0,1fr)_auto]"
-            >
-              <div className="flex h-[76px] w-[76px] items-center justify-center overflow-hidden bg-[#f7f2f3]">
-                {choice.url ? (
-                  <img
-                    src={
-                      choice.url
-                    }
-                    alt=""
-                    className="h-full w-full object-contain"
-                  />
-                ) : (
-                  <ImageIcon className="h-5 w-5 text-black/18" />
-                )}
-              </div>
-
-              <label className="block">
-                <span className="mb-1 block text-[10px] font-bold text-black/42">
-                  Tên asset
-                </span>
-
-                <input
-                  value={
-                    choice.label
-                  }
-                  onChange={(
-                    event
-                  ) =>
-                    updateChoice(
-                      choice.id,
-                      {
-                        label:
-                          event
-                            .target
-                            .value,
-                      }
-                    )
-                  }
-                  className="w-full border border-black/10 px-3 py-2.5 text-xs outline-none focus:border-[#cf5068]"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-1 block text-[10px] font-bold text-black/42">
-                  URL / đường dẫn asset
-                </span>
-
-                <input
-                  value={
-                    choice.url
-                  }
-                  placeholder="/images/... hoặc https://..."
-                  onChange={(
-                    event
-                  ) =>
-                    updateChoice(
-                      choice.id,
-                      {
-                        url:
-                          event
-                            .target
-                            .value,
-                      }
-                    )
-                  }
-                  className="w-full border border-black/10 px-3 py-2.5 font-mono text-[11px] outline-none focus:border-[#cf5068]"
-                />
-              </label>
-
-              <div className="flex items-center gap-3 lg:flex-col lg:items-end lg:justify-between">
-                <label className="flex items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    checked={
-                      choice.enabled
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      updateChoice(
-                        choice.id,
-                        {
-                          enabled:
-                            event
-                              .target
-                              .checked,
-                        }
-                      )
-                    }
-                    className="h-4 w-4 accent-[#b83e57]"
-                  />
-
-                  <span className="text-[10px] font-bold text-black/48">
-                    Bật
-                  </span>
-                </label>
-
-                <label className="flex items-center gap-1.5">
-                  <input
-                    type="radio"
-                    name={
-                      `default-${slot.id}`
-                    }
-                    checked={
-                      slot
-                        .defaultAssetId ===
-                      choice.id
-                    }
-                    disabled={
-                      !choice.enabled
-                    }
-                    onChange={() =>
-                      onChange({
-                        ...slot,
-                        defaultAssetId:
-                          choice.id,
-                      })
-                    }
-                    className="h-4 w-4 accent-[#b83e57]"
-                  />
-
-                  <span className="text-[10px] font-bold text-black/48">
-                    Mặc định
-                  </span>
-                </label>
-
-                <button
-                  type="button"
-                  disabled={
-                    slot.choices
-                      .length <=
-                    1
-                  }
-                  onClick={() =>
-                    removeChoice(
-                      choice.id
-                    )
-                  }
-                  className="flex h-8 w-8 items-center justify-center border border-black/8 text-black/25 transition hover:border-red-200 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-20"
-                  aria-label={
-                    `Xóa asset ${index + 1}`
-                  }
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
+              choice={
+                choice
+              }
+              defaultAssetId={
+                slot.defaultAssetId
+              }
+              radioName={
+                `default-${slot.id}`
+              }
+              canDelete={
+                slot.choices
+                  .length >
+                1
+              }
+              onUpdate={(
+                patch
+              ) =>
+                updateChoice(
+                  choice.id,
+                  patch
+                )
+              }
+              onSetDefault={() =>
+                onChange({
+                  ...slot,
+                  defaultAssetId:
+                    choice.id,
+                })
+              }
+              onDelete={() =>
+                removeChoice(
+                  choice.id
+                )
+              }
+            />
           )
         )}
+      </div>
+
+      <button
+        type="button"
+        onClick={
+          addChoice
+        }
+        className="mt-3 inline-flex items-center gap-1.5 rounded-[10px] border border-dashed border-[#cf5068]/35 bg-white px-3 py-2 text-[10px] font-bold text-[#b83e57]"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Thêm asset
+      </button>
+    </section>
+  );
+};
+
+const AssetCard:
+React.FC<{
+  choice:
+    TemplateAssetChoice;
+  defaultAssetId:
+    string;
+  radioName: string;
+  canDelete: boolean;
+  onUpdate: (
+    patch:
+      Partial<
+        TemplateAssetChoice
+      >
+  ) => void;
+  onSetDefault:
+    () => void;
+  onDelete:
+    () => void;
+}> = ({
+  choice,
+  defaultAssetId,
+  radioName,
+  canDelete,
+  onUpdate,
+  onSetDefault,
+  onDelete,
+}) => {
+  const [
+    broken,
+    setBroken,
+  ] = useState(false);
+
+  return (
+    <div className="rounded-[12px] border border-black/7 bg-white p-3">
+      <div className="aspect-[16/10] overflow-hidden rounded-[10px] bg-[#f5f1f2]">
+        {choice.url &&
+        !broken ? (
+          <img
+            src={
+              choice.url
+            }
+            alt=""
+            onError={() =>
+              setBroken(true)
+            }
+            onLoad={() =>
+              setBroken(false)
+            }
+            className="h-full w-full object-contain"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center px-4 text-center">
+            <p className="text-[10px] font-bold text-red-400">
+              {choice.url
+                ? 'Thiếu file / sai path'
+                : 'Chưa có URL'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <input
+        value={
+          choice.label
+        }
+        onChange={(
+          event
+        ) =>
+          onUpdate({
+            label:
+              event.target
+                .value,
+          })
+        }
+        className="mt-3 w-full border-0 border-b border-black/8 px-0 py-1.5 text-xs font-bold outline-none focus:border-[#cf5068]"
+      />
+
+      <input
+        value={
+          choice.url
+        }
+        onChange={(
+          event
+        ) => {
+          setBroken(false);
+
+          onUpdate({
+            url:
+              event.target
+                .value,
+          });
+        }}
+        placeholder="/images/..."
+        className="mt-2 w-full rounded-[8px] bg-[#faf9f8] px-2.5 py-2 font-mono text-[9px] text-black/48 outline-none"
+      />
+
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1 text-[9px] font-bold text-black/40">
+            <input
+              type="checkbox"
+              checked={
+                choice.enabled
+              }
+              onChange={(
+                event
+              ) =>
+                onUpdate({
+                  enabled:
+                    event.target
+                      .checked,
+                })
+              }
+              className="h-3.5 w-3.5 accent-[#b83e57]"
+            />
+            Bật
+          </label>
+
+          <label className="flex items-center gap-1 text-[9px] font-bold text-black/40">
+            <input
+              type="radio"
+              name={
+                radioName
+              }
+              checked={
+                defaultAssetId ===
+                choice.id
+              }
+              disabled={
+                !choice.enabled
+              }
+              onChange={
+                onSetDefault
+              }
+              className="h-3.5 w-3.5 accent-[#b83e57]"
+            />
+            Mặc định
+          </label>
+        </div>
 
         <button
           type="button"
-          onClick={
-            addChoice
+          disabled={
+            !canDelete
           }
-          className="inline-flex w-fit items-center gap-2 border border-dashed border-[#cf5068]/35 px-4 py-2.5 text-[11px] font-bold text-[#b83e57] transition hover:bg-[#fff3f5]"
+          onClick={
+            onDelete
+          }
+          className="flex h-7 w-7 items-center justify-center text-black/20 hover:text-red-500 disabled:opacity-20"
         >
-          <Plus className="h-3.5 w-3.5" />
-          Thêm asset
+          <Trash2 className="h-3.5 w-3.5" />
         </button>
-
-        <p className="text-[10px] leading-5 text-black/30">
-          {enabledCount}{' '}
-          asset đang bật ·
-          {' '}
-          {slot.customerCanChoose &&
-          enabledCount > 1
-            ? 'Khách sẽ thấy selector.'
-            : 'Khách dùng asset mặc định.'}
-        </p>
       </div>
     </div>
   );

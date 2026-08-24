@@ -1,4 +1,6 @@
-import React from 'react';
+import React, {
+  useState,
+} from 'react';
 
 import {
   TemplateConfig,
@@ -18,7 +20,7 @@ import {
   AdminTemplateAssetEditor,
 } from './AdminTemplateAssetEditor';
 
-interface CommonProps {
+interface Props {
   template:
     TemplateConfig;
   saved: boolean;
@@ -30,560 +32,350 @@ interface CommonProps {
   onSave: () => void;
 }
 
+type TemplateSection =
+  | 'selling'
+  | 'design'
+  | 'assets';
+
 export const AdminTemplatesTab:
-React.FC<
-  CommonProps
-> = ({
+React.FC<Props> = ({
   template,
   saved,
   saving,
   onChange,
   onSave,
 }) => {
+  const [
+    section,
+    setSection,
+  ] =
+    useState<TemplateSection>(
+      'selling'
+    );
+
   const discount =
     getTemplateDiscountPercent(
       template
     );
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="min-w-0 border border-black/8 bg-white p-5 sm:p-6">
-        <div className="border-b border-black/8 pb-4">
-          <p className="text-lg font-black">
-            {template.name}
-          </p>
+    <div>
+      <div className="rounded-[18px] border border-black/8 bg-white p-4 sm:p-5">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-lg font-black">
+              {template.name}
+            </p>
 
-          <p className="mt-1 text-xs leading-5 text-black/40">
-            Đây là mẫu gốc. Giá và design ở đây dùng cho đơn checkout mới.
-          </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+              <span className="rounded-full bg-[#f4f1f1] px-2.5 py-1 font-bold text-black/45">
+                {template.status}
+              </span>
+
+              <span className="font-bold text-[#b83e57]">
+                {formatVnd(
+                  getEffectiveTemplatePrice(
+                    template
+                  )
+                )}
+              </span>
+
+              {discount >
+                0 && (
+                <span className="text-black/30">
+                  giảm{' '}
+                  {discount}%
+                </span>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={
+              saving
+            }
+            onClick={
+              onSave
+            }
+            className="rounded-[12px] bg-[#191919] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#b83e57] disabled:opacity-50"
+          >
+            {saving
+              ? 'Đang lưu...'
+              : saved
+                ? 'Đã lưu ✓'
+                : 'Lưu thay đổi'}
+          </button>
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <AdminField
-            label="Tên template"
-            value={
-              template.name
+        <div className="mt-5 grid grid-cols-3 gap-1 rounded-[12px] bg-[#f4f1f1] p-1">
+          <SectionButton
+            active={
+              section ===
+              'selling'
             }
-            onChange={(value) =>
-              onChange({
-                ...template,
-                name: value,
-              })
-            }
-          />
-
-          <AdminSelect
-            label="Trạng thái"
-            value={
-              template.status
-            }
-            options={[
-              [
-                'available',
-                'Available',
-              ],
-              [
-                'paused',
-                'Paused',
-              ],
-              [
-                'coming_soon',
-                'Coming soon',
-              ],
-            ]}
-            onChange={(value) =>
-              onChange({
-                ...template,
-                status:
-                  value as
-                    TemplateConfig[
-                      'status'
-                    ],
-              })
+            label="Giá & bán"
+            onClick={() =>
+              setSection(
+                'selling'
+              )
             }
           />
 
-          <AdminNumberField
-            label="Giá gốc"
-            value={
-              template.basePrice
+          <SectionButton
+            active={
+              section ===
+              'design'
             }
-            onChange={(value) =>
-              onChange({
-                ...template,
-                basePrice:
-                  value,
-              })
-            }
-          />
-
-          <AdminNumberField
-            label="Giá sale"
-            value={
-              template.salePrice
-            }
-            onChange={(value) =>
-              onChange({
-                ...template,
-                salePrice:
-                  value,
-              })
-            }
-          />
-        </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <ToggleRow
-            title="Bật giá sale"
-            description={`Giảm hiện tại ${discount}%`}
-            checked={
-              template.saleEnabled
-            }
-            onChange={(checked) =>
-              onChange({
-                ...template,
-                saleEnabled:
-                  checked,
-              })
+            label="Giao diện"
+            onClick={() =>
+              setSection(
+                'design'
+              )
             }
           />
 
-          <ToggleRow
-            title="Hiển thị template"
-            description="Tắt nếu muốn ẩn khỏi storefront."
-            checked={
-              template.visible
+          <SectionButton
+            active={
+              section ===
+              'assets'
             }
-            onChange={(checked) =>
-              onChange({
-                ...template,
-                visible:
-                  checked,
-              })
+            label="GIF & ảnh"
+            onClick={() =>
+              setSection(
+                'assets'
+              )
             }
           />
         </div>
+      </div>
 
-        <div className="mt-5">
-          <AdminField
-            label="Nhãn khuyến mãi"
-            value={
+      <div className="mt-4 rounded-[18px] border border-black/8 bg-white p-4 sm:p-6">
+        {section ===
+          'selling' && (
+          <SellingEditor
+            template={
               template
-                .promotionLabel
             }
-            onChange={(value) =>
+            discount={
+              discount
+            }
+            onChange={
+              onChange
+            }
+          />
+        )}
+
+        {section ===
+          'design' && (
+          <AdminTemplateDesignEditor
+            design={
+              template.design
+            }
+            onChange={(
+              design
+            ) =>
               onChange({
                 ...template,
-                promotionLabel:
-                  value,
+                design,
               })
             }
-            placeholder="VD: Launch offer"
           />
-        </div>
+        )}
 
-        <AdminTemplateDesignEditor
-          design={
-            template.design
-          }
-          onChange={(design) =>
-            onChange({
-              ...template,
-              design,
-            })
-          }
-        />
-
-        <AdminTemplateAssetEditor
-          assets={
-            template.assets
-          }
-          onChange={(assets) =>
-            onChange({
-              ...template,
-              assets,
-            })
-          }
-        />
-
-        <SaveButton
-          saved={saved}
-          saving={saving}
-          label="Lưu toàn bộ mẫu gốc"
-          onSave={onSave}
-        />
-      </section>
-
-      <aside className="min-w-0 xl:sticky xl:top-5 xl:self-start">
-        <TemplatePreview
-          template={
-            template
-          }
-          discount={
-            discount
-          }
-        />
-      </aside>
+        {section ===
+          'assets' && (
+          <AdminTemplateAssetEditor
+            assets={
+              template.assets
+            }
+            onChange={(
+              assets
+            ) =>
+              onChange({
+                ...template,
+                assets,
+              })
+            }
+          />
+        )}
+      </div>
     </div>
   );
 };
 
-const TemplatePreview:
+const SellingEditor:
 React.FC<{
   template:
     TemplateConfig;
   discount: number;
+  onChange: (
+    template:
+      TemplateConfig
+  ) => void;
 }> = ({
   template,
   discount,
-}) => {
-  const design =
-    template.design;
-
-  return (
-    <div className="overflow-hidden border border-black/8 bg-white">
-      <div className="border-b border-black/8 px-5 py-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#b83e57]">
-          Live style preview
-        </p>
-      </div>
-
-      <div
-        style={{
-          background:
-            design.colors
-              .pageBackground,
-          color:
-            design.colors.text,
-          fontFamily:
-            design.fonts.body,
-        }}
-        className="p-5"
-      >
-        <div
-          style={{
-            background:
-              design.colors
-                .surface,
-          }}
-          className="rounded-[22px] p-5 shadow-sm"
-        >
-          <p
-            style={{
-              color:
-                design.proposal
-                  .questionColor,
-              fontFamily:
-                design.fonts
-                  .heading,
-              fontSize:
-                '24px',
-            }}
-            className="text-center font-bold"
-          >
-            Do you love me? ❤️
-          </p>
-
-          <div className="mt-4 flex justify-center gap-2">
-            <span
-              style={{
-                background:
-                  design.proposal
-                    .yesButtonBackground,
-                color:
-                  design.proposal
-                    .yesButtonText,
-              }}
-              className="rounded-full px-4 py-2 text-[10px] font-bold"
-            >
-              YES
-            </span>
-
-            <span
-              style={{
-                background:
-                  design.proposal
-                    .noButtonBackground,
-                color:
-                  design.proposal
-                    .noButtonText,
-              }}
-              className="rounded-full border border-black/10 px-4 py-2 text-[10px] font-bold"
-            >
-              NO
-            </span>
-          </div>
-        </div>
-
-        <div
-          style={{
-            background:
-              design.memories
-                .background,
-          }}
-          className="mt-4 rounded-[22px] p-4"
-        >
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              design.memories
-                .captions.leftTop,
-              design.memories
-                .captions.rightTop,
-            ].map(
-              (
-                caption,
-                index
-              ) => (
-                <div
-                  key={
-                    caption +
-                    index
-                  }
-                  style={{
-                    background:
-                      design.memories
-                        .polaroidBackground,
-                  }}
-                  className={[
-                    'p-2 shadow-sm',
-                    index === 0
-                      ? '-rotate-2'
-                      : 'rotate-2',
-                  ].join(' ')}
-                >
-                  <div
-                    style={{
-                      background:
-                        design.colors
-                          .surfaceSoft,
-                    }}
-                    className="aspect-square"
-                  />
-
-                  <p
-                    style={{
-                      color:
-                        design.memories
-                          .captionColor,
-                      fontFamily:
-                        design.memories
-                          .captionFont,
-                    }}
-                    className="mt-2 truncate text-center text-[9px] italic"
-                  >
-                    {caption}
-                  </p>
-                </div>
-              )
-            )}
-          </div>
-
-          <p
-            style={{
-              color:
-                design.memories
-                  .titleColor,
-              fontFamily:
-                design.memories
-                  .titleFont,
-            }}
-            className="mt-5 text-center text-2xl"
-          >
-            {
-              design.memories
-                .title
-            }
-          </p>
-        </div>
-      </div>
-
-      <div className="border-t border-black/8 p-5">
-        <h3 className="text-lg font-black">
-          {template.name}
-        </h3>
-
-        <div className="mt-4 flex items-baseline gap-2">
-          <span className="text-2xl font-black">
-            {formatVnd(
-              getEffectiveTemplatePrice(
-                template
-              )
-            )}
-          </span>
-
-          {discount >
-            0 && (
-            <span className="text-xs text-black/35 line-through">
-              {formatVnd(
-                template.basePrice
-              )}
-            </span>
-          )}
-        </div>
-
-        <p className="mt-2 text-xs text-[#b83e57]">
-          {discount >
-          0
-            ? `Giảm ${discount}%`
-            : 'Không áp dụng giảm giá'}
-        </p>
-
-        <div className="mt-5 border-t border-black/8 pt-4 text-[11px] leading-6 text-black/40">
-          <p>
-            Body:{' '}
-            {
-              design.fonts
-                .body
-            }
-          </p>
-          <p>
-            Heading:{' '}
-            {
-              design.fonts
-                .heading
-            }
-          </p>
-          <p>
-            Script:{' '}
-            {
-              design.fonts
-                .script
-            }
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export const AdminDiscountsTab:
-React.FC<
-  CommonProps
-> = ({
-  template,
-  saved,
-  saving,
   onChange,
-  onSave,
-}) => {
-  const discount =
-    getTemplateDiscountPercent(
-      template
-    );
+}) => (
+  <div>
+    <h3 className="text-base font-black">
+      Giá & trạng thái bán
+    </h3>
 
-  return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
-      <section className="border border-black/8 bg-white p-5 sm:p-6">
-        <p className="text-lg font-black">
-          Khuyến mãi{' '}
-          {template.name}
-        </p>
+    <p className="mt-1 text-xs leading-5 text-black/38">
+      Những giá trị này được checkout mới sử dụng.
+    </p>
 
-        <p className="mt-1 text-xs leading-5 text-black/40">
-          Checkout mới sẽ lấy giá sau giảm này.
-        </p>
+    <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <TextField
+        label="Tên template"
+        value={
+          template.name
+        }
+        onChange={(name) =>
+          onChange({
+            ...template,
+            name,
+          })
+        }
+      />
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <AdminNumberField
-            label="Giá gốc"
-            value={
-              template.basePrice
-            }
-            onChange={(value) =>
-              onChange({
-                ...template,
-                basePrice:
-                  value,
-              })
-            }
-          />
+      <SelectField
+        label="Trạng thái"
+        value={
+          template.status
+        }
+        onChange={(status) =>
+          onChange({
+            ...template,
+            status:
+              status as
+                TemplateConfig[
+                  'status'
+                ],
+          })
+        }
+      />
 
-          <AdminNumberField
-            label="Giá sau giảm"
-            value={
-              template.salePrice
-            }
-            onChange={(value) =>
-              onChange({
-                ...template,
-                salePrice:
-                  value,
-              })
-            }
-          />
-        </div>
+      <NumberField
+        label="Giá gốc"
+        value={
+          template.basePrice
+        }
+        onChange={(
+          basePrice
+        ) =>
+          onChange({
+            ...template,
+            basePrice,
+          })
+        }
+      />
 
-        <div className="mt-4">
-          <AdminField
-            label="Tên chương trình"
-            value={
-              template
-                .promotionLabel
-            }
-            onChange={(value) =>
-              onChange({
-                ...template,
-                promotionLabel:
-                  value,
-              })
-            }
-          />
-        </div>
-
-        <div className="mt-4">
-          <ToggleRow
-            title="Kích hoạt khuyến mãi"
-            description={`Mức giảm hiện tại: ${discount}%`}
-            checked={
-              template.saleEnabled
-            }
-            onChange={(checked) =>
-              onChange({
-                ...template,
-                saleEnabled:
-                  checked,
-              })
-            }
-          />
-        </div>
-
-        <SaveButton
-          saved={saved}
-          saving={saving}
-          label="Lưu khuyến mãi"
-          onSave={onSave}
-        />
-      </section>
-
-      <aside className="border border-black/8 bg-[#181818] p-5 text-white">
-        <p className="text-[10px] uppercase tracking-[0.16em] text-white/35">
-          Discount
-        </p>
-
-        <p className="mt-4 text-6xl font-black tracking-[-0.07em] text-[#f0a0af]">
-          {discount}%
-        </p>
-
-        <p className="mt-4 text-sm text-white/50">
-          {template.saleEnabled
-            ? template
-                .promotionLabel ||
-              'Sale đang bật'
-            : 'Sale đang tắt'}
-        </p>
-      </aside>
+      <NumberField
+        label="Giá sale"
+        value={
+          template.salePrice
+        }
+        onChange={(
+          salePrice
+        ) =>
+          onChange({
+            ...template,
+            salePrice,
+          })
+        }
+      />
     </div>
-  );
-};
 
-const AdminField:
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <ToggleRow
+        title="Bật giá sale"
+        description={`Hiện giảm ${discount}%`}
+        checked={
+          template.saleEnabled
+        }
+        onChange={(
+          saleEnabled
+        ) =>
+          onChange({
+            ...template,
+            saleEnabled,
+          })
+        }
+      />
+
+      <ToggleRow
+        title="Hiển thị trên web"
+        description="Tắt nếu muốn ẩn template."
+        checked={
+          template.visible
+        }
+        onChange={(visible) =>
+          onChange({
+            ...template,
+            visible,
+          })
+        }
+      />
+    </div>
+
+    <div className="mt-4">
+      <TextField
+        label="Nhãn khuyến mãi"
+        value={
+          template
+            .promotionLabel
+        }
+        placeholder="VD: Launch offer"
+        onChange={(
+          promotionLabel
+        ) =>
+          onChange({
+            ...template,
+            promotionLabel,
+          })
+        }
+      />
+    </div>
+  </div>
+);
+
+const SectionButton:
+React.FC<{
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}> = ({
+  active,
+  label,
+  onClick,
+}) => (
+  <button
+    type="button"
+    onClick={
+      onClick
+    }
+    className={[
+      'rounded-[9px] px-2 py-2.5 text-[11px] font-bold transition',
+      active
+        ? 'bg-white text-[#b83e57] shadow-sm'
+        : 'text-black/40 hover:text-black/65',
+    ].join(' ')}
+  >
+    {label}
+  </button>
+);
+
+const TextField:
 React.FC<{
   label: string;
   value: string;
   placeholder?: string;
-  onChange:
-    (value: string) =>
-      void;
+  onChange: (
+    value: string
+  ) => void;
 }> = ({
   label,
   value,
@@ -591,7 +383,7 @@ React.FC<{
   onChange,
 }) => (
   <label className="block">
-    <span className="mb-1.5 block text-[11px] font-bold text-black/55">
+    <span className="mb-1.5 block text-[10px] font-bold text-black/45">
       {label}
     </span>
 
@@ -602,29 +394,28 @@ React.FC<{
       }
       onChange={(event) =>
         onChange(
-          event.target
-            .value
+          event.target.value
         )
       }
-      className="w-full border border-black/10 px-3.5 py-3 text-sm outline-none focus:border-[#cf5068]"
+      className="w-full rounded-[10px] border border-black/10 bg-[#faf9f8] px-3 py-3 text-sm outline-none focus:border-[#cf5068]"
     />
   </label>
 );
 
-const AdminNumberField:
+const NumberField:
 React.FC<{
   label: string;
   value: number;
-  onChange:
-    (value: number) =>
-      void;
+  onChange: (
+    value: number
+  ) => void;
 }> = ({
   label,
   value,
   onChange,
 }) => (
   <label className="block">
-    <span className="mb-1.5 block text-[11px] font-bold text-black/55">
+    <span className="mb-1.5 block text-[10px] font-bold text-black/45">
       {label}
     </span>
 
@@ -638,36 +429,30 @@ React.FC<{
           Math.max(
             0,
             Number(
-              event.target
-                .value
+              event.target.value
             ) || 0
           )
         )
       }
-      className="w-full border border-black/10 px-3.5 py-3 text-sm font-bold outline-none focus:border-[#cf5068]"
+      className="w-full rounded-[10px] border border-black/10 bg-[#faf9f8] px-3 py-3 text-sm font-bold outline-none focus:border-[#cf5068]"
     />
   </label>
 );
 
-const AdminSelect:
+const SelectField:
 React.FC<{
   label: string;
   value: string;
-  options:
-    Array<
-      [string, string]
-    >;
-  onChange:
-    (value: string) =>
-      void;
+  onChange: (
+    value: string
+  ) => void;
 }> = ({
   label,
   value,
-  options,
   onChange,
 }) => (
   <label className="block">
-    <span className="mb-1.5 block text-[11px] font-bold text-black/55">
+    <span className="mb-1.5 block text-[10px] font-bold text-black/45">
       {label}
     </span>
 
@@ -675,29 +460,22 @@ React.FC<{
       value={value}
       onChange={(event) =>
         onChange(
-          event.target
-            .value
+          event.target.value
         )
       }
-      className="w-full border border-black/10 bg-white px-3.5 py-3 text-sm font-bold outline-none focus:border-[#cf5068]"
+      className="w-full rounded-[10px] border border-black/10 bg-[#faf9f8] px-3 py-3 text-sm font-bold outline-none"
     >
-      {options.map(
-        ([
-          optionValue,
-          optionLabel,
-        ]) => (
-          <option
-            key={
-              optionValue
-            }
-            value={
-              optionValue
-            }
-          >
-            {optionLabel}
-          </option>
-        )
-      )}
+      <option value="available">
+        Available
+      </option>
+
+      <option value="paused">
+        Paused
+      </option>
+
+      <option value="coming_soon">
+        Coming soon
+      </option>
     </select>
   </label>
 );
@@ -707,62 +485,37 @@ React.FC<{
   title: string;
   description: string;
   checked: boolean;
-  onChange:
-    (checked: boolean) =>
-      void;
+  onChange: (
+    checked: boolean
+  ) => void;
 }> = ({
   title,
   description,
   checked,
   onChange,
 }) => (
-  <label className="flex cursor-pointer items-center justify-between gap-4 border border-black/8 p-4">
+  <label className="flex cursor-pointer items-center justify-between gap-4 rounded-[12px] border border-black/8 bg-[#faf9f8] p-4">
     <div>
       <p className="text-xs font-bold">
         {title}
       </p>
 
-      <p className="mt-1 text-[11px] leading-5 text-black/35">
+      <p className="mt-1 text-[10px] text-black/35">
         {description}
       </p>
     </div>
 
     <input
       type="checkbox"
-      checked={checked}
+      checked={
+        checked
+      }
       onChange={(event) =>
         onChange(
-          event.target
-            .checked
+          event.target.checked
         )
       }
       className="h-4 w-4 accent-[#b83e57]"
     />
   </label>
-);
-
-const SaveButton:
-React.FC<{
-  saved: boolean;
-  saving: boolean;
-  label: string;
-  onSave: () => void;
-}> = ({
-  saved,
-  saving,
-  label,
-  onSave,
-}) => (
-  <button
-    type="button"
-    disabled={saving}
-    onClick={onSave}
-    className="mt-6 bg-[#181818] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#b83e57] disabled:opacity-50"
-  >
-    {saving
-      ? 'Đang lưu...'
-      : saved
-        ? 'Đã lưu'
-        : label}
-  </button>
 );

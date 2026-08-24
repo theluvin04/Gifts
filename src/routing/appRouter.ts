@@ -1,10 +1,6 @@
 export type AdminSection =
-  | 'dashboard'
   | 'orders'
-  | 'templates'
-  | 'customers'
-  | 'discounts'
-  | 'settings';
+  | 'templates';
 
 export type AppLocation =
   | {
@@ -29,7 +25,8 @@ export type AppLocation =
       kind: 'cart';
     }
   | {
-      kind: 'track-order';
+      kind:
+        'track-order';
     }
   | {
       kind: 'gift';
@@ -37,10 +34,12 @@ export type AppLocation =
     }
   | {
       kind: 'admin';
-      section: AdminSection;
+      section:
+        AdminSection;
     }
   | {
-      kind: 'admin-order';
+      kind:
+        'admin-order';
       giftId: string;
     }
   | {
@@ -49,7 +48,8 @@ export type AppLocation =
       templateId: string;
     }
   | {
-      kind: 'not-found';
+      kind:
+        'not-found';
     };
 
 export const cleanPath = (
@@ -79,7 +79,9 @@ export const resolveAppLocation = (
   search = ''
 ): AppLocation => {
   const path =
-    cleanPath(pathname);
+    cleanPath(
+      pathname
+    );
 
   const query =
     new URLSearchParams(
@@ -87,8 +89,12 @@ export const resolveAppLocation = (
     );
 
   const legacyGift =
-    query.get('gift') ||
-    query.get('g');
+    query.get(
+      'gift'
+    ) ||
+    query.get(
+      'g'
+    );
 
   if (legacyGift) {
     return {
@@ -144,36 +150,43 @@ export const resolveAppLocation = (
 
   if (adminOrder) {
     return {
-      kind: 'admin-order',
+      kind:
+        'admin-order',
       giftId:
         adminOrder[1],
     };
   }
 
-  const adminPaths:
-  Record<
-    string,
-    AdminSection
-  > = {
-    '/admin':
-      'dashboard',
-    '/admin/orders':
-      'orders',
-    '/admin/templates':
-      'templates',
-    '/admin/customers':
-      'customers',
-    '/admin/discounts':
-      'discounts',
-    '/admin/settings':
-      'settings',
-  };
-
-  if (adminPaths[path]) {
+  if (
+    path ===
+    '/admin/templates'
+  ) {
     return {
       kind: 'admin',
       section:
-        adminPaths[path],
+        'templates',
+    };
+  }
+
+  const oldAdminPaths =
+    [
+      '/admin',
+      '/admin/orders',
+      '/admin/dashboard',
+      '/admin/customers',
+      '/admin/discounts',
+      '/admin/settings',
+    ];
+
+  if (
+    oldAdminPaths.includes(
+      path
+    )
+  ) {
+    return {
+      kind: 'admin',
+      section:
+        'orders',
     };
   }
 
@@ -242,6 +255,7 @@ export const resolveAppLocation = (
   }
 
   return {
-    kind: 'not-found',
+    kind:
+      'not-found',
   };
 };
