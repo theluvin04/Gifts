@@ -349,25 +349,7 @@ export const CreateLovePage: React.FC<
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onCheckout}
-              className="hidden items-center gap-1.5 rounded-full bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-rose-200 transition hover:bg-rose-600 sm:inline-flex"
-            >
-              <CreditCard className="h-3.5 w-3.5" />
-              Thanh toán
-            </button>
-
-            <button
-              type="button"
-              onClick={onPreview}
-              className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-rose-500"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              Preview
-            </button>
-          </div>
+          <div className="w-8 sm:w-28" />
         </div>
       </header>
 

@@ -1,10 +1,13 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
   limit,
   query,
+  serverTimestamp,
+  updateDoc,
 } from 'firebase/firestore';
 
 import {
@@ -173,10 +176,48 @@ export const logoutAdmin =
     await signOutAdmin();
   };
 
+const normalizeOrder = (
+  id: string,
+  data: SavedGiftDocument
+): AdminOrderRecord => {
+  return {
+    ...data,
+    id,
+    createdAtMs:
+      timestampToMillis(
+        data.createdAt
+      ),
+    updatedAtMs:
+      timestampToMillis(
+        data.updatedAt
+      ),
+    paidAtMs:
+      timestampToMillis(
+        data.paidAt
+      ),
+  };
+};
+
+const assertAdminAccess =
+  async () => {
+    const session =
+      await getAdminSession();
+
+    if (!session.isAdmin) {
+      throw new Error(
+        'Tài khoản này không có quyền Admin.'
+      );
+    }
+
+    return session;
+  };
+
 export const listAdminOrders =
   async (): Promise<
     AdminOrderRecord[]
   > => {
+    await assertAdminAccess();
+
     const giftsQuery = query(
       collection(db, 'gifts'),
       limit(200)
@@ -187,32 +228,136 @@ export const listAdminOrders =
 
     const orders =
       snapshot.docs.map(
-        (giftSnapshot) => {
-          const data =
-            giftSnapshot.data() as SavedGiftDocument;
-
-          return {
-            ...data,
-            id: giftSnapshot.id,
-            createdAtMs:
-              timestampToMillis(
-                data.createdAt
-              ),
-            updatedAtMs:
-              timestampToMillis(
-                data.updatedAt
-              ),
-            paidAtMs:
-              timestampToMillis(
-                data.paidAt
-              ),
-          };
-        }
+        (giftSnapshot) =>
+          normalizeOrder(
+            giftSnapshot.id,
+            giftSnapshot.data() as SavedGiftDocument
+          )
       );
 
     return orders.sort(
       (left, right) =>
         right.createdAtMs -
         left.createdAtMs
+    );
+  };
+
+export const getAdminOrderById =
+  async (
+    giftId: string
+  ): Promise<
+    AdminOrderRecord | null
+  > => {
+    await assertAdminAccess();
+
+    const giftRef = doc(
+      db,
+      'gifts',
+      giftId
+    );
+
+    const snapshot =
+      await getDoc(giftRef);
+
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    return normalizeOrder(
+      snapshot.id,
+      snapshot.data() as SavedGiftDocument
+    );
+  };
+
+export const markAdminOrderPaid =
+  async (
+    giftId: string
+  ) => {
+    await assertAdminAccess();
+
+    const giftRef = doc(
+      db,
+      'gifts',
+      giftId
+    );
+
+    await updateDoc(
+      giftRef,
+      {
+        paymentStatus: 'paid',
+        paidAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    );
+  };
+
+export const confirmAdminBankPayment =
+  async (
+    giftId: string
+  ) => {
+    await assertAdminAccess();
+
+    const giftRef = doc(
+      db,
+      'gifts',
+      giftId
+    );
+
+    const now =
+      serverTimestamp();
+
+    await updateDoc(
+      giftRef,
+      {
+        paymentStatus: 'paid',
+        paidAt: now,
+        status: 'published',
+        isPublished: true,
+        publishedAt: now,
+        updatedAt: now,
+      }
+    );
+  };
+
+export const setAdminGiftPublished =
+  async (
+    giftId: string,
+    published: boolean
+  ) => {
+    await assertAdminAccess();
+
+    const giftRef = doc(
+      db,
+      'gifts',
+      giftId
+    );
+
+    await updateDoc(
+      giftRef,
+      {
+        status: published
+          ? 'published'
+          : 'draft',
+        isPublished: published,
+        publishedAt: published
+          ? serverTimestamp()
+          : null,
+        updatedAt: serverTimestamp(),
+      }
+    );
+  };
+
+export const deleteAdminOrder =
+  async (
+    giftId: string
+  ) => {
+    await assertAdminAccess();
+
+    await deleteDoc(
+      doc(
+        db,
+        'gifts',
+        giftId
+      )
     );
   };

@@ -19,7 +19,9 @@ export type GiftStatus =
 
 export type PaymentStatus =
   | 'unpaid'
-  | 'paid_test';
+  | 'waiting_bank_transfer'
+  | 'paid_test'
+  | 'paid';
 
 export interface CheckoutCustomer {
   fullName: string;
@@ -44,6 +46,8 @@ export interface SavedGiftDocument {
   price?: number;
   currency?: string;
   paymentStatus?: PaymentStatus;
+  paymentMethod?: 'bank_transfer';
+  paymentReference?: string;
   customer?: CheckoutCustomer;
 }
 
@@ -51,6 +55,13 @@ interface SaveGiftResult {
   id: string;
   url: string;
   status: GiftStatus;
+}
+
+export interface CheckoutGiftState {
+  id: string;
+  status: GiftStatus;
+  isPublished: boolean;
+  paymentStatus: PaymentStatus;
 }
 
 const SAVED_KEYS_STORAGE =
@@ -236,6 +247,63 @@ export const saveGiftDraftToFirestore =
     config: LoveConfig,
     customId?: string
   ) => {
+    if (customId) {
+      const existingRef = doc(
+        db,
+        'gifts',
+        customId
+      );
+
+      const existing =
+        await getDoc(existingRef);
+
+      if (existing.exists()) {
+        const existingData =
+          existing.data() as SavedGiftDocument;
+
+        if (
+          existingData.status ===
+            'published' ||
+          existingData.isPublished === true
+        ) {
+          return {
+            id: customId,
+            url: buildShareUrl(
+              customId
+            ),
+            status:
+              'published' as const,
+          };
+        }
+
+        return saveGift(
+          config,
+          'draft',
+          customId,
+          {
+            templateId:
+              existingData.templateId ||
+              'love-01',
+            price:
+              existingData.price ??
+              LOVE_01_PRICE,
+            currency:
+              existingData.currency ||
+              LOVE_01_CURRENCY,
+            paymentStatus:
+              existingData.paymentStatus ||
+              'unpaid',
+            paymentMethod:
+              existingData.paymentMethod,
+            paymentReference:
+              existingData.paymentReference,
+            customer:
+              existingData.customer,
+          }
+        );
+      }
+    }
+
     return saveGift(
       config,
       'draft',
@@ -270,6 +338,72 @@ export const publishGiftToFirestore =
           LOVE_01_CURRENCY,
       }
     );
+  };
+
+export const submitBankTransferCheckout =
+  async (
+    config: LoveConfig,
+    giftId: string,
+    customer: CheckoutCustomer,
+    paymentReference: string
+  ) => {
+    if (!giftId) {
+      throw new Error(
+        'Chưa có mã đơn nháp.'
+      );
+    }
+
+    return saveGift(
+      config,
+      'draft',
+      giftId,
+      {
+        templateId: 'love-01',
+        price: LOVE_01_PRICE,
+        currency:
+          LOVE_01_CURRENCY,
+        paymentStatus:
+          'waiting_bank_transfer',
+        paymentMethod:
+          'bank_transfer',
+        paymentReference,
+        customer,
+      }
+    );
+  };
+
+export const fetchCheckoutGiftState =
+  async (
+    giftId: string
+  ): Promise<
+    CheckoutGiftState | null
+  > => {
+    const giftRef = doc(
+      db,
+      'gifts',
+      giftId
+    );
+
+    const snapshot =
+      await getDoc(giftRef);
+
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    const data =
+      snapshot.data() as SavedGiftDocument;
+
+    return {
+      id: snapshot.id,
+      status:
+        data.status || 'draft',
+      isPublished:
+        data.isPublished === true,
+      paymentStatus:
+        data.paymentStatus ||
+        'unpaid',
+    };
   };
 
 /**

@@ -13,13 +13,12 @@ import {
   ExternalLink,
   Eye,
   Gift,
-  Heart,
+  Landmark,
   Loader2,
   Mail,
   Phone,
   QrCode,
   ShieldCheck,
-  Sparkles,
   UserRound,
 } from 'lucide-react';
 
@@ -28,9 +27,16 @@ import { LoveConfig } from '../types';
 import {
   CheckoutCustomer,
   LOVE_01_PRICE,
-  publishGiftAfterTestPayment,
+  fetchCheckoutGiftState,
   saveGiftDraftToFirestore,
+  submitBankTransferCheckout,
 } from '../services/giftService';
+
+import {
+  BANK_TRANSFER_CONFIG,
+  buildPaymentReference,
+  buildVietQrImageUrl,
+} from '../config/payment';
 
 interface CheckoutPageProps {
   config: LoveConfig;
@@ -40,6 +46,8 @@ interface CheckoutPageProps {
 
 const CHECKOUT_GIFT_ID_KEY =
   'gifts:love-01:checkout-gift-id';
+
+const POLL_INTERVAL_MS = 5000;
 
 const formatVnd = (
   amount: number
@@ -89,26 +97,25 @@ export const CheckoutPage: React.FC<
   const [giftId, setGiftId] =
     useState('');
 
-  const [shareUrl, setShareUrl] =
-    useState('');
-
   const [isPreparing, setIsPreparing] =
     useState(true);
 
-  const [isPaying, setIsPaying] =
+  const [isCreatingPayment, setIsCreatingPayment] =
+    useState(false);
+
+  const [isPaymentReady, setIsPaymentReady] =
+    useState(false);
+
+  const [isPaidAndPublished, setIsPaidAndPublished] =
     useState(false);
 
   const [error, setError] =
     useState('');
 
-  const [copied, setCopied] =
-    useState(false);
-
-  const [showQr, setShowQr] =
-    useState(false);
-
-  const [isPaid, setIsPaid] =
-    useState(false);
+  const [copiedField, setCopiedField] =
+    useState<
+      '' | 'account' | 'content' | 'gift'
+    >('');
 
   const hasPreparedRef =
     useRef(false);
@@ -142,6 +149,40 @@ export const CheckoutPage: React.FC<
           CHECKOUT_GIFT_ID_KEY,
           result.id
         );
+
+        if (
+          result.status === 'published'
+        ) {
+          setIsPaidAndPublished(true);
+        } else {
+          const state =
+            await fetchCheckoutGiftState(
+              result.id
+            );
+
+          if (
+            state?.paymentStatus ===
+            'waiting_bank_transfer'
+          ) {
+            setIsPaymentReady(true);
+          }
+
+          if (
+            (
+              state?.paymentStatus ===
+                'paid' ||
+              state?.paymentStatus ===
+                'paid_test'
+            ) &&
+            (
+              state.status ===
+                'published' ||
+              state.isPublished
+            )
+          ) {
+            setIsPaidAndPublished(true);
+          }
+        }
       } catch (prepareError: any) {
         console.error(prepareError);
 
@@ -154,8 +195,75 @@ export const CheckoutPage: React.FC<
       }
     };
 
-    prepareDraft();
+    void prepareDraft();
   }, [config]);
+
+  useEffect(() => {
+    if (
+      !giftId ||
+      !isPaymentReady ||
+      isPaidAndPublished
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const checkPayment = async () => {
+      try {
+        const state =
+          await fetchCheckoutGiftState(
+            giftId
+          );
+
+        if (
+          !cancelled &&
+          state &&
+          (
+            state.paymentStatus ===
+              'paid' ||
+            state.paymentStatus ===
+              'paid_test'
+          ) &&
+          (
+            state.status ===
+              'published' ||
+            state.isPublished
+          )
+        ) {
+          setIsPaidAndPublished(true);
+
+          window.sessionStorage.removeItem(
+            CHECKOUT_GIFT_ID_KEY
+          );
+        }
+      } catch (pollError) {
+        console.warn(
+          'Payment status poll:',
+          pollError
+        );
+      }
+    };
+
+    void checkPayment();
+
+    const timer =
+      window.setInterval(
+        () => {
+          void checkPayment();
+        },
+        POLL_INTERVAL_MS
+      );
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [
+    giftId,
+    isPaymentReady,
+    isPaidAndPublished,
+  ]);
 
   const updateCustomer = (
     field: keyof CheckoutCustomer,
@@ -199,7 +307,7 @@ export const CheckoutPage: React.FC<
     return '';
   };
 
-  const handleTestPayment =
+  const handleCreatePayment =
     async () => {
       const validationError =
         validateForm();
@@ -209,72 +317,73 @@ export const CheckoutPage: React.FC<
         return;
       }
 
-      setIsPaying(true);
+      setIsCreatingPayment(true);
       setError('');
 
       try {
-        const result =
-          await publishGiftAfterTestPayment(
-            config,
-            giftId,
-            {
-              fullName:
-                customer.fullName.trim(),
-              email:
-                customer.email.trim(),
-              phone:
-                customer.phone.trim(),
-            }
+        const paymentReference =
+          buildPaymentReference(
+            giftId
           );
 
-        setShareUrl(result.url);
-        setIsPaid(true);
-
-        window.sessionStorage.removeItem(
-          CHECKOUT_GIFT_ID_KEY
+        await submitBankTransferCheckout(
+          config,
+          giftId,
+          {
+            fullName:
+              customer.fullName.trim(),
+            email:
+              customer.email.trim(),
+            phone:
+              customer.phone.trim(),
+          },
+          paymentReference
         );
+
+        setIsPaymentReady(true);
       } catch (paymentError: any) {
         console.error(paymentError);
 
         setError(
           paymentError?.message ||
-            'Không thể xác nhận thanh toán test.'
+            'Không thể tạo yêu cầu thanh toán.'
         );
       } finally {
-        setIsPaying(false);
+        setIsCreatingPayment(false);
       }
     };
 
-  const handleCopy = async () => {
-    if (!shareUrl) {
-      return;
-    }
-
+  const copyText = async (
+    field:
+      | 'account'
+      | 'content'
+      | 'gift',
+    value: string
+  ) => {
     try {
       await navigator.clipboard.writeText(
-        shareUrl
+        value
       );
 
-      setCopied(true);
+      setCopiedField(field);
 
       window.setTimeout(
-        () => setCopied(false),
-        2200
+        () => setCopiedField(''),
+        2000
       );
     } catch {
       setError(
-        'Không thể tự sao chép. Hãy copy link thủ công.'
+        'Không thể tự sao chép.'
       );
     }
   };
 
-  if (isPaid) {
-    const qrImageUrl = shareUrl
-      ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=be185d&bgcolor=ffffff&data=${encodeURIComponent(
-          shareUrl
-        )}`
+  const giftUrl =
+    giftId
+      ? `${window.location.origin}/gift/${giftId}`
       : '';
 
+  if (isPaidAndPublished) {
     return (
       <div className="min-h-[100svh] bg-[#fff9fb] px-4 py-10 text-slate-800 sm:py-16">
         <div className="mx-auto max-w-2xl">
@@ -285,17 +394,16 @@ export const CheckoutPage: React.FC<
               </div>
 
               <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">
-                Payment test successful
+                Payment confirmed
               </p>
 
               <h1 className="mt-2 text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
-                Món quà đã được xuất bản 💕
+                Món quà đã sẵn sàng 💕
               </h1>
 
-              <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-white/75">
-                Hiện tại đây là bước thanh toán TEST.
-                Sau này nút này sẽ được thay bằng cổng
-                thanh toán thật.
+              <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-white/80">
+                Thanh toán đã được xác nhận và gift
+                đã được publish.
               </p>
             </div>
 
@@ -308,16 +416,22 @@ export const CheckoutPage: React.FC<
                 <div className="mt-2 flex items-center gap-2">
                   <input
                     readOnly
-                    value={shareUrl}
+                    value={giftUrl}
                     className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-700 outline-none sm:text-sm"
                   />
 
                   <button
                     type="button"
-                    onClick={handleCopy}
+                    onClick={() =>
+                      void copyText(
+                        'gift',
+                        giftUrl
+                      )
+                    }
                     className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-rose-500 px-3.5 py-2 text-xs font-bold text-white"
                   >
-                    {copied ? (
+                    {copiedField ===
+                    'gift' ? (
                       <>
                         <Check className="h-3.5 w-3.5" />
                         Đã chép
@@ -332,67 +446,219 @@ export const CheckoutPage: React.FC<
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowQr(
-                      (current) => !current
-                    )
-                  }
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-700 transition hover:border-rose-200 hover:text-rose-500"
-                >
-                  <QrCode className="h-4 w-4" />
-                  {showQr
-                    ? 'Ẩn QR'
-                    : 'Hiện mã QR'}
-                </button>
+              <a
+                href={giftUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-rose-500"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Mở món quà
+              </a>
 
-                <a
-                  href={shareUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-xs font-bold text-white transition hover:bg-rose-500"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Mở món quà
-                </a>
-              </div>
-
-              {showQr &&
-                qrImageUrl && (
-                <div className="mt-4 flex flex-col items-center rounded-[22px] border border-rose-100 bg-rose-50/50 p-5">
-                  <div className="rounded-2xl bg-white p-3 shadow-sm">
-                    <img
-                      src={qrImageUrl}
-                      alt="QR món quà"
-                      className="h-44 w-44 object-contain"
-                    />
-                  </div>
-
-                  <p className="mt-3 text-center text-xs leading-5 text-slate-500">
-                    Quét QR để mở{' '}
-                    <span className="font-bold text-rose-500">
-                      /gift/{giftId}
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-xs leading-5 text-slate-500">
+              <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-xs leading-5 text-slate-500">
                 <span className="font-bold text-slate-700">
-                  Mã đơn test:
+                  Gift ID:
                 </span>{' '}
                 {giftId}
-                <br />
-                <span className="font-bold text-slate-700">
-                  Trạng thái:
-                </span>{' '}
-                paid_test → published
               </div>
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (isPaymentReady && giftId) {
+    const paymentReference =
+      buildPaymentReference(
+        giftId
+      );
+
+    const qrImageUrl =
+      buildVietQrImageUrl(
+        giftId,
+        LOVE_01_PRICE
+      );
+
+    return (
+      <div className="min-h-[100svh] bg-[#fff9fb] text-slate-800">
+        <header className="border-b border-rose-100 bg-white/90 backdrop-blur-xl">
+          <div className="mx-auto flex min-h-[68px] max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-7">
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 transition hover:text-rose-500"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                Quay lại
+              </span>
+            </button>
+
+            <div className="text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-400">
+                Bank transfer
+              </p>
+
+              <p className="text-sm font-bold text-slate-900">
+                Chờ thanh toán
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onPreview}
+              className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-bold text-white"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Preview
+            </button>
+          </div>
+        </header>
+
+        <main className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-7 lg:grid-cols-[390px_1fr]">
+          <section className="rounded-[30px] border border-rose-100 bg-white p-5 shadow-[0_24px_70px_rgba(190,70,110,0.1)]">
+            <div className="text-center">
+              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
+                <QrCode className="h-5 w-5" />
+              </span>
+
+              <h1 className="mt-4 text-xl font-bold text-slate-900">
+                Quét QR để thanh toán
+              </h1>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Số tiền và nội dung đã được điền sẵn.
+              </p>
+            </div>
+
+            <div className="mt-5 overflow-hidden rounded-[22px] border border-slate-100 bg-white p-2">
+              <img
+                src={qrImageUrl}
+                alt="VietQR Techcombank"
+                className="mx-auto w-full max-w-[320px]"
+              />
+            </div>
+
+            <p className="mt-4 text-center text-3xl font-black tracking-[-0.04em] text-rose-500">
+              {formatVnd(
+                LOVE_01_PRICE
+              )}
+            </p>
+          </section>
+
+          <section className="space-y-5">
+            <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+              <div className="flex items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                  <Landmark className="h-5 w-5" />
+                </span>
+
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Thông tin chuyển khoản
+                  </h2>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Chuyển đúng số tiền và giữ nguyên
+                    nội dung để đối soát đơn.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                <PaymentRow
+                  label="Ngân hàng"
+                  value={
+                    BANK_TRANSFER_CONFIG.bankName
+                  }
+                />
+
+                <PaymentRow
+                  label="Số tài khoản"
+                  value={
+                    BANK_TRANSFER_CONFIG.accountNo
+                  }
+                  actionLabel={
+                    copiedField ===
+                    'account'
+                      ? 'Đã copy'
+                      : 'Copy'
+                  }
+                  onAction={() =>
+                    void copyText(
+                      'account',
+                      BANK_TRANSFER_CONFIG.accountNo
+                    )
+                  }
+                />
+
+                <PaymentRow
+                  label="Số tiền"
+                  value={formatVnd(
+                    LOVE_01_PRICE
+                  )}
+                />
+
+                <PaymentRow
+                  label="Nội dung CK"
+                  value={
+                    paymentReference
+                  }
+                  highlight
+                  actionLabel={
+                    copiedField ===
+                    'content'
+                      ? 'Đã copy'
+                      : 'Copy'
+                  }
+                  onAction={() =>
+                    void copyText(
+                      'content',
+                      paymentReference
+                    )
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-amber-100 bg-amber-50 p-5">
+              <div className="flex items-start gap-3">
+                <Loader2 className="mt-0.5 h-5 w-5 animate-spin text-amber-500" />
+
+                <div>
+                  <p className="text-sm font-bold text-amber-800">
+                    Đang chờ xác nhận thanh toán
+                  </p>
+
+                  <p className="mt-1 text-xs leading-5 text-amber-700/80">
+                    Trang này tự kiểm tra trạng thái mỗi
+                    5 giây. Khi Admin xác nhận tiền đã
+                    vào và publish gift, link món quà sẽ
+                    tự xuất hiện.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-slate-200 bg-white p-4 text-xs leading-6 text-slate-500">
+              <p>
+                <span className="font-bold text-slate-700">
+                  Mã đơn:
+                </span>{' '}
+                {giftId}
+              </p>
+
+              <p>
+                <span className="font-bold text-slate-700">
+                  Trạng thái:
+                </span>{' '}
+                waiting_bank_transfer
+              </p>
+            </div>
+          </section>
+        </main>
       </div>
     );
   }
@@ -447,8 +713,8 @@ export const CheckoutPage: React.FC<
                 </h1>
 
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Dùng để gắn với đơn hàng.
-                  Chưa tích hợp thanh toán thật ở bước này.
+                  Thông tin này được lưu cùng đơn hàng
+                  để Admin đối soát thanh toán.
                 </p>
               </div>
             </div>
@@ -503,13 +769,12 @@ export const CheckoutPage: React.FC<
 
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  Thanh toán
+                  Chuyển khoản ngân hàng
                 </h2>
 
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Đây là chế độ test để kiểm tra
-                  toàn bộ flow trước khi nối VietQR /
-                  cổng thanh toán thật.
+                  Hệ thống sẽ tạo VietQR riêng theo mã
+                  gift để đối soát từng đơn.
                 </p>
               </div>
             </div>
@@ -517,20 +782,20 @@ export const CheckoutPage: React.FC<
             <div className="mt-5 rounded-[22px] border-2 border-rose-200 bg-rose-50/60 p-4">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500 text-white">
-                  <Sparkles className="h-4 w-4" />
+                  <Landmark className="h-4 w-4" />
                 </span>
 
                 <div className="flex-1">
                   <p className="text-sm font-bold text-slate-900">
-                    Thanh toán thử nghiệm
+                    {BANK_TRANSFER_CONFIG.bankName}
                   </p>
 
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    Không trừ tiền thật
+                    STK {BANK_TRANSFER_CONFIG.accountNo}
                   </p>
                 </div>
 
-                <CheckCircle2 className="h-5 w-5 text-rose-500" />
+                <QrCode className="h-5 w-5 text-rose-500" />
               </div>
             </div>
 
@@ -544,10 +809,12 @@ export const CheckoutPage: React.FC<
               type="button"
               disabled={
                 isPreparing ||
-                isPaying ||
+                isCreatingPayment ||
                 !giftId
               }
-              onClick={handleTestPayment}
+              onClick={() =>
+                void handleCreatePayment()
+              }
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-rose-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-rose-200 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPreparing ? (
@@ -555,15 +822,15 @@ export const CheckoutPage: React.FC<
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Đang tạo đơn nháp...
                 </>
-              ) : isPaying ? (
+              ) : isCreatingPayment ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Đang xác nhận...
+                  Đang tạo QR...
                 </>
               ) : (
                 <>
-                  <CreditCard className="h-4 w-4" />
-                  Xác nhận thanh toán TEST
+                  <QrCode className="h-4 w-4" />
+                  Tạo QR thanh toán
                 </>
               )}
             </button>
@@ -572,12 +839,10 @@ export const CheckoutPage: React.FC<
               <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
 
               <p>
-                Trước khi bấm nút này, gift trong
-                Firestore ở trạng thái{' '}
-                <strong>draft / unpaid</strong>.
-                Sau khi test thành công mới chuyển
-                thành{' '}
-                <strong>published / paid_test</strong>.
+                Gift vẫn ở trạng thái{' '}
+                <strong>draft</strong> cho đến khi
+                thanh toán được xác nhận. Khách không
+                thể tự publish bằng frontend.
               </p>
             </div>
           </div>
@@ -622,7 +887,7 @@ export const CheckoutPage: React.FC<
                 />
 
                 <SummaryLine
-                  text="QR chia sẻ món quà"
+                  text="VietQR theo mã đơn"
                 />
               </div>
 
@@ -716,6 +981,62 @@ const CheckoutField: React.FC<
       />
     </div>
   </label>
+);
+
+interface PaymentRowProps {
+  label: string;
+  value: string;
+  highlight?: boolean;
+  actionLabel?: string;
+  onAction?: () => void;
+}
+
+const PaymentRow: React.FC<
+  PaymentRowProps
+> = ({
+  label,
+  value,
+  highlight = false,
+  actionLabel,
+  onAction,
+}) => (
+  <div
+    className={[
+      'flex items-center gap-3 rounded-2xl border p-4',
+      highlight
+        ? 'border-rose-200 bg-rose-50/70'
+        : 'border-slate-100 bg-slate-50/60',
+    ].join(' ')}
+  >
+    <div className="min-w-0 flex-1">
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+        {label}
+      </p>
+
+      <p
+        className={[
+          'mt-1 break-all text-sm font-bold',
+          highlight
+            ? 'text-rose-600'
+            : 'text-slate-800',
+        ].join(' ')}
+      >
+        {value}
+      </p>
+    </div>
+
+    {onAction &&
+      actionLabel && (
+        <button
+          type="button"
+          onClick={onAction}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-[10px] font-bold text-slate-600 shadow-sm transition hover:text-rose-500"
+        >
+          <Copy className="h-3 w-3" />
+          {actionLabel}
+        </button>
+      )}
+  </div>
 );
 
 const SummaryLine: React.FC<{

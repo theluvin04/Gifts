@@ -7,6 +7,7 @@ import React, {
 import {
   ArrowLeft,
   Check,
+  ChevronRight,
   Copy,
   ExternalLink,
   Gift,
@@ -33,6 +34,9 @@ import {
 
 interface AdminOrdersPageProps {
   onBackHome: () => void;
+  onOpenOrder: (
+    giftId: string
+  ) => void;
 }
 
 type PaymentFilter =
@@ -143,6 +147,7 @@ export const AdminOrdersPage: React.FC<
   AdminOrdersPageProps
 > = ({
   onBackHome,
+  onOpenOrder,
 }) => {
   const [orders, setOrders] = useState<
     AdminOrderRecord[]
@@ -801,7 +806,7 @@ export const AdminOrdersPage: React.FC<
                   </th>
 
                   <th className="px-5 py-4 text-right">
-                    Mở
+                    Thao tác
                   </th>
                 </tr>
               </thead>
@@ -902,22 +907,33 @@ export const AdminOrdersPage: React.FC<
                         </td>
 
                         <td className="px-5 py-4 text-right">
-                          {order.status ===
-                          'published' ? (
-                            <a
-                              href={`/gift/${order.id}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-bold text-white transition hover:bg-rose-500"
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onOpenOrder(
+                                  order.id
+                                )
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold text-slate-700 transition hover:border-rose-200 hover:text-rose-500"
                             >
-                              <ExternalLink className="h-3 w-3" />
-                              Gift
-                            </a>
-                          ) : (
-                            <span className="text-[10px] font-semibold text-slate-300">
-                              Draft
-                            </span>
-                          )}
+                              Chi tiết
+                              <ChevronRight className="h-3 w-3" />
+                            </button>
+
+                            {order.status ===
+                            'published' ? (
+                              <a
+                                href={`/gift/${order.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-bold text-white transition hover:bg-rose-500"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Gift
+                              </a>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     );

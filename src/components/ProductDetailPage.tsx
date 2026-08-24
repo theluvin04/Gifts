@@ -92,13 +92,7 @@ export const ProductDetailPage: React.FC<
             </span>
           </button>
 
-          <button
-            type="button"
-            onClick={onPreview}
-            className="rounded-full bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-rose-500 sm:px-5 sm:text-sm"
-          >
-            Xem demo
-          </button>
+          <div className="w-8 sm:w-20" />
         </div>
       </header>
 

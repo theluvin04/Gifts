@@ -16,6 +16,7 @@ import { CreateLovePage } from './components/CreateLovePage';
 import { QuickConfigModal } from './components/QuickConfigModal';
 import { CheckoutPage } from './components/CheckoutPage';
 import { AdminOrdersPage } from './components/admin/AdminOrdersPage';
+import { AdminOrderDetailPage } from './components/admin/AdminOrderDetailPage';
 
 import { ProposalScreen } from './components/ProposalScreen';
 import { GiftSelector } from './components/GiftSelector';
@@ -76,6 +77,18 @@ const getGiftIdFromPath = (
   return match?.[1] ?? null;
 };
 
+const getAdminOrderIdFromPath = (
+  pathname: string
+): string | null => {
+  const path = cleanPath(pathname);
+
+  const match = path.match(
+    /^\/admin\/orders\/([a-z0-9_-]{4,64})$/i
+  );
+
+  return match?.[1] ?? null;
+};
+
 const getLegacyGiftIdFromQuery = () => {
   const params = new URLSearchParams(
     window.location.search
@@ -123,16 +136,34 @@ export default function App() {
     getGiftIdFromPath(window.location.pathname) ||
     getLegacyGiftIdFromQuery();
 
+  const initialAdminOrderId =
+    getAdminOrderIdFromPath(
+      window.location.pathname
+    );
+
   const initialRoute = initialGiftId
     ? 'proposal'
-    : getRouteFromPath(window.location.pathname);
+    : initialAdminOrderId
+      ? 'adminOrders'
+      : getRouteFromPath(
+          window.location.pathname
+        );
 
   const [route, setRoute] = useState<AppRoute>(
     initialRoute ?? 'home'
   );
 
   const [invalidRoute, setInvalidRoute] = useState(
-    !initialGiftId && initialRoute === null
+    !initialGiftId &&
+      !initialAdminOrderId &&
+      initialRoute === null
+  );
+
+  const [
+    adminOrderId,
+    setAdminOrderId,
+  ] = useState<string | null>(
+    initialAdminOrderId
   );
 
   const [config, setConfig] =
@@ -218,6 +249,7 @@ export default function App() {
   ) => {
     setInvalidRoute(false);
     setCloudGiftError(null);
+    setAdminOrderId(null);
     setRoute(nextRoute);
 
     if (
@@ -276,6 +308,40 @@ export default function App() {
     });
   };
 
+  const navigateToAdminOrder = (
+    giftId: string,
+    replace = false
+  ) => {
+    const nextPath =
+      `/admin/orders/${giftId}`;
+
+    setInvalidRoute(false);
+    setCloudGiftError(null);
+    setIsSharedGiftMode(false);
+    setCloudGiftId(null);
+    setAdminOrderId(giftId);
+    setRoute('adminOrders');
+
+    if (replace) {
+      window.history.replaceState(
+        {},
+        '',
+        nextPath
+      );
+    } else {
+      window.history.pushState(
+        {},
+        '',
+        nextPath
+      );
+    }
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'instant',
+    });
+  };
+
   useEffect(() => {
     if (initialGiftId) {
       loadSharedGift(initialGiftId, true);
@@ -290,6 +356,29 @@ export default function App() {
 
       if (giftId) {
         loadSharedGift(giftId);
+        return;
+      }
+
+      const nextAdminOrderId =
+        getAdminOrderIdFromPath(
+          window.location.pathname
+        );
+
+      if (nextAdminOrderId) {
+        setInvalidRoute(false);
+        setCloudGiftError(null);
+        setIsSharedGiftMode(false);
+        setCloudGiftId(null);
+        setAdminOrderId(
+          nextAdminOrderId
+        );
+        setRoute('adminOrders');
+
+        window.scrollTo({
+          top: 0,
+          behavior: 'instant',
+        });
+
         return;
       }
 
@@ -308,6 +397,7 @@ export default function App() {
       setCloudGiftError(null);
       setIsSharedGiftMode(false);
       setCloudGiftId(null);
+      setAdminOrderId(null);
       setRoute(nextRoute);
 
       window.scrollTo({
@@ -339,7 +429,12 @@ export default function App() {
 
     if (
       pathname !== cleaned &&
-      getRouteFromPath(cleaned)
+      (
+        getRouteFromPath(cleaned) ||
+        getAdminOrderIdFromPath(
+          cleaned
+        )
+      )
     ) {
       window.history.replaceState(
         {},
@@ -538,12 +633,32 @@ export default function App() {
   }
 
   if (
+    route === 'adminOrders' &&
+    adminOrderId
+  ) {
+    return (
+      <AdminOrderDetailPage
+        giftId={adminOrderId}
+        onBack={() =>
+          navigate('adminOrders')
+        }
+        onBackHome={() =>
+          navigate('home')
+        }
+      />
+    );
+  }
+
+  if (
     route === 'admin' ||
     route === 'adminOrders'
   ) {
     return (
       <AdminOrdersPage
         onBackHome={() => navigate('home')}
+        onOpenOrder={
+          navigateToAdminOrder
+        }
       />
     );
   }
