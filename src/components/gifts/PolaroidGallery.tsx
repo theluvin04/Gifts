@@ -26,17 +26,12 @@ const sparklePositions = [
   { top: '58%', left: '63%', delay: 1.4 },
 ];
 
-const Sparkle = ({
-  top,
-  left,
-  right,
-  delay,
-}: {
+const Sparkle: React.FC<{
   top: string;
   left?: string;
   right?: string;
   delay: number;
-}) => (
+}> = ({ top, left, right, delay }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.6 }}
     animate={{

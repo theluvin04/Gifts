@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /gifts/{giftId} {
+      // Anyone with the link can view the personalized gift
+      allow read: if true;
+      // Anyone can create or save their love gift configuration
+      allow create: if request.resource.data.config != null;
+      // Allow updates to the gift or view counts
+      allow update: if true;
+      // Allow deletion only if creator or authenticated
+      allow delete: if request.auth != null;
+    }
+  }
+}
