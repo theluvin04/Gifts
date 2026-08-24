@@ -423,9 +423,14 @@ React.FC<
         keyword.startsWith(
           'dearly'
         )
-          ? keyword.slice(
-              'dearly'.length
-            )
+          ? keyword
+              .slice(
+                'dearly'.length
+              )
+              .replace(
+                /\D/g,
+                ''
+              )
           : keyword;
 
       return checkoutOrders.filter(
@@ -465,11 +470,14 @@ React.FC<
             order.customer;
 
           const orderCode =
+            order.orderCode ||
+            order.paymentReference ||
             `Dearly${order.id}`;
 
           const haystack = [
             order.id,
             orderCode,
+            order.orderCode,
             order.paymentReference,
             order.senderName,
             order.receiverName,

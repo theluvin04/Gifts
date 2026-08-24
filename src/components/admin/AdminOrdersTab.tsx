@@ -51,7 +51,7 @@ React.FC<Props> = ({
             event.target.value
           )
         }
-        placeholder="Tìm Dearly..., tên, email, SĐT..."
+        placeholder="Tìm Dearly8888, tên, email, SĐT..."
         className="min-w-0 border border-black/10 px-3.5 py-2.5 text-sm outline-none focus:border-[#cf5068]"
       />
 
@@ -123,7 +123,9 @@ React.FC<Props> = ({
                 >
                   <td className="px-4 py-4">
                     <p className="font-mono font-bold">
-                      Dearly{order.id.toUpperCase()}
+                      {order.orderCode ||
+                        order.paymentReference ||
+                        `Dearly${order.id}`}
                     </p>
                     <p className="mt-1 text-[10px] text-black/30">
                       {order.templateId ||

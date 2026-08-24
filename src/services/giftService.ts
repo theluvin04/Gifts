@@ -54,6 +54,7 @@ export interface SavedGiftDocument {
   paymentStatus?: PaymentStatus;
   paymentMethod?: 'bank_transfer';
   paymentReference?: string;
+  orderCode?: string;
   customer?: CheckoutCustomer;
 }
 
@@ -110,28 +111,43 @@ export const getCurrentCheckoutPricing =
     return getCurrentLoveTemplatePrice();
   };
 
-export const generateGiftId = (
-  length = 10
-): string => {
-  const chars =
-    'abcdefghjkmnpqrstuvwxyz23456789';
-
-  let result = '';
-
-  for (
-    let index = 0;
-    index < length;
-    index++
-  ) {
-    result += chars.charAt(
+export const generateGiftId = () => {
+  return String(
+    1000 +
       Math.floor(
-        Math.random() * chars.length
+        Math.random() * 9000
       )
-    );
-  }
-
-  return result;
+  );
 };
+
+export const generateUniqueGiftId =
+  async (): Promise<string> => {
+    for (
+      let attempt = 0;
+      attempt < 40;
+      attempt++
+    ) {
+      const candidate =
+        generateGiftId();
+
+      const existing =
+        await getDoc(
+          doc(
+            db,
+            'gifts',
+            candidate
+          )
+        );
+
+      if (!existing.exists()) {
+        return candidate;
+      }
+    }
+
+    throw new Error(
+      'Không thể tạo mã đơn 4 số mới. Hãy thử lại.'
+    );
+  };
 
 const buildShareUrl = (
   giftId: string
@@ -418,6 +434,8 @@ export const submitBankTransferCheckout =
         paymentMethod:
           'bank_transfer',
         paymentReference,
+        orderCode:
+          paymentReference,
         customer,
       }
     );

@@ -27,7 +27,7 @@ import {
   CheckoutCustomer,
   LOVE_01_PRICE,
   fetchCheckoutGiftState,
-  generateGiftId,
+  generateUniqueGiftId,
   getCurrentCheckoutPricing,
   submitBankTransferCheckout,
 } from '../services/giftService';
@@ -134,10 +134,27 @@ export const CheckoutPage: React.FC<
         setError('');
 
         try {
-          const existingId =
+          const storedId =
             window.sessionStorage.getItem(
               CHECKOUT_GIFT_ID_KEY
             );
+
+          const existingId =
+            storedId &&
+            /^\d{4}$/.test(
+              storedId
+            )
+              ? storedId
+              : null;
+
+          if (
+            storedId &&
+            !existingId
+          ) {
+            window.sessionStorage.removeItem(
+              CHECKOUT_GIFT_ID_KEY
+            );
+          }
 
           if (existingId) {
             const existingState =
@@ -337,7 +354,7 @@ export const CheckoutPage: React.FC<
         // Mã đơn chỉ được sinh sau khi form hợp lệ
         // và khách chủ động bấm tạo QR.
         const nextGiftId =
-          generateGiftId();
+          await generateUniqueGiftId();
 
         const paymentReference =
           buildPaymentReference(
@@ -495,9 +512,11 @@ export const CheckoutPage: React.FC<
 
               <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-xs leading-5 text-slate-500">
                 <span className="font-bold text-slate-700">
-                  Gift ID:
+                  Mã đơn:
                 </span>{' '}
-                {giftId}
+                {buildPaymentReference(
+                  giftId
+                )}
               </div>
             </div>
           </div>
@@ -677,7 +696,9 @@ export const CheckoutPage: React.FC<
                 <span className="font-bold text-slate-700">
                   Mã đơn:
                 </span>{' '}
-                {giftId}
+                {buildPaymentReference(
+                  giftId
+                )}
               </p>
 
               <p>

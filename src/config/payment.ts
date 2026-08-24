@@ -8,15 +8,19 @@ export const BANK_TRANSFER_CONFIG = {
 export const buildPaymentReference = (
   giftId: string
 ) => {
-  const cleanCode =
-    giftId
-      .replace(
-        /[^a-zA-Z0-9]/g,
-        ''
-      )
-      .toUpperCase();
+  const digits =
+    giftId.replace(
+      /\D/g,
+      ''
+    );
 
-  return `Dearly${cleanCode}`;
+  if (!/^\d{4}$/.test(digits)) {
+    throw new Error(
+      'Mã đơn phải gồm đúng 4 số.'
+    );
+  }
+
+  return `Dearly${digits}`;
 };
 
 export const buildVietQrImageUrl = (
