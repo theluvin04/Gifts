@@ -23,6 +23,7 @@ import {
 interface Props {
   template:
     TemplateConfig;
+  dirty: boolean;
   saved: boolean;
   saving: boolean;
   onChange: (
@@ -40,6 +41,7 @@ type TemplateSection =
 export const AdminTemplatesTab:
 React.FC<Props> = ({
   template,
+  dirty,
   saved,
   saving,
   onChange,
@@ -59,7 +61,7 @@ React.FC<Props> = ({
     );
 
   return (
-    <div>
+    <div className="pb-24">
       <div className="rounded-[18px] border border-black/8 bg-white p-4 sm:p-5">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
@@ -93,18 +95,27 @@ React.FC<Props> = ({
           <button
             type="button"
             disabled={
-              saving
+              saving ||
+              !dirty
             }
             onClick={
               onSave
             }
-            className="rounded-[12px] bg-[#191919] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#b83e57] disabled:opacity-50"
+            className={[
+              'rounded-[12px] px-5 py-3 text-xs font-bold transition',
+              dirty
+                ? 'bg-[#191919] text-white hover:bg-[#b83e57]'
+                : 'bg-[#f4f1f1] text-black/35',
+              'disabled:cursor-default disabled:opacity-100',
+            ].join(' ')}
           >
             {saving
               ? 'Đang lưu...'
-              : saved
-                ? 'Đã lưu ✓'
-                : 'Lưu thay đổi'}
+              : dirty
+                ? 'Lưu thay đổi'
+                : saved
+                  ? 'Đã lưu ✓'
+                  : 'Đã lưu'}
           </button>
         </div>
 
@@ -200,6 +211,61 @@ React.FC<Props> = ({
           />
         )}
       </div>
+
+      {(dirty ||
+        saving ||
+        saved) && (
+        <div className="sticky bottom-3 z-40 mx-auto mt-5 max-w-[760px]">
+          <div className="flex items-center justify-between gap-4 rounded-[16px] border border-black/10 bg-white/95 px-4 py-3 shadow-[0_14px_45px_rgba(0,0,0,0.14)] backdrop-blur-xl sm:px-5">
+            <div className="min-w-0">
+              <p
+                className={[
+                  'text-xs font-black',
+                  dirty
+                    ? 'text-[#b83e57]'
+                    : 'text-emerald-700',
+                ].join(' ')}
+              >
+                {saving
+                  ? 'Đang lưu template...'
+                  : dirty
+                    ? 'Có thay đổi chưa lưu'
+                    : 'Đã lưu thay đổi ✓'}
+              </p>
+
+              <p className="mt-1 text-[10px] leading-4 text-black/35">
+                {dirty
+                  ? 'Bấm Lưu để cập nhật giá, giao diện và lựa chọn GIF/ảnh cho khách.'
+                  : 'Template mới nhất đã được ghi vào Firestore.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={
+                saving ||
+                !dirty
+              }
+              onClick={
+                onSave
+              }
+              className={[
+                'shrink-0 rounded-[11px] px-4 py-2.5 text-[11px] font-bold transition',
+                dirty
+                  ? 'bg-[#191919] text-white hover:bg-[#b83e57]'
+                  : 'bg-emerald-50 text-emerald-700',
+                'disabled:cursor-default',
+              ].join(' ')}
+            >
+              {saving
+                ? 'Đang lưu...'
+                : dirty
+                  ? 'Lưu thay đổi'
+                  : 'Đã lưu'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

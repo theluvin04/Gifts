@@ -44,7 +44,7 @@ import type {
 
 import {
   getCachedTemplateConfigById,
-  getPublicTemplateConfigById,
+  getRequiredPublicTemplateConfigById,
 } from '../services/templateService';
 
 interface CreateLovePageProps {
@@ -206,12 +206,19 @@ export const CreateLovePage: React.FC<
 
   useEffect(() => {
     let cancelled = false;
+    let loading = false;
 
     const loadAssets =
       async () => {
+        if (loading) {
+          return;
+        }
+
+        loading = true;
+
         try {
           const template =
-            await getPublicTemplateConfigById(
+            await getRequiredPublicTemplateConfigById(
               'love-01'
             );
 
@@ -230,16 +237,53 @@ export const CreateLovePage: React.FC<
           error
         ) {
           console.warn(
-            'Template assets fallback:',
+            'Fresh template assets load failed:',
             error
           );
+        } finally {
+          loading = false;
+        }
+      };
+
+    const handleFocus =
+      () => {
+        void loadAssets();
+      };
+
+    const handleVisibilityChange =
+      () => {
+        if (
+          document.visibilityState ===
+          'visible'
+        ) {
+          void loadAssets();
         }
       };
 
     void loadAssets();
 
+    window.addEventListener(
+      'focus',
+      handleFocus
+    );
+
+    document.addEventListener(
+      'visibilitychange',
+      handleVisibilityChange
+    );
+
     return () => {
       cancelled = true;
+
+      window.removeEventListener(
+        'focus',
+        handleFocus
+      );
+
+      document.removeEventListener(
+        'visibilitychange',
+        handleVisibilityChange
+      );
     };
   }, []);
 

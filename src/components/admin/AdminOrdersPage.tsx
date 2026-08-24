@@ -172,6 +172,12 @@ React.FC<Props> = ({
     useState(false);
 
   const [
+    isTemplateDirty,
+    setIsTemplateDirty,
+  ] =
+    useState(false);
+
+  const [
     error,
     setError,
   ] =
@@ -250,6 +256,10 @@ React.FC<Props> = ({
         setTemplateDraft(
           nextTemplate
         );
+
+        setIsTemplateDirty(
+          false
+        );
       } catch (
         loadError: any
       ) {
@@ -315,10 +325,55 @@ React.FC<Props> = ({
       );
   }, []);
 
+  useEffect(() => {
+    const handleBeforeUnload = (
+      event: BeforeUnloadEvent
+    ) => {
+      if (
+        !isTemplateDirty
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener(
+      'beforeunload',
+      handleBeforeUnload
+    );
+
+    return () =>
+      window.removeEventListener(
+        'beforeunload',
+        handleBeforeUnload
+      );
+  }, [
+    isTemplateDirty,
+  ]);
+
   const openTab = (
     next:
       AdminTab
   ) => {
+    if (
+      tab ===
+        'templates' &&
+      next !==
+        'templates' &&
+      isTemplateDirty
+    ) {
+      const leave =
+        window.confirm(
+          'Template đang có thay đổi chưa lưu. Rời trang và bỏ thay đổi?'
+        );
+
+      if (!leave) {
+        return;
+      }
+    }
+
     setTab(next);
 
     const path =
@@ -410,6 +465,10 @@ React.FC<Props> = ({
 
         setTemplateDraft(
           saved
+        );
+
+        setIsTemplateDirty(
+          false
         );
 
         setTemplateSaved(
@@ -1154,15 +1213,30 @@ React.FC<Props> = ({
               template={
                 templateDraft
               }
+              dirty={
+                isTemplateDirty
+              }
               saved={
                 templateSaved
               }
               saving={
                 isSavingTemplate
               }
-              onChange={
-                setTemplateDraft
-              }
+              onChange={(
+                nextTemplate
+              ) => {
+                setTemplateDraft(
+                  nextTemplate
+                );
+
+                setTemplateSaved(
+                  false
+                );
+
+                setIsTemplateDirty(
+                  true
+                );
+              }}
               onSave={() =>
                 void handleSaveTemplate()
               }
