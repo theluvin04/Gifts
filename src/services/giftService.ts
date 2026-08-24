@@ -105,7 +105,12 @@ const getCurrentLoveTemplatePrice =
     };
   };
 
-const generateGiftId = (
+export const getCurrentCheckoutPricing =
+  async () => {
+    return getCurrentLoveTemplatePrice();
+  };
+
+export const generateGiftId = (
   length = 10
 ): string => {
   const chars =
@@ -391,9 +396,12 @@ export const submitBankTransferCheckout =
   ) => {
     if (!giftId) {
       throw new Error(
-        'Chưa có mã đơn nháp.'
+        'Chưa có mã đơn.'
       );
     }
+
+    const pricing =
+      await getCurrentLoveTemplatePrice();
 
     return saveGift(
       config,
@@ -401,6 +409,10 @@ export const submitBankTransferCheckout =
       giftId,
       {
         templateId: 'love-01',
+        price:
+          pricing.price,
+        currency:
+          pricing.currency,
         paymentStatus:
           'waiting_bank_transfer',
         paymentMethod:

@@ -393,12 +393,42 @@ React.FC<
       }
     };
 
+  const checkoutOrders =
+    useMemo(
+      () =>
+        orders.filter(
+          (order) =>
+            Boolean(
+              order.customer?.fullName ||
+              order.customer?.email ||
+              order.customer?.phone ||
+              order.paymentReference
+            ) ||
+            order.paymentStatus ===
+              'waiting_bank_transfer' ||
+            order.paymentStatus ===
+              'paid' ||
+            order.paymentStatus ===
+              'paid_test'
+        ),
+      [orders]
+    );
+
   const filteredOrders =
     useMemo(() => {
       const keyword =
         search.trim().toLowerCase();
 
-      return orders.filter(
+      const normalizedKeyword =
+        keyword.startsWith(
+          'dearly'
+        )
+          ? keyword.slice(
+              'dearly'.length
+            )
+          : keyword;
+
+      return checkoutOrders.filter(
         (order) => {
           const paid =
             isPaidOrder(order);
@@ -434,8 +464,13 @@ React.FC<
           const customer =
             order.customer;
 
-          return [
+          const orderCode =
+            `Dearly${order.id}`;
+
+          const haystack = [
             order.id,
+            orderCode,
+            order.paymentReference,
             order.senderName,
             order.receiverName,
             customer?.fullName,
@@ -444,12 +479,25 @@ React.FC<
           ]
             .filter(Boolean)
             .join(' ')
-            .toLowerCase()
-            .includes(keyword);
+            .toLowerCase();
+
+          return (
+            haystack.includes(
+              keyword
+            ) ||
+            (
+              normalizedKeyword &&
+              order.id
+                .toLowerCase()
+                .includes(
+                  normalizedKeyword
+                )
+            )
+          );
         }
       );
     }, [
-      orders,
+      checkoutOrders,
       search,
       paymentFilter,
       giftFilter,
@@ -457,15 +505,20 @@ React.FC<
 
   const customers =
     useMemo(
-      () => buildCustomers(orders),
-      [orders]
+      () =>
+        buildCustomers(
+          checkoutOrders
+        ),
+      [checkoutOrders]
     );
 
   const paidOrders =
-    orders.filter(isPaidOrder);
+    checkoutOrders.filter(
+      isPaidOrder
+    );
 
   const pendingOrders =
-    orders.filter(
+    checkoutOrders.filter(
       (order) =>
         order.paymentStatus ===
         'waiting_bank_transfer'
@@ -650,7 +703,7 @@ React.FC<
           {tab === 'orders' && (
             <AdminOrdersTab
               orders={filteredOrders}
-              totalOrders={orders.length}
+              totalOrders={checkoutOrders.length}
               search={search}
               paymentFilter={paymentFilter}
               giftFilter={giftFilter}

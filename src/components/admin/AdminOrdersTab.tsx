@@ -51,7 +51,7 @@ React.FC<Props> = ({
             event.target.value
           )
         }
-        placeholder="Tìm mã gift, tên, email, SĐT..."
+        placeholder="Tìm Dearly..., tên, email, SĐT..."
         className="min-w-0 border border-black/10 px-3.5 py-2.5 text-sm outline-none focus:border-[#cf5068]"
       />
 
@@ -103,7 +103,7 @@ React.FC<Props> = ({
         <table className="w-full min-w-[980px] border-collapse text-left">
           <thead className="bg-[#f7f7f5]">
             <tr className="text-[10px] font-bold uppercase tracking-[0.12em] text-black/35">
-              <th className="px-4 py-3.5">Gift</th>
+              <th className="px-4 py-3.5">Mã đơn</th>
               <th className="px-4 py-3.5">Khách hàng</th>
               <th className="px-4 py-3.5">Người nhận</th>
               <th className="px-4 py-3.5">Thanh toán</th>
@@ -123,7 +123,7 @@ React.FC<Props> = ({
                 >
                   <td className="px-4 py-4">
                     <p className="font-mono font-bold">
-                      {order.id}
+                      Dearly{order.id.toUpperCase()}
                     </p>
                     <p className="mt-1 text-[10px] text-black/30">
                       {order.templateId ||

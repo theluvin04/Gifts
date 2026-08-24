@@ -1,55 +1,30 @@
-DEARLY — FULL FIX
+DEARLY — CHECKOUT ORDER FLOW FIX
 
-THAY FILE:
-src/App.tsx
-src/components/Homepage.tsx
-src/components/admin/AdminOrdersPage.tsx
-src/components/CheckoutPage.tsx
-src/components/CreateLovePage.tsx
-src/components/gifts/VinylMusicPlayer.tsx
-src/services/giftService.ts
-src/services/templateService.ts
-src/config/payment.ts
-src/types/index.ts
+THAY 4 FILE:
+1. src/components/CheckoutPage.tsx
+2. src/services/giftService.ts
+3. src/components/admin/AdminOrdersPage.tsx
+4. src/components/admin/AdminOrdersTab.tsx
 
-THÊM FILE MỚI:
-src/utils/youtube.ts
+FLOW MỚI:
+- Vào /checkout/love-01: chỉ đọc giá.
+- CHƯA tạo gift document.
+- CHƯA sinh mã đơn.
+- Khách điền đủ Tên + Email + SĐT.
+- Khách bấm "Tạo QR thanh toán".
+- Lúc đó mới sinh giftId.
+- Lúc đó mới tạo Firestore order.
+- paymentReference = Dearly + giftId.
+- Admin thấy đơn ngay sau khi refresh.
 
-1. URL ADMIN:
- /admin
- /admin/orders
- /admin/templates
- /admin/customers
- /admin/discounts
- /admin/settings
- /admin/orders/:giftId
+ADMIN:
+- Không tính các ghost draft cũ chưa có thông tin khách vào "Đơn hàng".
+- Tìm được bằng:
+  DearlyCZW47J3UVJ
+  hoặc CZW47J3UVJ
+  hoặc tên/email/SĐT.
+- Cột đầu hiển thị mã đơn dạng DearlyXXXXXXXXXX.
 
-Không còn /admin#orders hay /admin#templates.
-Link hash cũ tự chuyển sang route mới.
-
-2. HOME:
-Nút Templates / Cách hoạt động chỉ scroll.
-URL vẫn giữ /, không sinh #templates hoặc #how-it-works.
-
-3. GIÁ:
-Đơn draft chưa thanh toán luôn đọc lại giá hiện tại từ
-Firestore templates/love-01.
-
-Nếu Admin đổi sale xuống 20.000đ thì checkout cũ đang giữ
-draft 99.000đ cũng được cập nhật về 20.000đ khi mở checkout lại.
-
-Checkout đọc lại giá thêm một lần trước khi hiện QR.
-
-Nếu Firestore lỗi quyền khi lấy giá, checkout báo lỗi thay vì
-âm thầm fallback về 99.000đ rồi thu sai tiền.
-
-4. NỘI DUNG CHUYỂN KHOẢN:
-Cũ: GIFT CZW47J3UVJ
-Mới: DearlyCZW47J3UVJ
-
-VietQR và nội dung hiển thị dùng cùng reference.
-
-5. GIỮ CÁC FIX TRƯỚC:
-Không preview trước thanh toán.
-YouTube music vẫn hoạt động.
-Không sửa firestore.rules / Firebase config / ngân hàng.
+SESSION CŨ:
+- Nếu sessionStorage đang giữ một draft "unpaid" cũ được sinh quá sớm,
+  checkout tự bỏ ID đó và không dùng làm mã đơn mới.

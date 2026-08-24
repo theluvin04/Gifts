@@ -27,7 +27,8 @@ import {
   CheckoutCustomer,
   LOVE_01_PRICE,
   fetchCheckoutGiftState,
-  saveGiftDraftToFirestore,
+  generateGiftId,
+  getCurrentCheckoutPricing,
   submitBankTransferCheckout,
 } from '../services/giftService';
 
@@ -127,82 +128,92 @@ export const CheckoutPage: React.FC<
 
     hasPreparedRef.current = true;
 
-    const prepareDraft = async () => {
-      setIsPreparing(true);
-      setError('');
+    const prepareCheckout =
+      async () => {
+        setIsPreparing(true);
+        setError('');
 
-      try {
-        const existingId =
-          window.sessionStorage.getItem(
-            CHECKOUT_GIFT_ID_KEY
-          ) || undefined;
+        try {
+          const existingId =
+            window.sessionStorage.getItem(
+              CHECKOUT_GIFT_ID_KEY
+            );
 
-        const result =
-          await saveGiftDraftToFirestore(
-            config,
-            existingId
+          if (existingId) {
+            const existingState =
+              await fetchCheckoutGiftState(
+                existingId
+              );
+
+            if (
+              existingState &&
+              existingState.paymentStatus !==
+                'unpaid'
+            ) {
+              setGiftId(existingId);
+              setCheckoutPrice(
+                existingState.price
+              );
+
+              if (
+                existingState.paymentStatus ===
+                'waiting_bank_transfer'
+              ) {
+                setIsPaymentReady(true);
+              }
+
+              if (
+                (
+                  existingState.paymentStatus ===
+                    'paid' ||
+                  existingState.paymentStatus ===
+                    'paid_test'
+                ) &&
+                (
+                  existingState.status ===
+                    'published' ||
+                  existingState.isPublished
+                )
+              ) {
+                setIsPaidAndPublished(
+                  true
+                );
+              }
+
+              return;
+            }
+
+            // Draft cũ được tạo trước khi khách nhập thông tin.
+            // Không dùng lại làm mã đơn.
+            window.sessionStorage.removeItem(
+              CHECKOUT_GIFT_ID_KEY
+            );
+          }
+
+          // Chỉ đọc giá hiện tại.
+          // Chưa tạo document / mã đơn ở bước này.
+          const pricing =
+            await getCurrentCheckoutPricing();
+
+          setCheckoutPrice(
+            pricing.price
+          );
+        } catch (prepareError: any) {
+          console.error(
+            prepareError
           );
 
-        setGiftId(result.id);
-
-        window.sessionStorage.setItem(
-          CHECKOUT_GIFT_ID_KEY,
-          result.id
-        );
-
-        if (
-          result.status === 'published'
-        ) {
-          setIsPaidAndPublished(true);
-        } else {
-          const state =
-            await fetchCheckoutGiftState(
-              result.id
-            );
-
-          if (state?.price) {
-            setCheckoutPrice(
-              state.price
-            );
-          }
-
-          if (
-            state?.paymentStatus ===
-            'waiting_bank_transfer'
-          ) {
-            setIsPaymentReady(true);
-          }
-
-          if (
-            (
-              state?.paymentStatus ===
-                'paid' ||
-              state?.paymentStatus ===
-                'paid_test'
-            ) &&
-            (
-              state.status ===
-                'published' ||
-              state.isPublished
-            )
-          ) {
-            setIsPaidAndPublished(true);
-          }
+          setError(
+            prepareError?.message ||
+              'Không thể tải thông tin thanh toán.'
+          );
+        } finally {
+          setIsPreparing(false);
         }
-      } catch (prepareError: any) {
-        console.error(prepareError);
+      };
 
-        setError(
-          prepareError?.message ||
-            'Không thể tạo đơn nháp trên Firestore.'
-        );
-      } finally {
-        setIsPreparing(false);
-      }
-    };
-
-    void prepareDraft();
-  }, [config]);
+    void prepareCheckout();
+  }, []);
 
   useEffect(() => {
     if (
@@ -306,10 +317,6 @@ export const CheckoutPage: React.FC<
       return 'Nhập số điện thoại hợp lệ.';
     }
 
-    if (!giftId) {
-      return 'Đơn nháp chưa sẵn sàng.';
-    }
-
     return '';
   };
 
@@ -327,34 +334,44 @@ export const CheckoutPage: React.FC<
       setError('');
 
       try {
+        // Mã đơn chỉ được sinh sau khi form hợp lệ
+        // và khách chủ động bấm tạo QR.
+        const nextGiftId =
+          generateGiftId();
+
         const paymentReference =
           buildPaymentReference(
-            giftId
+            nextGiftId
           );
 
-        await submitBankTransferCheckout(
-          config,
-          giftId,
-          {
-            fullName:
-              customer.fullName.trim(),
-            email:
-              customer.email.trim(),
-            phone:
-              customer.phone.trim(),
-          },
-          paymentReference
+        const result =
+          await submitBankTransferCheckout(
+            config,
+            nextGiftId,
+            {
+              fullName:
+                customer.fullName.trim(),
+              email:
+                customer.email.trim(),
+              phone:
+                customer.phone.trim(),
+            },
+            paymentReference
+          );
+
+        setGiftId(result.id);
+
+        window.sessionStorage.setItem(
+          CHECKOUT_GIFT_ID_KEY,
+          result.id
         );
 
         const refreshedState =
           await fetchCheckoutGiftState(
-            giftId
+            result.id
           );
 
-        if (
-          refreshedState?.price !==
-          undefined
-        ) {
+        if (refreshedState) {
           setCheckoutPrice(
             refreshedState.price
           );
@@ -815,8 +832,7 @@ export const CheckoutPage: React.FC<
               type="button"
               disabled={
                 isPreparing ||
-                isCreatingPayment ||
-                !giftId
+                isCreatingPayment
               }
               onClick={() =>
                 void handleCreatePayment()
@@ -826,7 +842,7 @@ export const CheckoutPage: React.FC<
               {isPreparing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Đang tạo đơn nháp...
+                  Đang tải giá...
                 </>
               ) : isCreatingPayment ? (
                 <>
@@ -937,11 +953,7 @@ export const CheckoutPage: React.FC<
                 </p>
               </div>
 
-              {giftId && (
-                <p className="mt-3 text-center text-[10px] font-medium text-slate-400">
-                  Draft ID: {giftId}
-                </p>
-              )}
+
             </div>
           </div>
         </aside>
