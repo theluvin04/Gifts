@@ -57,26 +57,55 @@ const EMPTY_SESSION: AdminSession = {
   isAdmin: false,
 };
 
+const ADMIN_TAB_PATHS:
+Record<AdminTab, string> = {
+  dashboard: '/admin',
+  orders: '/admin/orders',
+  templates: '/admin/templates',
+  customers: '/admin/customers',
+  discounts: '/admin/discounts',
+  settings: '/admin/settings',
+};
+
 const getInitialTab =
   (): AdminTab => {
-    const hash =
+    const path =
+      window.location.pathname
+        .replace(/\/$/, '') ||
+      '/';
+
+    const matched =
+      (
+        Object.entries(
+          ADMIN_TAB_PATHS
+        ) as [
+          AdminTab,
+          string,
+        ][]
+      ).find(
+        ([, value]) =>
+          value === path
+      );
+
+    if (matched) {
+      return matched[0];
+    }
+
+    const legacyHash =
       window.location.hash
-        .replace('#', '') as AdminTab;
+        .replace(
+          '#',
+          ''
+        ) as AdminTab;
 
     if (
       ADMIN_TABS.some(
         (item) =>
-          item.key === hash
+          item.key ===
+          legacyHash
       )
     ) {
-      return hash;
-    }
-
-    if (
-      window.location.pathname ===
-      '/admin/orders'
-    ) {
-      return 'orders';
+      return legacyHash;
     }
 
     return 'dashboard';
@@ -222,29 +251,78 @@ React.FC<
   }, []);
 
   useEffect(() => {
-    const handleHashChange = () => {
-      setTab(getInitialTab());
-    };
+    const syncTabFromUrl =
+      () => {
+        setTab(
+          getInitialTab()
+        );
+      };
 
     window.addEventListener(
-      'hashchange',
-      handleHashChange
+      'popstate',
+      syncTabFromUrl
     );
 
     return () => {
       window.removeEventListener(
-        'hashchange',
-        handleHashChange
+        'popstate',
+        syncTabFromUrl
       );
     };
+  }, []);
+
+  useEffect(() => {
+    const legacyHash =
+      window.location.hash
+        .replace(
+          '#',
+          ''
+        ) as AdminTab;
+
+    if (
+      ADMIN_TABS.some(
+        (item) =>
+          item.key ===
+          legacyHash
+      )
+    ) {
+      const cleanPath =
+        ADMIN_TAB_PATHS[
+          legacyHash
+        ];
+
+      window.history.replaceState(
+        {},
+        '',
+        cleanPath
+      );
+
+      setTab(legacyHash);
+    }
   }, []);
 
   const openTab = (
     nextTab: AdminTab
   ) => {
     setTab(nextTab);
-    window.location.hash =
-      nextTab;
+
+    const nextPath =
+      ADMIN_TAB_PATHS[
+        nextTab
+      ];
+
+    if (
+      window.location.pathname !==
+      nextPath ||
+      window.location.hash
+    ) {
+      window.history.pushState(
+        {},
+        '',
+        nextPath
+      );
+    }
+
     window.scrollTo({
       top: 0,
       behavior: 'instant',

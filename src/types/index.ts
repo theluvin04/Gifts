@@ -13,6 +13,7 @@ export interface SongTrack {
   artist: string;
   coverUrl: string;
   audioUrl: string;
+  youtubeUrl?: string;
   duration?: string;
 }
 
@@ -82,4 +83,11 @@ export interface LoveConfig {
   };
 }
 
-export type AppStage = 'intro' | 'proposal' | 'success' | 'gifts' | 'gift1' | 'gift2' | 'gift3';
+export type AppStage =
+  | 'intro'
+  | 'proposal'
+  | 'success'
+  | 'gifts'
+  | 'gift1'
+  | 'gift2'
+  | 'gift3';

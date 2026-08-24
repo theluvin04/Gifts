@@ -86,6 +86,47 @@ export const HomePage: React.FC<
       'vi-VN'
     ).format(amount) + 'đ';
 
+  const scrollToSection = (
+    sectionId: string
+  ) => {
+    document
+      .getElementById(
+        sectionId
+      )
+      ?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+  };
+
+  useEffect(() => {
+    const legacySection =
+      window.location.hash
+        .replace('#', '');
+
+    if (
+      legacySection ===
+        'templates' ||
+      legacySection ===
+        'how-it-works'
+    ) {
+      window.history.replaceState(
+        {},
+        '',
+        window.location.pathname +
+          window.location.search
+      );
+
+      window.setTimeout(
+        () =>
+          scrollToSection(
+            legacySection
+          ),
+        0
+      );
+    }
+  }, []);
+
   return (
     <div className="min-h-[100svh] w-full bg-[#fffaf8] text-[#171717]">
       <header className="sticky top-0 z-50 border-b border-black/5 bg-[#fffaf8]/92 backdrop-blur-xl">
@@ -109,19 +150,29 @@ export const HomePage: React.FC<
           </button>
 
           <nav className="hidden items-center gap-8 text-sm font-medium text-black/50 md:flex">
-            <a
-              href="#templates"
+            <button
+              type="button"
+              onClick={() =>
+                scrollToSection(
+                  'templates'
+                )
+              }
               className="transition hover:text-black"
             >
               Templates
-            </a>
+            </button>
 
-            <a
-              href="#how-it-works"
+            <button
+              type="button"
+              onClick={() =>
+                scrollToSection(
+                  'how-it-works'
+                )
+              }
               className="transition hover:text-black"
             >
               Cách hoạt động
-            </a>
+            </button>
           </nav>
 
           <button
@@ -221,12 +272,17 @@ export const HomePage: React.FC<
                   Xem Love Story 01
                 </button>
 
-                <a
-                  href="#how-it-works"
+                <button
+                  type="button"
+                  onClick={() =>
+                    scrollToSection(
+                      'how-it-works'
+                    )
+                  }
                   className="border-b border-black/30 pb-1 text-sm font-semibold text-black/60 transition hover:border-black hover:text-black"
                 >
                   Xem cách hoạt động
-                </a>
+                </button>
               </motion.div>
 
               <motion.div

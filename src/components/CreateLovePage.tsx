@@ -2,9 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowLeft,
-  CheckCircle2,
   CreditCard,
-  Eye,
   Image as ImageIcon,
   Mail,
   Music2,
@@ -17,12 +15,15 @@ import {
 } from 'lucide-react';
 
 import { LoveConfig } from '../types';
+import {
+  getYouTubeThumbnailUrl,
+  getYouTubeVideoId,
+} from '../utils/youtube';
 
 interface CreateLovePageProps {
   config: LoveConfig;
   onChange: (config: LoveConfig) => void;
   onBack: () => void;
-  onPreview: () => void;
   onReset: () => void;
   onCheckout: () => void;
 }
@@ -95,7 +96,6 @@ export const CreateLovePage: React.FC<
   config,
   onChange,
   onBack,
-  onPreview,
   onReset,
   onCheckout,
 }) => {
@@ -349,7 +349,14 @@ export const CreateLovePage: React.FC<
             </p>
           </div>
 
-          <div className="w-8 sm:w-28" />
+          <button
+            type="button"
+            onClick={onCheckout}
+            className="inline-flex items-center gap-1.5 rounded-full bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-rose-200 transition hover:bg-rose-600"
+          >
+            <CreditCard className="h-3.5 w-3.5" />
+            Thanh toán
+          </button>
         </div>
       </header>
 
@@ -366,9 +373,9 @@ export const CreateLovePage: React.FC<
               </h1>
 
               <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
-                Thay nội dung bên dưới rồi xem Preview.
+                Điền đầy đủ nội dung món quà bên dưới.
                 Bản nháp được tự lưu trên trình duyệt này.
-                Khi hoàn tất, tiếp tục sang bước thanh toán để tạo link riêng.
+                Preview chỉ được mở sau khi thanh toán được xác nhận.
               </p>
             </div>
           </div>
@@ -380,7 +387,7 @@ export const CreateLovePage: React.FC<
           </div>
         )}
 
-        <div className="grid gap-6 xl:grid-cols-[210px_minmax(0,1fr)_360px]">
+        <div className="grid gap-6 xl:grid-cols-[210px_minmax(0,1fr)]">
           <aside>
             <div className="sticky top-[92px] flex gap-2 overflow-x-auto rounded-[22px] border border-rose-100 bg-white p-2 shadow-sm xl:flex-col">
               {tabs.map((tab) => {
@@ -468,16 +475,7 @@ export const CreateLovePage: React.FC<
                 Khôi phục mẫu gốc
               </button>
 
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={onPreview}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-xs font-bold text-slate-700 shadow-sm transition hover:border-rose-300 hover:text-rose-600"
-                >
-                  <Eye className="h-4 w-4" />
-                  Xem preview
-                </button>
-
+              <div className="flex flex-col items-stretch gap-2 sm:items-end">
                 <button
                   type="button"
                   onClick={onCheckout}
@@ -486,19 +484,14 @@ export const CreateLovePage: React.FC<
                   <CreditCard className="h-4 w-4" />
                   Tiếp tục thanh toán
                 </button>
+
+                <p className="text-center text-[10px] font-medium text-slate-400 sm:text-right">
+                  Preview mở sau khi thanh toán thành công.
+                </p>
               </div>
             </div>
           </section>
 
-          <aside className="hidden xl:block">
-            <div className="sticky top-[92px]">
-              <PreviewCard
-                config={config}
-                onPreview={onPreview}
-                onCheckout={onCheckout}
-              />
-            </div>
-          </aside>
         </div>
       </main>
     </div>
@@ -738,7 +731,7 @@ const MusicSection: React.FC<
   <div>
     <SectionHeader
       title="Playlist riêng"
-      description="Sửa tên bài, ca sĩ, ảnh bìa và đường dẫn audio."
+      description="Dán link video YouTube cho từng bài. Ảnh thumbnail sẽ được lấy tự động; Audio URL chỉ là phương án dự phòng."
     />
 
     <div className="mt-7 space-y-5">
@@ -808,18 +801,57 @@ const MusicSection: React.FC<
               />
 
               <InputField
-                label="Audio URL"
+                label="Video YouTube"
+                value={
+                  track.youtubeUrl ?? ''
+                }
+                onChange={(value) => {
+                  const videoId =
+                    getYouTubeVideoId(
+                      value
+                    );
+
+                  const thumbnail =
+                    getYouTubeThumbnailUrl(
+                      value
+                    );
+
+                  updateTrack(index, {
+                    youtubeUrl: value,
+                    ...(videoId &&
+                    thumbnail
+                      ? {
+                          coverUrl:
+                            thumbnail,
+                        }
+                      : {}),
+                  });
+                }}
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+
+              {track.youtubeUrl &&
+                !getYouTubeVideoId(
+                  track.youtubeUrl
+                ) && (
+                <p className="text-[11px] font-semibold leading-5 text-red-500">
+                  Link YouTube chưa đúng. Hãy dán link video YouTube, YouTube Music hoặc youtu.be.
+                </p>
+              )}
+
+              <InputField
+                label="Audio URL · không bắt buộc"
                 value={track.audioUrl}
                 onChange={(value) =>
                   updateTrack(index, {
                     audioUrl: value,
                   })
                 }
-                placeholder="https://..."
+                placeholder="https://...mp3"
               />
 
               <p className="text-[11px] leading-5 text-slate-400">
-                Upload file nhạc lên server/cloud sẽ làm cùng bước lưu đơn và sinh link riêng.
+                Nếu có link YouTube hợp lệ, món quà sẽ ưu tiên hiển thị video YouTube. Không cần upload file nhạc.
               </p>
             </div>
           </div>
@@ -960,116 +992,6 @@ const LetterSection: React.FC<
     </div>
   );
 };
-
-interface PreviewCardProps {
-  config: LoveConfig;
-  onPreview: () => void;
-  onCheckout: () => void;
-}
-
-const PreviewCard: React.FC<
-  PreviewCardProps
-> = ({
-  config,
-  onPreview,
-  onCheckout,
-}) => (
-  <div className="overflow-hidden rounded-[28px] border border-rose-100 bg-white shadow-[0_24px_70px_rgba(190,70,110,0.12)]">
-    <div className="border-b border-rose-100 px-5 py-4">
-      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-400">
-        Live draft
-      </p>
-
-      <h3 className="mt-1 text-sm font-bold text-slate-900">
-        {config.couple.senderName}
-        {' → '}
-        {config.couple.receiverName}
-      </h3>
-    </div>
-
-    <div className="bg-[#fff4f8] p-5">
-      <div className="rounded-[24px] bg-white px-5 py-7 text-center shadow-sm">
-        <img
-          src={config.proposal.initialGif}
-          alt=""
-          className="mx-auto h-24 w-24 object-contain"
-        />
-
-        <p className="mt-4 font-heading text-xl font-bold text-slate-800">
-          {config.proposal.question}
-        </p>
-
-        <div className="mt-4 flex justify-center gap-2">
-          <span className="rounded-full bg-rose-500 px-4 py-2 text-[10px] font-bold text-white">
-            {config.proposal.yesBtnText}
-          </span>
-
-          <span className="rounded-full bg-slate-100 px-4 py-2 text-[10px] font-bold text-slate-400">
-            Không nha 😜
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {[
-          '/images/gifts/gift-1.png',
-          '/images/gifts/gift-2.png',
-          '/images/gifts/gift-3.png',
-        ].map((src) => (
-          <div
-            key={src}
-            className="flex aspect-square items-center justify-center rounded-2xl bg-white p-2"
-          >
-            <img
-              src={src}
-              alt=""
-              className="h-[80%] w-[80%] object-contain"
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-
-    <div className="p-5">
-      <div className="space-y-2 text-xs text-slate-500">
-        <p className="flex items-center gap-2">
-          <CheckCircle2 className="h-3.5 w-3.5 text-rose-500" />
-          {config.gifts.gift1.photos.length} ảnh kỷ niệm
-        </p>
-
-        <p className="flex items-center gap-2">
-          <CheckCircle2 className="h-3.5 w-3.5 text-rose-500" />
-          {config.gifts.gift2.playlist.length} bài hát
-        </p>
-
-        <p className="flex items-center gap-2">
-          <CheckCircle2 className="h-3.5 w-3.5 text-rose-500" />
-          {config.gifts.gift3.letter.paragraphs.length} đoạn thư
-        </p>
-      </div>
-
-      <div className="mt-5 space-y-2">
-        <button
-          type="button"
-          onClick={onCheckout}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-rose-500 px-5 py-3 text-xs font-bold text-white shadow-md shadow-rose-100 transition hover:bg-rose-600"
-        >
-          <CreditCard className="h-3.5 w-3.5" />
-          Tiếp tục thanh toán
-        </button>
-
-        <button
-          type="button"
-          onClick={onPreview}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-xs font-bold text-white transition hover:bg-rose-500"
-        >
-          <Eye className="h-3.5 w-3.5" />
-          Xem bản thật
-        </button>
-      </div>
-    </div>
-  </div>
-);
 
 interface SectionHeaderProps {
   title: string;

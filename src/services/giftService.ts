@@ -16,7 +16,7 @@ import { LoveConfig } from '../types';
 import {
   DEFAULT_LOVE_TEMPLATE_CONFIG,
   getEffectiveTemplatePrice,
-  getPublicTemplateConfig,
+  getRequiredPublicTemplateConfig,
 } from './templateService';
 
 export type GiftStatus =
@@ -84,7 +84,7 @@ export const LOVE_01_CURRENCY =
 const getCurrentLoveTemplatePrice =
   async () => {
     const template =
-      await getPublicTemplateConfig();
+      await getRequiredPublicTemplateConfig();
 
     if (
       !template.visible ||
@@ -311,6 +311,9 @@ export const saveGiftDraftToFirestore =
           };
         }
 
+        const pricing =
+          await getCurrentLoveTemplatePrice();
+
         return saveGift(
           config,
           'draft',
@@ -320,11 +323,9 @@ export const saveGiftDraftToFirestore =
               existingData.templateId ||
               'love-01',
             price:
-              existingData.price ??
-              LOVE_01_PRICE,
+              pricing.price,
             currency:
-              existingData.currency ||
-              LOVE_01_CURRENCY,
+              pricing.currency,
             paymentStatus:
               existingData.paymentStatus ||
               'unpaid',
@@ -432,6 +433,31 @@ export const fetchCheckoutGiftState =
     const data =
       snapshot.data() as SavedGiftDocument;
 
+    let price =
+      typeof data.price ===
+        'number'
+        ? data.price
+        : null;
+
+    let currency =
+      data.currency || '';
+
+    if (
+      price === null ||
+      !currency
+    ) {
+      const pricing =
+        await getCurrentLoveTemplatePrice();
+
+      price =
+        price ??
+        pricing.price;
+
+      currency =
+        currency ||
+        pricing.currency;
+    }
+
     return {
       id: snapshot.id,
       status:
@@ -441,13 +467,8 @@ export const fetchCheckoutGiftState =
       paymentStatus:
         data.paymentStatus ||
         'unpaid',
-      price:
-        typeof data.price === 'number'
-          ? data.price
-          : LOVE_01_PRICE,
-      currency:
-        data.currency ||
-        LOVE_01_CURRENCY,
+      price,
+      currency,
     };
   };
 
@@ -469,15 +490,19 @@ export const publishGiftAfterTestPayment =
       );
     }
 
+    const pricing =
+      await getCurrentLoveTemplatePrice();
+
     return saveGift(
       config,
       'published',
       giftId,
       {
         templateId: 'love-01',
-        price: LOVE_01_PRICE,
+        price:
+          pricing.price,
         currency:
-          LOVE_01_CURRENCY,
+          pricing.currency,
         paymentStatus:
           'paid_test',
         customer,

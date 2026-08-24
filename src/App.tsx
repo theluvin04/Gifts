@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
-  CreditCard,
   Heart,
-  Settings,
   Sparkles,
 } from 'lucide-react';
 
@@ -13,7 +11,6 @@ import { LoveConfig } from './types';
 import { HomePage } from './components/Homepage';
 import { ProductDetailPage } from './components/ProductDetailPage';
 import { CreateLovePage } from './components/CreateLovePage';
-import { QuickConfigModal } from './components/QuickConfigModal';
 import { CheckoutPage } from './components/CheckoutPage';
 import { AdminOrdersPage } from './components/admin/AdminOrdersPage';
 import { AdminOrderDetailPage } from './components/admin/AdminOrderDetailPage';
@@ -37,6 +34,10 @@ const ROUTES = {
   checkout: '/checkout/love-01',
   admin: '/admin',
   adminOrders: '/admin/orders',
+  adminTemplates: '/admin/templates',
+  adminCustomers: '/admin/customers',
+  adminDiscounts: '/admin/discounts',
+  adminSettings: '/admin/settings',
   proposal: TEMPLATE_BASE,
   gifts: `${TEMPLATE_BASE}/gifts`,
   gift1: `${TEMPLATE_BASE}/gifts/memories`,
@@ -45,6 +46,10 @@ const ROUTES = {
 } as const;
 
 type AppRoute = keyof typeof ROUTES;
+
+type PreviewSource =
+  | 'product'
+  | null;
 
 const cleanPath = (pathname: string) => {
   if (pathname.length > 1 && pathname.endsWith('/')) {
@@ -160,6 +165,11 @@ export default function App() {
   );
 
   const [
+    previewSource,
+    setPreviewSource,
+  ] = useState<PreviewSource>(null);
+
+  const [
     adminOrderId,
     setAdminOrderId,
   ] = useState<string | null>(
@@ -168,9 +178,6 @@ export default function App() {
 
   const [config, setConfig] =
     useState<LoveConfig>(loadDraftConfig);
-
-  const [isConfigOpen, setIsConfigOpen] =
-    useState(false);
 
   const [
     isLoadingCloudGift,
@@ -247,6 +254,10 @@ export default function App() {
     nextRoute: AppRoute,
     replace = false
   ) => {
+    if (!isTemplateRoute(nextRoute)) {
+      setPreviewSource(null);
+    }
+
     setInvalidRoute(false);
     setCloudGiftError(null);
     setAdminOrderId(null);
@@ -460,6 +471,21 @@ export default function App() {
     }
   }, [config, isSharedGiftMode]);
 
+  const openPreview = (
+    source: Exclude<
+      PreviewSource,
+      null
+    >
+  ) => {
+    setPreviewSource(source);
+    navigate('proposal');
+  };
+
+  const exitPreview = () => {
+    setPreviewSource(null);
+    navigate('product');
+  };
+
   const resetDraft = () => {
     setConfig(initialConfig);
 
@@ -603,7 +629,9 @@ export default function App() {
     return (
       <ProductDetailPage
         onBackHome={() => navigate('home')}
-        onPreview={() => navigate('proposal')}
+        onPreview={() =>
+          openPreview('product')
+        }
         onPersonalize={() => navigate('create')}
       />
     );
@@ -615,7 +643,6 @@ export default function App() {
         config={config}
         onChange={setConfig}
         onBack={() => navigate('product')}
-        onPreview={() => navigate('proposal')}
         onReset={resetDraft}
         onCheckout={() => navigate('checkout')}
       />
@@ -627,7 +654,6 @@ export default function App() {
       <CheckoutPage
         config={config}
         onBack={() => navigate('create')}
-        onPreview={() => navigate('proposal')}
       />
     );
   }
@@ -651,7 +677,11 @@ export default function App() {
 
   if (
     route === 'admin' ||
-    route === 'adminOrders'
+    route === 'adminOrders' ||
+    route === 'adminTemplates' ||
+    route === 'adminCustomers' ||
+    route === 'adminDiscounts' ||
+    route === 'adminSettings'
   ) {
     return (
       <AdminOrdersPage
@@ -667,14 +697,19 @@ export default function App() {
     return null;
   }
 
+  const experienceConfig =
+    isSharedGiftMode
+      ? config
+      : initialConfig;
+
   return (
     <main className="relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-gradient-to-b from-pink-50 via-rose-50 to-pink-100 text-slate-800 selection:bg-pink-300 selection:text-pink-900">
       <AudioPlayer
         musicUrl={
-          config.audio.backgroundMusicUrl
+          experienceConfig.audio.backgroundMusicUrl
         }
         musicTitle={
-          config.audio.backgroundMusicTitle
+          experienceConfig.audio.backgroundMusicTitle
         }
       />
 
@@ -683,32 +718,10 @@ export default function App() {
           <>
             <button
               type="button"
-              onClick={() =>
-                setIsConfigOpen(true)
-              }
-              className="flex items-center gap-1.5 rounded-full border border-rose-200 bg-white/85 px-3 py-2 text-xs font-bold text-rose-700 shadow-sm backdrop-blur-md transition hover:bg-white"
-              title="Tùy chỉnh nhanh"
+              onClick={exitPreview}
+              className="rounded-[12px] border border-black/10 bg-white/88 px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md transition hover:bg-white"
             >
-              <Settings className="h-3.5 w-3.5" />
-
-              <span className="hidden sm:inline">
-                Chỉnh sửa nhanh
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() =>
-                navigate('checkout')
-              }
-              className="flex items-center gap-1.5 rounded-full bg-rose-500 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 transition hover:bg-rose-600"
-              title="Tiếp tục sang bước thanh toán"
-            >
-              <CreditCard className="h-3.5 w-3.5" />
-
-              <span className="hidden sm:inline">
-                Tiếp tục thanh toán
-              </span>
+              ← Thoát demo
             </button>
           </>
         )}
@@ -717,7 +730,7 @@ export default function App() {
           <button
             type="button"
             onClick={handleCreateSimilar}
-            className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-md transition hover:bg-white"
+            className="flex items-center gap-1.5 rounded-[12px] border border-slate-200 bg-white/90 px-3 py-2.5 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-md transition hover:bg-white"
           >
             <Sparkles className="h-3.5 w-3.5 text-rose-500" />
 
@@ -733,7 +746,7 @@ export default function App() {
           {route === 'proposal' && (
             <ProposalScreen
               key="proposal-stage"
-              config={config}
+              config={experienceConfig}
               onYesAccepted={() =>
                 navigate('gifts')
               }
@@ -743,7 +756,7 @@ export default function App() {
           {route === 'gifts' && (
             <GiftSelector
               key="gifts-stage"
-              config={config}
+              config={experienceConfig}
               onSelectGift={(
                 selectedStage
               ) => {
@@ -775,7 +788,7 @@ export default function App() {
             <PolaroidGallery
               key="gift1-stage"
               photos={
-                config.gifts.gift1.photos
+                experienceConfig.gifts.gift1.photos
               }
               onBack={() =>
                 navigate('gifts')
@@ -787,7 +800,7 @@ export default function App() {
             <VinylMusicPlayer
               key="gift2-stage"
               playlist={
-                config.gifts.gift2.playlist
+                experienceConfig.gifts.gift2.playlist
               }
               onBack={() =>
                 navigate('gifts')
@@ -799,13 +812,13 @@ export default function App() {
             <LoveLetter
               key="gift3-stage"
               letterData={
-                config.gifts.gift3.letter
+                experienceConfig.gifts.gift3.letter
               }
               senderName={
-                config.couple.senderName
+                experienceConfig.couple.senderName
               }
               receiverName={
-                config.couple.receiverName
+                experienceConfig.couple.receiverName
               }
               onBack={() =>
                 navigate('gifts')
@@ -825,20 +838,6 @@ export default function App() {
         </p>
       </footer>
 
-      {!isSharedGiftMode && (
-        <>
-          <QuickConfigModal
-            open={isConfigOpen}
-            config={config}
-            onClose={() =>
-              setIsConfigOpen(false)
-            }
-            onSave={setConfig}
-            onReset={resetDraft}
-          />
-
-        </>
-      )}
     </main>
   );
 }

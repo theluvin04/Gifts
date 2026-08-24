@@ -1,26 +1,55 @@
-DEARLY HOME + FIREBASE FIX
+DEARLY — FULL FIX
 
-THAY 3 FILE:
-1. src/components/Homepage.tsx
-2. src/services/adminService.ts
-3. firestore.rules
+THAY FILE:
+src/App.tsx
+src/components/Homepage.tsx
+src/components/admin/AdminOrdersPage.tsx
+src/components/CheckoutPage.tsx
+src/components/CreateLovePage.tsx
+src/components/gifts/VinylMusicPlayer.tsx
+src/services/giftService.ts
+src/services/templateService.ts
+src/config/payment.ts
+src/types/index.ts
 
-QUAN TRỌNG:
-Sau khi thay firestore.rules trong project, vào Firebase Console →
-Cloud Firestore → chọn đúng database app đang dùng →
-ai-studio-romanticlovesurp-1b89a4b9-dcb7-435b-ad96-d70becbbc72c →
-Security / Rules → paste file firestore.rules này → Publish.
+THÊM FILE MỚI:
+src/utils/youtube.ts
 
-Fix Firebase trong bundle:
-- Template config lỗi quyền sẽ fallback về giá mặc định thay vì làm toàn Admin chết.
-- /templates/love-01 được public GET cho storefront.
-- Chỉ Admin mới được sửa template.
-- Giữ quyền Orders/Gifts và Admin Gmail/UID.
+1. URL ADMIN:
+ /admin
+ /admin/orders
+ /admin/templates
+ /admin/customers
+ /admin/discounts
+ /admin/settings
+ /admin/orders/:giftId
 
-Homepage:
-- Bo card 30px.
-- Khối ảnh bên trong bo 24px.
-- Shadow nhẹ.
-- Ảnh Love Story lớn hơn.
-- Giá / giá gạch / giảm giá rõ hơn.
-- Coming soon đồng bộ bo góc.
+Không còn /admin#orders hay /admin#templates.
+Link hash cũ tự chuyển sang route mới.
+
+2. HOME:
+Nút Templates / Cách hoạt động chỉ scroll.
+URL vẫn giữ /, không sinh #templates hoặc #how-it-works.
+
+3. GIÁ:
+Đơn draft chưa thanh toán luôn đọc lại giá hiện tại từ
+Firestore templates/love-01.
+
+Nếu Admin đổi sale xuống 20.000đ thì checkout cũ đang giữ
+draft 99.000đ cũng được cập nhật về 20.000đ khi mở checkout lại.
+
+Checkout đọc lại giá thêm một lần trước khi hiện QR.
+
+Nếu Firestore lỗi quyền khi lấy giá, checkout báo lỗi thay vì
+âm thầm fallback về 99.000đ rồi thu sai tiền.
+
+4. NỘI DUNG CHUYỂN KHOẢN:
+Cũ: GIFT CZW47J3UVJ
+Mới: DearlyCZW47J3UVJ
+
+VietQR và nội dung hiển thị dùng cùng reference.
+
+5. GIỮ CÁC FIX TRƯỚC:
+Không preview trước thanh toán.
+YouTube music vẫn hoạt động.
+Không sửa firestore.rules / Firebase config / ngân hàng.

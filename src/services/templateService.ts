@@ -167,3 +167,25 @@ export const getPublicTemplateConfig =
       };
     }
   };
+
+export const getRequiredPublicTemplateConfig =
+  async (): Promise<TemplateConfig> => {
+    const snapshot =
+      await getDoc(
+        doc(
+          db,
+          'templates',
+          'love-01'
+        )
+      );
+
+    if (!snapshot.exists()) {
+      return {
+        ...DEFAULT_LOVE_TEMPLATE_CONFIG,
+      };
+    }
+
+    return normalizeTemplateConfig(
+      snapshot.data()
+    );
+  };

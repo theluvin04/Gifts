@@ -11,7 +11,6 @@ import {
   Copy,
   CreditCard,
   ExternalLink,
-  Eye,
   Gift,
   Landmark,
   Loader2,
@@ -41,7 +40,6 @@ import {
 interface CheckoutPageProps {
   config: LoveConfig;
   onBack: () => void;
-  onPreview: () => void;
 }
 
 const CHECKOUT_GIFT_ID_KEY =
@@ -85,7 +83,6 @@ export const CheckoutPage: React.FC<
 > = ({
   config,
   onBack,
-  onPreview,
 }) => {
   const [customer, setCustomer] =
     useState<CheckoutCustomer>({
@@ -349,6 +346,20 @@ export const CheckoutPage: React.FC<
           paymentReference
         );
 
+        const refreshedState =
+          await fetchCheckoutGiftState(
+            giftId
+          );
+
+        if (
+          refreshedState?.price !==
+          undefined
+        ) {
+          setCheckoutPrice(
+            refreshedState.price
+          );
+        }
+
         setIsPaymentReady(true);
       } catch (paymentError: any) {
         console.error(paymentError);
@@ -515,14 +526,7 @@ export const CheckoutPage: React.FC<
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={onPreview}
-              className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-bold text-white"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              Preview
-            </button>
+            <div className="w-16 sm:w-24" />
           </div>
         </header>
 
@@ -697,14 +701,7 @@ export const CheckoutPage: React.FC<
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onPreview}
-            className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-rose-500"
-          >
-            <Eye className="h-3.5 w-3.5" />
-            Preview
-          </button>
+          <div className="w-16 sm:w-24" />
         </div>
       </header>
 
@@ -930,14 +927,15 @@ export const CheckoutPage: React.FC<
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={onPreview}
-                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:text-rose-500"
-              >
-                <Eye className="h-3.5 w-3.5" />
-                Xem lại preview
-              </button>
+              <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-center">
+                <p className="text-[11px] font-bold text-slate-600">
+                  Preview đang được khóa
+                </p>
+
+                <p className="mt-1 text-[10px] leading-5 text-slate-400">
+                  Món quà chỉ mở sau khi thanh toán được xác nhận.
+                </p>
+              </div>
 
               {giftId && (
                 <p className="mt-3 text-center text-[10px] font-medium text-slate-400">

@@ -8,7 +8,15 @@ export const BANK_TRANSFER_CONFIG = {
 export const buildPaymentReference = (
   giftId: string
 ) => {
-  return `GIFT ${giftId.toUpperCase()}`;
+  const cleanCode =
+    giftId
+      .replace(
+        /[^a-zA-Z0-9]/g,
+        ''
+      )
+      .toUpperCase();
+
+  return `Dearly${cleanCode}`;
 };
 
 export const buildVietQrImageUrl = (
