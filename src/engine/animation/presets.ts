@@ -203,6 +203,173 @@ Record<
     },
   },
 
+  'zigzag-left': {
+    initial: {
+      opacity: 0,
+      x: -100,
+      y: 18,
+      rotate: -5,
+    },
+    animate: {
+      opacity: [0, 1, 1, 1, 1],
+      x: [-100, -56, -24, -8, 0],
+      y: [18, -14, 10, -5, 0],
+      rotate: [-5, 4, -3, 2, 0],
+    },
+    exit: {
+      opacity: 0,
+      x: 20,
+    },
+  },
+
+  'zigzag-right': {
+    initial: {
+      opacity: 0,
+      x: 100,
+      y: -18,
+      rotate: 5,
+    },
+    animate: {
+      opacity: [0, 1, 1, 1, 1],
+      x: [100, 56, 24, 8, 0],
+      y: [-18, 14, -10, 5, 0],
+      rotate: [5, -4, 3, -2, 0],
+    },
+    exit: {
+      opacity: 0,
+      x: -20,
+    },
+  },
+
+  'blur-reveal': {
+    initial: {
+      opacity: 0,
+      filter: 'blur(14px)',
+      scale: 0.97,
+    },
+    animate: {
+      opacity: 1,
+      filter: 'blur(0px)',
+      scale: 1,
+    },
+    exit: {
+      opacity: 0,
+      filter: 'blur(8px)',
+    },
+  },
+
+  'wipe-left': {
+    initial: {
+      opacity: 1,
+      clipPath:
+        'inset(0 100% 0 0)',
+    },
+    animate: {
+      opacity: 1,
+      clipPath:
+        'inset(0 0% 0 0)',
+    },
+    exit: {
+      opacity: 0,
+    },
+  },
+
+  'wipe-up': {
+    initial: {
+      opacity: 1,
+      clipPath:
+        'inset(100% 0 0 0)',
+    },
+    animate: {
+      opacity: 1,
+      clipPath:
+        'inset(0% 0 0 0)',
+    },
+    exit: {
+      opacity: 0,
+    },
+  },
+
+  'bounce-in': {
+    initial: {
+      opacity: 0,
+      y: 44,
+      scale: 0.68,
+    },
+    animate: {
+      opacity: [0, 1, 1, 1],
+      y: [44, -10, 5, 0],
+      scale: [0.68, 1.08, 0.97, 1],
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.9,
+    },
+  },
+
+  'flip-in': {
+    initial: {
+      opacity: 0,
+      rotateY: -90,
+      scale: 0.92,
+    },
+    animate: {
+      opacity: 1,
+      rotateY: 0,
+      scale: 1,
+    },
+    exit: {
+      opacity: 0,
+      rotateY: 70,
+    },
+  },
+
+  typewriter: {
+    initial: {},
+    animate: {},
+    exit: {},
+  },
+
+  'word-reveal': {
+    initial: {},
+    animate: {},
+    exit: {},
+  },
+
+  'line-reveal': {
+    initial: {},
+    animate: {},
+    exit: {},
+  },
+
+  spin: {
+    initial: {
+      opacity: 1,
+      rotate: 0,
+    },
+    animate: {
+      opacity: 1,
+      rotate: 360,
+    },
+    exit: {
+      opacity: 1,
+    },
+  },
+
+  'spin-reverse': {
+    initial: {
+      opacity: 1,
+      rotate: 0,
+    },
+    animate: {
+      opacity: 1,
+      rotate: -360,
+    },
+    exit: {
+      opacity: 1,
+    },
+  },
+
   float: {
     initial: {
       opacity: 1,
@@ -239,6 +406,36 @@ Record<
       opacity: 0,
     },
   },
+
+  shake: {
+    initial: {
+      opacity: 1,
+      x: 0,
+      rotate: 0,
+    },
+    animate: {
+      opacity: 1,
+      x: [0, -5, 5, -4, 4, 0],
+      rotate: [0, -1, 1, -1, 1, 0],
+    },
+    exit: {
+      opacity: 0,
+    },
+  },
+
+  pulse: {
+    initial: {
+      opacity: 1,
+      scale: 1,
+    },
+    animate: {
+      opacity: 1,
+      scale: [1, 1.045, 1],
+    },
+    exit: {
+      opacity: 0,
+    },
+  },
 };
 
 const isLoopPreset = (
@@ -249,7 +446,15 @@ const isLoopPreset = (
     preset ===
       'float' ||
     preset ===
-      'swing'
+      'swing' ||
+    preset ===
+      'spin' ||
+    preset ===
+      'spin-reverse' ||
+    preset ===
+      'shake' ||
+    preset ===
+      'pulse'
   );
 };
 

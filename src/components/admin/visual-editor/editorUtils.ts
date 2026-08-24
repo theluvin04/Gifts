@@ -18,6 +18,14 @@ export type AlignAction =
   | 'distribute-x'
   | 'distribute-y';
 
+export type CanvasAlignAction =
+  | 'left'
+  | 'center-x'
+  | 'right'
+  | 'top'
+  | 'center-y'
+  | 'bottom';
+
 export type LayerAction =
   | 'forward'
   | 'backward'
@@ -118,7 +126,7 @@ export const getElementLabel = (
     element.type ===
     'decor'
   ) {
-    return 'Decor';
+    return 'Trang trí';
   }
 
   if (
@@ -127,7 +135,18 @@ export const getElementLabel = (
   ) {
     return (
       element.alt ||
-      'Image'
+      'Ảnh'
+    );
+  }
+
+  if (
+    element.type ===
+    'photo-frame'
+  ) {
+    return (
+      element.caption
+        ?.trim() ||
+      'Khung Polaroid'
     );
   }
 
@@ -135,12 +154,26 @@ export const getElementLabel = (
     element.type ===
     'shape'
   ) {
-    return (
+    const kind =
       element
         .shapeStyle
-        ?.kind ||
-      'Shape'
-    );
+        ?.kind;
+
+    if (
+      kind ===
+      'circle'
+    ) {
+      return 'Hình tròn';
+    }
+
+    if (
+      kind ===
+      'line'
+    ) {
+      return 'Đường kẻ';
+    }
+
+    return 'Hình chữ nhật';
   }
 
   return element.id;
@@ -553,31 +586,31 @@ export const anchorTranslate =
       anchor
     ) {
       case 'top-center':
-        return '-50% 0%';
+        return '-50%, 0%';
 
       case 'top-right':
-        return '-100% 0%';
+        return '-100%, 0%';
 
       case 'center-left':
-        return '0% -50%';
+        return '0%, -50%';
 
       case 'center':
-        return '-50% -50%';
+        return '-50%, -50%';
 
       case 'center-right':
-        return '-100% -50%';
+        return '-100%, -50%';
 
       case 'bottom-left':
-        return '0% -100%';
+        return '0%, -100%';
 
       case 'bottom-center':
-        return '-50% -100%';
+        return '-50%, -100%';
 
       case 'bottom-right':
-        return '-100% -100%';
+        return '-100%, -100%';
 
       default:
-        return '0% 0%';
+        return '0%, 0%';
     }
   };
 

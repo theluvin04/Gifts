@@ -12,6 +12,7 @@ export type SceneElementType =
   | 'button'
   | 'decor'
   | 'shape'
+  | 'photo-frame'
   | 'custom';
 
 export type SceneElementAnchor =
@@ -121,6 +122,52 @@ export interface SceneShapeStyle {
     'solid' |
     'dashed' |
     'dotted';
+}
+
+export type ScenePhotoFramePreset =
+  | 'polaroid'
+  | 'polaroid-square'
+  | 'polaroid-wide'
+  | 'polaroid-mini'
+  | 'polaroid-rounded'
+  | 'polaroid-black'
+  | 'polaroid-vintage'
+  | 'polaroid-clean';
+
+export interface ScenePhotoFrameStyle {
+  preset?:
+    ScenePhotoFramePreset;
+
+  background?: string;
+
+  imageFit?:
+    'cover' |
+    'contain';
+
+  innerRadius?: number;
+
+  outerRadius?: number;
+
+  paddingPercent?: number;
+
+  captionAreaPercent?: number;
+
+  boxShadow?: string;
+
+  captionColor?: string;
+
+  captionFontFamily?: string;
+
+  captionFontSize?: number;
+
+  captionFontWeight?:
+    number |
+    string;
+
+  captionAlign?:
+    'left' |
+    'center' |
+    'right';
 }
 
 export type SceneElementAction =
@@ -251,6 +298,21 @@ extends BaseSceneElement {
     SceneShapeStyle;
 }
 
+export interface ScenePhotoFrameElement
+extends BaseSceneElement {
+  type:
+    'photo-frame';
+
+  src: string;
+
+  alt?: string;
+
+  caption?: string;
+
+  frameStyle?:
+    ScenePhotoFrameStyle;
+}
+
 export interface SceneCustomElement
 extends BaseSceneElement {
   type: 'custom';
@@ -269,6 +331,7 @@ export type SceneElement =
   | SceneImageElement
   | SceneButtonElement
   | SceneShapeElement
+  | ScenePhotoFrameElement
   | SceneCustomElement;
 
 export interface SceneCanvasBackground {

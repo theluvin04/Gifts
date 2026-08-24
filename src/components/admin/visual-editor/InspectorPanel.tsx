@@ -8,7 +8,14 @@ import type {
 } from '../../../engine';
 
 import {
+  PHOTO_FRAME_PRESETS,
+  getPhotoFramePreset,
+  resolvePhotoFrameStyle,
+} from '../../../engine';
+
+import {
   VISUAL_EDITOR_ANIMATION_PRESETS,
+  VISUAL_EDITOR_TEXT_ANIMATION_PRESETS,
   VISUAL_EDITOR_TRANSITION_PRESETS,
 } from '../../../templates/visualEditor';
 
@@ -94,6 +101,56 @@ interface Props {
         }
   ) => void;
 }
+
+const getElementTypeLabel =
+  (
+    element:
+      SceneElement
+  ) => {
+    if (
+      element.type ===
+      'text'
+    ) {
+      return 'chữ';
+    }
+
+    if (
+      element.type ===
+      'image'
+    ) {
+      return 'ảnh';
+    }
+
+    if (
+      element.type ===
+      'decor'
+    ) {
+      return 'trang trí';
+    }
+
+    if (
+      element.type ===
+      'button'
+    ) {
+      return 'nút';
+    }
+
+    if (
+      element.type ===
+      'shape'
+    ) {
+      return 'hình';
+    }
+
+    if (
+      element.type ===
+      'photo-frame'
+    ) {
+      return 'khung ảnh';
+    }
+
+    return 'tùy chỉnh';
+  };
 
 export const InspectorPanel:
 React.FC<Props> = ({
@@ -253,13 +310,13 @@ React.FC<{
   return (
     <div>
       <InspectorTitle
-        title="Scene"
-        description="Không chọn element nào — đang chỉnh canvas."
+        title="Trang"
+        description="Không chọn đối tượng nào — đang chỉnh khung vẽ."
       />
 
       <div className="mt-4 space-y-3">
         <TextInput
-          label="Tên scene"
+          label="Tên trang"
           value={
             scene.title ||
             ''
@@ -274,7 +331,7 @@ React.FC<{
         />
 
         <SelectInput
-          label="Tỉ lệ canvas desktop"
+          label="Tỉ lệ khung vẽ máy tính"
           value={
             String(
               scene.aspectRatio ||
@@ -288,7 +345,7 @@ React.FC<{
                   16 / 9
                 ),
               label:
-                '16:9 · Landscape',
+                '16:9 · Ngang',
             },
             {
               value:
@@ -302,7 +359,7 @@ React.FC<{
               value:
                 '1',
               label:
-                '1:1 · Square',
+                '1:1 · Vuông',
             },
             {
               value:
@@ -310,7 +367,7 @@ React.FC<{
                   4 / 5
                 ),
               label:
-                '4:5 · Social',
+                '4:5 · Mạng xã hội',
             },
             {
               value:
@@ -318,7 +375,7 @@ React.FC<{
                   9 / 16
                 ),
               label:
-                '9:16 · Story',
+                '9:16 · Dọc / Story',
             },
           ]}
           onChange={(
@@ -334,7 +391,7 @@ React.FC<{
         />
 
         <SelectInput
-          label="Transition"
+          label="Chuyển cảnh"
           value={
             scene.transition
               ?.preset ||
@@ -365,7 +422,7 @@ React.FC<{
         />
 
         <NumberInput
-          label="Transition"
+          label="Chuyển cảnh"
           value={
             scene.transition
               ?.durationMs ||
@@ -414,7 +471,7 @@ React.FC<{
         />
 
         <TextInput
-          label="Ảnh nền URL / path"
+          label="Đường dẫn ảnh nền"
           value={
             background
               .imageUrl ||
@@ -443,7 +500,7 @@ React.FC<{
         />
 
         <SelectInput
-          label="Ảnh nền fit"
+          label="Cách hiển thị ảnh nền"
           value={
             background
               .imageFit ||
@@ -454,13 +511,13 @@ React.FC<{
               value:
                 'cover',
               label:
-                'Cover',
+                'Phủ kín',
             },
             {
               value:
                 'contain',
               label:
-                'Contain',
+                'Vừa khung',
             },
           ]}
           onChange={(
@@ -479,7 +536,7 @@ React.FC<{
         />
 
         <ColorInput
-          label="Overlay"
+          label="Màu lớp phủ"
           value={
             background
               .overlayColor ||
@@ -498,7 +555,7 @@ React.FC<{
         />
 
         <RangeInput
-          label="Overlay opacity"
+          label="Độ trong lớp phủ"
           value={
             background
               .overlayOpacity ||
@@ -520,7 +577,7 @@ React.FC<{
         />
 
         <NumberInput
-          label="Blur nền"
+          label="Độ mờ nền"
           value={
             background
               .blurPx ||
@@ -543,7 +600,7 @@ React.FC<{
         />
 
         <RangeInput
-          label="Brightness"
+          label="Độ sáng"
           value={
             background
               .brightness ??
@@ -565,7 +622,7 @@ React.FC<{
         />
 
         <SelectInput
-          label="Overflow"
+          label="Nội dung tràn"
           value={
             scene.overflow ||
             'hidden'
@@ -636,11 +693,11 @@ React.FC<{
   return (
     <div>
       <InspectorTitle
-        title={`${elements.length} elements`}
+        title={`${elements.length} đối tượng`}
         description={
           grouped
-            ? 'Đang chọn group / multi-selection.'
-            : 'Multi-selection.'
+            ? 'Đang chọn nhóm / nhiều đối tượng.'
+            : 'Đang chọn nhiều đối tượng.'
         }
       />
 
@@ -660,14 +717,14 @@ React.FC<{
         />
 
         <SmallButton
-          label="Layer +"
+          label="Lớp +"
           onClick={
             onLayerUp
           }
         />
 
         <SmallButton
-          label="Layer −"
+          label="Lớp −"
           onClick={
             onLayerDown
           }
@@ -683,7 +740,7 @@ React.FC<{
       </div>
 
       <div className="mt-4 rounded-[12px] bg-[#faf7f6] p-3 text-[10px] leading-5 text-black/40">
-        Dùng toolbar phía trên để Group/Ungroup, căn trái-phải-giữa, chia đều, đưa lên/xuống layer. Kéo một element đang được chọn để di chuyển cả selection.
+        Dùng thanh công cụ để Nhóm/Bỏ nhóm, căn trái-phải-giữa, chia đều và đổi lớp. Kéo một đối tượng đang chọn để di chuyển cả nhóm.
       </div>
 
       <div className="mt-4 space-y-1">
@@ -707,7 +764,9 @@ React.FC<{
                 </span>
 
                 <span className="shrink-0 text-[8px] uppercase text-black/25">
-                  {element.type}
+                  {getElementTypeLabel(
+                    element
+                  )}
                 </span>
               </div>
             )
@@ -831,7 +890,7 @@ React.FC<{
             element
           )
         }
-        description={`${element.type} · ${device}${element.groupId ? ' · grouped' : ''}`}
+        description={`${getElementTypeLabel(element)} · ${device === 'desktop' ? 'máy tính' : 'điện thoại'}${element.groupId ? ' · đã nhóm' : ''}`}
       />
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -843,14 +902,14 @@ React.FC<{
         />
 
         <SmallButton
-          label="Layer +"
+          label="Lớp +"
           onClick={
             onLayerUp
           }
         />
 
         <SmallButton
-          label="Layer −"
+          label="Lớp −"
           onClick={
             onLayerDown
           }
@@ -877,10 +936,10 @@ React.FC<{
       </div>
 
       <InspectorSection
-        title="Layer"
+        title="Lớp"
       >
         <TextInput
-          label="Tên layer"
+          label="Tên lớp"
           value={
             element.name ||
             ''
@@ -939,6 +998,21 @@ React.FC<{
         )}
 
         {element.type ===
+          'photo-frame' && (
+          <PhotoFrameControls
+            element={
+              element
+            }
+            onChange={
+              onChange
+            }
+            onOpenAssetLibrary={
+              onOpenAssetLibrary
+            }
+          />
+        )}
+
+        {element.type ===
           'shape' && (
           <ShapeControls
             element={
@@ -964,7 +1038,7 @@ React.FC<{
       </InspectorSection>
 
       <InspectorSection
-        title={`Vị trí · ${device}`}
+        title={`Vị trí · ${device === 'desktop' ? 'máy tính' : 'điện thoại'}`}
       >
         <div className="grid grid-cols-2 gap-2">
           <NumberInput
@@ -1006,7 +1080,7 @@ React.FC<{
           />
 
           <NumberInput
-            label="Width"
+            label="Chiều rộng"
             value={
               frame.width
             }
@@ -1025,7 +1099,7 @@ React.FC<{
           />
 
           <NumberInput
-            label="Height"
+            label="Chiều cao"
             value={
               frame.height ||
               0
@@ -1049,7 +1123,7 @@ React.FC<{
           />
 
           <NumberInput
-            label="Rotate"
+            label="Góc xoay"
             value={
               frame.rotate ||
               0
@@ -1069,7 +1143,7 @@ React.FC<{
           />
 
           <NumberInput
-            label="Z-index"
+            label="Thứ tự lớp"
             value={
               frame.zIndex ||
               0
@@ -1089,7 +1163,7 @@ React.FC<{
         </div>
 
         <SelectInput
-          label="Anchor"
+          label="Điểm neo"
           value={
             frame.anchor ||
             'center'
@@ -1099,55 +1173,55 @@ React.FC<{
               value:
                 'top-left',
               label:
-                'Top left',
+                'Trên trái',
             },
             {
               value:
                 'top-center',
               label:
-                'Top center',
+                'Trên giữa',
             },
             {
               value:
                 'top-right',
               label:
-                'Top right',
+                'Trên phải',
             },
             {
               value:
                 'center-left',
               label:
-                'Center left',
+                'Giữa trái',
             },
             {
               value:
                 'center',
               label:
-                'Center',
+                'Chính giữa',
             },
             {
               value:
                 'center-right',
               label:
-                'Center right',
+                'Giữa phải',
             },
             {
               value:
                 'bottom-left',
               label:
-                'Bottom left',
+                'Dưới trái',
             },
             {
               value:
                 'bottom-center',
               label:
-                'Bottom center',
+                'Dưới giữa',
             },
             {
               value:
                 'bottom-right',
               label:
-                'Bottom right',
+                'Dưới phải',
             },
           ]}
           onChange={(
@@ -1162,7 +1236,7 @@ React.FC<{
         />
 
         <RangeInput
-          label="Scale"
+          label="Tỉ lệ"
           value={
             frame.scale ||
             1
@@ -1181,7 +1255,7 @@ React.FC<{
         />
 
         <RangeInput
-          label="Opacity"
+          label="Độ trong suốt"
           value={
             frame.opacity ??
             1
@@ -1201,7 +1275,7 @@ React.FC<{
       </InspectorSection>
 
       <InspectorSection
-        title="Animation"
+        title="Hiệu ứng"
       >
         <SelectInput
           label="Hiệu ứng"
@@ -1212,29 +1286,98 @@ React.FC<{
             'none'
           }
           options={
-            VISUAL_EDITOR_ANIMATION_PRESETS
+            element.type ===
+            'text'
+              ? VISUAL_EDITOR_TEXT_ANIMATION_PRESETS
+              : VISUAL_EDITOR_ANIMATION_PRESETS
           }
           onChange={(
             preset
           ) =>
             onChange(
-              (current) => ({
-                ...current,
-                animation: {
-                  ...current
-                    .animation,
-                  preset:
-                    preset as any,
-                },
-              } as
-                SceneElement)
+              (current) => {
+                const isSpin =
+                  preset ===
+                    'spin' ||
+                  preset ===
+                    'spin-reverse';
+
+                const isTypewriter =
+                  preset ===
+                  'typewriter';
+
+                const isTextReveal =
+                  isTypewriter ||
+                  preset ===
+                    'word-reveal' ||
+                  preset ===
+                    'line-reveal';
+
+                const isLoop =
+                  isSpin ||
+                  preset ===
+                    'float' ||
+                  preset ===
+                    'swing' ||
+                  preset ===
+                    'shake' ||
+                  preset ===
+                    'pulse';
+
+                return {
+                  ...current,
+                  animation: {
+                    ...current
+                      .animation,
+                    preset:
+                      preset as any,
+                    durationMs:
+                      isSpin
+                        ? 4000
+                        : isTypewriter
+                          ? 1800
+                          : isTextReveal
+                            ? 1000
+                            : isLoop
+                              ? (
+                                  current
+                                    .animation
+                                    ?.durationMs ||
+                                  1800
+                                )
+                              : (
+                                  current
+                                    .animation
+                                    ?.durationMs ||
+                                  520
+                                ),
+                    easing:
+                      isSpin
+                        ? 'linear'
+                        : current
+                            .animation
+                            ?.easing ||
+                          'easeOut',
+                    showCursor:
+                      isTypewriter
+                        ? current
+                            .animation
+                            ?.showCursor !==
+                          false
+                        : current
+                            .animation
+                            ?.showCursor,
+                  },
+                } as
+                  SceneElement;
+              }
             )
           }
         />
 
         <div className="grid grid-cols-2 gap-2">
           <NumberInput
-            label="Delay"
+            label="Độ trễ"
             value={
               element
                 .animation
@@ -1268,15 +1411,64 @@ React.FC<{
           />
 
           <NumberInput
-            label="Duration"
+            label={
+              element.animation
+                ?.preset ===
+                'spin' ||
+              element.animation
+                ?.preset ===
+                'spin-reverse'
+                ? 'Thời gian 1 vòng'
+                : element.animation
+                      ?.preset ===
+                      'typewriter'
+                  ? 'Thời gian gõ xong'
+                  : element.animation
+                        ?.preset ===
+                        'word-reveal' ||
+                    element.animation
+                        ?.preset ===
+                        'line-reveal'
+                    ? 'Thời gian hiện xong'
+                    : 'Thời lượng'
+            }
             value={
               element
                 .animation
                 ?.durationMs ||
-              500
+              (
+                element.animation
+                  ?.preset ===
+                  'spin' ||
+                element.animation
+                  ?.preset ===
+                  'spin-reverse'
+                  ? 4000
+                  : element.animation
+                        ?.preset ===
+                        'typewriter'
+                    ? 1800
+                    : element.animation
+                          ?.preset ===
+                          'word-reveal' ||
+                      element.animation
+                          ?.preset ===
+                          'line-reveal'
+                      ? 1000
+                      : 500
+              )
             }
-            min={0}
-            max={10000}
+            min={
+              element.animation
+                ?.preset ===
+                'spin' ||
+              element.animation
+                ?.preset ===
+                'spin-reverse'
+                ? 300
+                : 0
+            }
+            max={20000}
             step={50}
             suffix="ms"
             onChange={(
@@ -1303,7 +1495,7 @@ React.FC<{
         </div>
 
         <SelectInput
-          label="Easing"
+          label="Độ mượt"
           value={
             element
               .animation
@@ -1315,37 +1507,37 @@ React.FC<{
               value:
                 'linear',
               label:
-                'Linear',
+                'Đều',
             },
             {
               value:
                 'easeIn',
               label:
-                'Ease in',
+                'Chậm đầu',
             },
             {
               value:
                 'easeOut',
               label:
-                'Ease out',
+                'Chậm cuối',
             },
             {
               value:
                 'easeInOut',
               label:
-                'Ease in/out',
+                'Chậm đầu & cuối',
             },
             {
               value:
                 'circOut',
               label:
-                'Circ out',
+                'Mượt tròn',
             },
             {
               value:
                 'backOut',
               label:
-                'Back out',
+                'Nảy nhẹ',
             },
           ]}
           onChange={(
@@ -1370,13 +1562,45 @@ React.FC<{
             )
           }
         />
+
+        {element.type ===
+          'text' &&
+          element.animation
+            ?.preset ===
+            'typewriter' && (
+          <ToggleRow
+            label="Hiện con trỏ khi đánh chữ"
+            checked={
+              element.animation
+                ?.showCursor !==
+              false
+            }
+            onChange={(
+              showCursor
+            ) =>
+              onChange(
+                (current) => ({
+                  ...current,
+                  animation: {
+                    ...current
+                      .animation,
+                    preset:
+                      'typewriter',
+                    showCursor,
+                  },
+                } as
+                  SceneElement)
+              )
+            }
+          />
+        )}
       </InspectorSection>
 
       <InspectorSection
-        title="Khi click"
+        title="Khi bấm"
       >
         <SelectInput
-          label="Hành động"
+          label="Khi bấm"
           value={
             firstAction
               ?.type ||
@@ -1525,7 +1749,7 @@ React.FC<{
           ?.type ===
           'go-to-scene' && (
           <SelectInput
-            label="Scene đích"
+            label="Trang đích"
             value={
               firstAction
                 .sceneId
@@ -1565,7 +1789,7 @@ React.FC<{
             ?.type ===
             'replay-animation') && (
           <SelectInput
-            label="Element đích"
+            label="Đối tượng đích"
             value={
               firstAction
                 .elementId
@@ -1601,7 +1825,7 @@ React.FC<{
           ?.type ===
           'open-url' && (
           <TextInput
-            label="URL"
+            label="Đường dẫn"
             value={
               firstAction.url
             }
@@ -1619,7 +1843,7 @@ React.FC<{
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <ToggleRow
-          label="Visible"
+          label="Hiển thị"
           checked={
             element.visible !==
             false
@@ -1638,7 +1862,7 @@ React.FC<{
         />
 
         <ToggleRow
-          label="Locked"
+          label="Đã khóa"
           checked={
             element.locked ===
             true
@@ -1713,7 +1937,7 @@ React.FC<{
   return (
     <>
       <TextAreaInput
-        label="Text"
+        label="Nội dung chữ"
         value={
           element.text
         }
@@ -1731,7 +1955,7 @@ React.FC<{
       />
 
       <TextInput
-        label="Font family"
+        label="Phông chữ"
         value={
           style.fontFamily ||
           ''
@@ -1784,7 +2008,7 @@ React.FC<{
         />
 
         <SelectInput
-          label="Weight"
+          label="Độ đậm"
           value={
             String(
               style.fontWeight ||
@@ -1796,43 +2020,43 @@ React.FC<{
               value:
                 '300',
               label:
-                'Light',
+                'Mảnh',
             },
             {
               value:
                 '400',
               label:
-                'Regular',
+                'Thường',
             },
             {
               value:
                 '500',
               label:
-                'Medium',
+                'Vừa',
             },
             {
               value:
                 '600',
               label:
-                'Semi bold',
+                'Hơi đậm',
             },
             {
               value:
                 '700',
               label:
-                'Bold',
+                'Đậm',
             },
             {
               value:
                 '800',
               label:
-                'Extra bold',
+                'Rất đậm',
             },
             {
               value:
                 '900',
               label:
-                'Black',
+                'Đen đậm',
             },
           ]}
           onChange={(
@@ -1848,7 +2072,7 @@ React.FC<{
         />
 
         <SelectInput
-          label="Align"
+          label="Căn chữ"
           value={
             style.textAlign ||
             'left'
@@ -1858,19 +2082,19 @@ React.FC<{
               value:
                 'left',
               label:
-                'Left',
+                'Trái',
             },
             {
               value:
                 'center',
               label:
-                'Center',
+                'Chính giữa',
             },
             {
               value:
                 'right',
               label:
-                'Right',
+                'Phải',
             },
           ]}
           onChange={(
@@ -1883,7 +2107,7 @@ React.FC<{
         />
 
         <NumberInput
-          label="Line height"
+          label="Giãn dòng"
           value={
             style.lineHeight ||
             1.2
@@ -1901,7 +2125,7 @@ React.FC<{
         />
 
         <NumberInput
-          label="Letter spacing"
+          label="Giãn chữ"
           value={
             style.letterSpacing ||
             0
@@ -1922,7 +2146,7 @@ React.FC<{
 
       <div className="grid grid-cols-3 gap-2">
         <ToggleRow
-          label="Italic"
+          label="Nghiêng"
           checked={
             style.fontStyle ===
             'italic'
@@ -1940,7 +2164,7 @@ React.FC<{
         />
 
         <ToggleRow
-          label="Underline"
+          label="Gạch chân"
           checked={
             style.textDecoration ===
             'underline'
@@ -1958,7 +2182,7 @@ React.FC<{
         />
 
         <ToggleRow
-          label="UPPER"
+          label="VIẾT HOA"
           checked={
             style.textTransform ===
             'uppercase'
@@ -2039,7 +2263,7 @@ React.FC<{
   return (
     <>
       <TextInput
-        label="URL / path ảnh"
+        label="Ảnh / đường dẫn"
         value={
           element.src
         }
@@ -2065,7 +2289,7 @@ React.FC<{
       />
 
       <SelectInput
-        label="Cách fit"
+        label="Cách hiển thị"
         value={
           style.objectFit ||
           'contain'
@@ -2075,19 +2299,19 @@ React.FC<{
             value:
               'contain',
             label:
-              'Contain',
+              'Vừa khung',
           },
           {
             value:
               'cover',
             label:
-              'Cover',
+              'Phủ kín',
           },
           {
             value:
               'fill',
             label:
-              'Fill',
+              'Kéo đầy khung',
           },
         ]}
         onChange={(
@@ -2155,12 +2379,377 @@ React.FC<{
       />
 
       <TextInput
-        label="Shadow CSS"
+        label="Bóng đổ"
         value={
           style.boxShadow ||
           ''
         }
         placeholder="0 12px 30px rgba(...)"
+        onChange={(
+          boxShadow
+        ) =>
+          patchStyle({
+            boxShadow:
+              boxShadow ||
+              undefined,
+          })
+        }
+      />
+    </>
+  );
+};
+
+const PhotoFrameControls:
+React.FC<{
+  element:
+    Extract<
+      SceneElement,
+      {
+        type:
+          'photo-frame';
+      }
+    >;
+
+  onChange: (
+    updater: (
+      element:
+        SceneElement
+    ) =>
+      SceneElement
+  ) => void;
+
+  onOpenAssetLibrary:
+    () => void;
+}> = ({
+  element,
+  onChange,
+  onOpenAssetLibrary,
+}) => {
+  const style =
+    resolvePhotoFrameStyle(
+      element.frameStyle
+    );
+
+  const patchStyle = (
+    next:
+      Record<
+        string,
+        unknown
+      >
+  ) =>
+    onChange(
+      (current) => ({
+        ...current,
+        frameStyle: {
+          ...(
+            current.type ===
+            'photo-frame'
+              ? current
+                  .frameStyle
+              : {}
+          ),
+          ...next,
+        },
+      } as
+        SceneElement)
+    );
+
+  return (
+    <>
+      <AssetPickerButton
+        label={
+          element.src
+            ? 'Thay ảnh trong khung'
+            : 'Chọn ảnh cho khung'
+        }
+        onClick={
+          onOpenAssetLibrary
+        }
+      />
+
+      {element.src && (
+        <div className="overflow-hidden rounded-[9px] border border-black/7 bg-[#f4f1ee] p-2">
+          <img
+            src={
+              element.src
+            }
+            alt=""
+            className="aspect-square w-full rounded-[6px] object-cover"
+          />
+        </div>
+      )}
+
+      <TextInput
+        label="Chú thích dưới ảnh"
+        value={
+          element.caption ||
+          ''
+        }
+        placeholder="Có thể để trống"
+        onChange={(
+          caption
+        ) =>
+          onChange(
+            (current) => ({
+              ...current,
+              caption,
+            } as
+              SceneElement)
+          )
+        }
+      />
+
+      <div>
+        <p className="mb-2 text-[8px] font-black uppercase tracking-[0.1em] text-black/30">
+          Mẫu khung
+        </p>
+
+        <div className="grid grid-cols-2 gap-2">
+          {PHOTO_FRAME_PRESETS.map(
+            (
+              preset
+            ) => {
+              const active =
+                style.preset ===
+                preset.value;
+
+              return (
+                <button
+                  key={
+                    preset.value
+                  }
+                  type="button"
+                  title={
+                    preset.description
+                  }
+                  onClick={() =>
+                    onChange(
+                      (
+                        current
+                      ) => {
+                        if (
+                          current.type !==
+                          'photo-frame'
+                        ) {
+                          return current;
+                        }
+
+                        const selected =
+                          getPhotoFramePreset(
+                            preset.value
+                          );
+
+                        return {
+                          ...current,
+                          frame: {
+                            ...current.frame,
+                            ...selected.desktop,
+                          },
+                          mobileFrame: {
+                            ...current
+                              .mobileFrame,
+                            ...selected.mobile,
+                          },
+                          frameStyle: {
+                            ...selected.style,
+                          },
+                        };
+                      }
+                    )
+                  }
+                  className={[
+                    'rounded-[9px] border p-2 text-left transition',
+                    active
+                      ? 'border-[#cf5068]/35 bg-[#fff4f7]'
+                      : 'border-black/8 bg-[#faf9f8] hover:border-[#cf5068]/20',
+                  ].join(' ')}
+                >
+                  <div
+                    style={{
+                      background:
+                        preset.style
+                          .background,
+                      borderRadius:
+                        preset.style
+                          .outerRadius,
+                      boxShadow:
+                        '0 5px 12px rgba(30,20,20,0.10)',
+                    }}
+                    className="mx-auto flex h-14 w-11 flex-col gap-1 p-1"
+                  >
+                    <div
+                      style={{
+                        borderRadius:
+                          preset.style
+                            .innerRadius,
+                      }}
+                      className="min-h-0 flex-1 bg-[#ded9d4]"
+                    />
+
+                    <div
+                      style={{
+                        background:
+                          preset.style
+                            .captionColor,
+                      }}
+                      className="mx-auto h-[2px] w-1/2 rounded-full opacity-35"
+                    />
+                  </div>
+
+                  <p className="mt-2 text-[8px] font-black text-black/60">
+                    {preset.label}
+                  </p>
+                </button>
+              );
+            }
+          )}
+        </div>
+      </div>
+
+      <SelectInput
+        label="Cách đặt ảnh"
+        value={
+          style.imageFit ||
+          'cover'
+        }
+        options={[
+          {
+            value:
+              'cover',
+            label:
+              'Phủ kín khung',
+          },
+          {
+            value:
+              'contain',
+            label:
+              'Hiện toàn bộ ảnh',
+          },
+        ]}
+        onChange={(
+          imageFit
+        ) =>
+          patchStyle({
+            imageFit,
+          })
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <ColorInput
+          label="Màu khung"
+          value={
+            style.background ||
+            '#fffdf8'
+          }
+          onChange={(
+            background
+          ) =>
+            patchStyle({
+              background,
+            })
+          }
+        />
+
+        <ColorInput
+          label="Màu chú thích"
+          value={
+            style.captionColor ||
+            '#34302f'
+          }
+          onChange={(
+            captionColor
+          ) =>
+            patchStyle({
+              captionColor,
+            })
+          }
+        />
+
+        <NumberInput
+          label="Lề khung"
+          value={
+            style.paddingPercent ??
+            6
+          }
+          min={0}
+          max={20}
+          step={0.5}
+          suffix="%"
+          onChange={(
+            paddingPercent
+          ) =>
+            patchStyle({
+              paddingPercent,
+            })
+          }
+        />
+
+        <NumberInput
+          label="Khoảng chú thích"
+          value={
+            style.captionAreaPercent ??
+            22
+          }
+          min={12}
+          max={45}
+          step={1}
+          suffix="%"
+          onChange={(
+            captionAreaPercent
+          ) =>
+            patchStyle({
+              captionAreaPercent,
+            })
+          }
+        />
+
+        <NumberInput
+          label="Cỡ chữ chú thích"
+          value={
+            style.captionFontSize ||
+            16
+          }
+          min={8}
+          max={80}
+          step={1}
+          suffix="px"
+          onChange={(
+            captionFontSize
+          ) =>
+            patchStyle({
+              captionFontSize,
+            })
+          }
+        />
+
+        <NumberInput
+          label="Bo góc ngoài"
+          value={
+            style.outerRadius ||
+            4
+          }
+          min={0}
+          max={80}
+          step={1}
+          suffix="px"
+          onChange={(
+            outerRadius
+          ) =>
+            patchStyle({
+              outerRadius,
+            })
+          }
+        />
+      </div>
+
+      <TextInput
+        label="Bóng đổ"
+        value={
+          style.boxShadow ||
+          ''
+        }
+        placeholder="0 18px 38px rgba(...)"
         onChange={(
           boxShadow
         ) =>
@@ -2228,7 +2817,7 @@ React.FC<{
   return (
     <>
       <SelectInput
-        label="Shape"
+        label="Loại hình"
         value={
           style.kind ||
           'rectangle'
@@ -2238,19 +2827,19 @@ React.FC<{
             value:
               'rectangle',
             label:
-              'Rectangle',
+              'Hình chữ nhật',
           },
           {
             value:
               'circle',
             label:
-              'Circle / ellipse',
+              'Hình tròn / elip',
           },
           {
             value:
               'line',
             label:
-              'Line',
+              'Đường kẻ',
           },
         ]}
         onChange={(
@@ -2263,7 +2852,7 @@ React.FC<{
       />
 
       <ColorInput
-        label="Fill"
+        label="Màu nền"
         value={
           style.fill ||
           '#f4b8c4'
@@ -2318,7 +2907,7 @@ React.FC<{
       </div>
 
       <ColorInput
-        label="Màu viền / line"
+        label="Màu viền / đường kẻ"
         value={
           style.borderColor ||
           '#cf5068'
@@ -2333,7 +2922,7 @@ React.FC<{
       />
 
       <SelectInput
-        label="Kiểu line"
+        label="Kiểu nét"
         value={
           style.lineStyle ||
           'solid'
@@ -2343,19 +2932,19 @@ React.FC<{
             value:
               'solid',
             label:
-              'Solid',
+              'Nét liền',
           },
           {
             value:
               'dashed',
             label:
-              'Dashed',
+              'Nét đứt',
           },
           {
             value:
               'dotted',
             label:
-              'Dotted',
+              'Nét chấm',
           },
         ]}
         onChange={(
@@ -2368,7 +2957,7 @@ React.FC<{
       />
 
       <TextInput
-        label="Shadow CSS"
+        label="Bóng đổ"
         value={
           style.boxShadow ||
           ''
@@ -2458,7 +3047,7 @@ React.FC<{
       />
 
       <TextInput
-        label="Font family"
+        label="Phông chữ"
         value={
           style.fontFamily ||
           ''
@@ -2476,7 +3065,7 @@ React.FC<{
 
       <div className="grid grid-cols-2 gap-2">
         <ColorInput
-          label="Nền"
+          label="Màu nền"
           value={
             style.background ||
             '#ff245a'
@@ -2491,7 +3080,7 @@ React.FC<{
         />
 
         <ColorInput
-          label="Chữ"
+          label="Màu chữ"
           value={
             style.color ||
             '#ffffff'

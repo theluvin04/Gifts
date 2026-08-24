@@ -1,37 +1,40 @@
-DEARLY ASSET LIBRARY V4.1.1 — PERMISSION FIX
+V7 STEP 3 — FIX HIỆU ỨNG KHÔNG CHẠY TRONG CANVAS
 
-LỖI ĐÃ XÁC ĐỊNH
-Firestore assetLibrary/assetFolders trả Missing or insufficient permissions.
-V4.1 dùng Promise.all và service throw trước khi trả codeAssets, nên public/images/** bị biến mất.
+CHỈ SỬA 1 FILE:
+src/components/admin/visual-editor/EditorCanvas.tsx
+
+LINE COUNT:
+1898 -> 1911 (+13)
+
+NGUYÊN NHÂN
+Canvas editor trước đây chỉ tự xử lý:
+- Xoay thuận liên tục
+- Xoay ngược liên tục
+
+Các hiệu ứng khác như:
+- Quét từ dưới lên
+- Quét từ trái sang
+- Zic-zac
+- Nảy vào
+- Lật vào
+- Mờ → rõ
+- Rung
+- Nhịp thở
+không hề đi qua AnimatedElement nên chọn xong không nhìn thấy gì.
 
 FIX
-- public/images/** được build/normalize trước.
-- Firestore assetLibrary chỉ là nguồn bổ sung.
-- Firestore lỗi -> vẫn trả code assets.
-- assetFolders lỗi -> vẫn trả folder từ code + default.
-- Upload vẫn cần Firebase rules đúng, nhưng không còn ảnh hưởng tới tab "Trong code".
+- EditorCanvas dùng cùng AnimatedElement với runtime Preview.
+- Khi đổi preset / duration / delay / easing, key đổi -> animation replay ngay.
+- Typewriter / hiện từng từ / từng dòng vẫn dùng AnimatedTextContent riêng, tránh chạy animation 2 lần.
+- Bỏ CSS spin riêng của editor, tất cả dùng chung một animation engine.
 
-FILE
-src/services/assetLibraryService.ts
+TEST
+1. Chọn ảnh.
+2. Hiệu ứng -> Quét từ dưới lên.
+3. Đổi dropdown -> phải thấy animation chạy ngay trên canvas.
+4. Đổi Thời lượng 520 -> 1500 -> phải replay chậm hơn.
+5. Thử Zic-zac từ trái.
+6. Thử Nảy vào.
+7. Với chữ thử Đánh chữ từng ký tự.
 
-LINE COUNT
-1024 -> 1064 (+40)
-
-SAU KHI THAY FILE
-1. AI Studio restart server / refresh Preview.
-2. Admin -> Templates -> Bố cục -> Tài nguyên.
-3. Bấm "Trong code".
-4. Phải thấy các file đang có trong public/images/**.
-
-Hiện GitHub main đã xác nhận có:
-- /images/cat-default.gif
-- /images/dearly-logo.png
-- /images/gifts/gift-1.png
-- /images/gifts/gift-2.png
-- /images/gifts/gift-3.png
-- /images/gifts/success.gif
-- /images/letter/envelope-cover.png
-- /images/template-assets/proposal/cat-love-sticker.gif
-
-Nếu phần "Đã upload" vẫn chưa dùng được thì deploy firestore.rules/storage.rules sau.
-Điều đó KHÔNG còn được phép làm mất ảnh "Trong code".
+Không sửa layer/template/preview ở step này.

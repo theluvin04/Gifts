@@ -19,6 +19,7 @@ import {
   createButtonElement,
   createDecorElement,
   createImageElement,
+  createPolaroidElement,
   createShapeElement,
   createTextElement,
   createVisualScene,
@@ -33,6 +34,10 @@ import {
 import {
   EditorCanvas,
 } from './visual-editor/EditorCanvas';
+
+import {
+  CanvasQuickBar,
+} from './visual-editor/CanvasQuickBar';
 
 import {
   AssetLibraryModal,
@@ -60,6 +65,7 @@ import {
 
 import {
   AlignAction,
+  CanvasAlignAction,
   cloneValue,
   DeviceMode,
   getEffectiveFrame,
@@ -608,7 +614,7 @@ React.FC<Props> = ({
 
       const confirmed =
         window.confirm(
-          `Xóa scene "${scene.title || scene.id}"?`
+          `Xóa trang "${scene.title || scene.id}"?`
         );
 
       if (!confirmed) {
@@ -654,9 +660,10 @@ React.FC<Props> = ({
       | 'button'
       | 'decor'
       | 'shape'
+      | 'photo-frame'
   ) => {
     if (!scene) {
-      return;
+      return null;
     }
 
     const count =
@@ -685,9 +692,14 @@ React.FC<Props> = ({
               ? createShapeElement(
                   count
                 )
-              : createDecorElement(
-                  count
-                );
+              : type ===
+                  'photo-frame'
+                ? createPolaroidElement(
+                    count
+                  )
+                : createDecorElement(
+                    count
+                  );
 
     const maxZ =
       Math.max(
@@ -719,7 +731,27 @@ React.FC<Props> = ({
     setSelectedElementIds([
       element.id,
     ]);
+
+    return element.id;
   };
+
+  const addPolaroid =
+    () => {
+      const elementId =
+        addElement(
+          'photo-frame'
+        );
+
+      if (
+        elementId
+      ) {
+        setAssetPickerTarget({
+          kind:
+            'element',
+          elementId,
+        });
+      }
+    };
 
   const addAssetElement =
     (
@@ -845,7 +877,9 @@ React.FC<Props> = ({
               element.type !==
                 'image' &&
               element.type !==
-                'decor'
+                'decor' &&
+              element.type !==
+                'photo-frame'
             ) {
               return element;
             }
@@ -858,10 +892,7 @@ React.FC<Props> = ({
                 element.name ||
                 asset.name,
               alt:
-                element.type ===
-                'image'
-                  ? asset.name
-                  : element.alt,
+                asset.name,
             } as
               SceneElement;
           }
@@ -1486,6 +1517,387 @@ React.FC<Props> = ({
     );
   };
 
+  const alignSelectionToCanvas =
+    (
+      action:
+        CanvasAlignAction
+    ) => {
+      if (
+        !scene ||
+        selectedElements.length ===
+        0
+      ) {
+        return;
+      }
+
+      const unlocked =
+        selectedElements.filter(
+          (
+            element
+          ) =>
+            !element.locked
+        );
+
+      if (
+        unlocked.length ===
+        0
+      ) {
+        return;
+      }
+
+      const escapeSelector =
+        (
+          value: string
+        ) => {
+          if (
+            typeof CSS !==
+              'undefined' &&
+            typeof CSS.escape ===
+              'function'
+          ) {
+            return CSS.escape(
+              value
+            );
+          }
+
+          return value.replace(
+            /["\\]/g,
+            '\\$&'
+          );
+        };
+
+      const domElements =
+        unlocked
+          .map(
+            (
+              element
+            ) =>
+              document.querySelector(
+                `[data-editor-element-id="${escapeSelector(element.id)}"]`
+              ) as
+                HTMLElement |
+                null
+          )
+          .filter(
+            (
+              element
+            ):
+              element is
+              HTMLElement =>
+                Boolean(
+                  element
+                )
+          );
+
+      const canvasElement =
+        domElements[0]
+          ?.offsetParent as
+          HTMLElement |
+          null;
+
+      let bounds:
+        {
+          left: number;
+          top: number;
+          right: number;
+          bottom: number;
+          centerX: number;
+          centerY: number;
+        } |
+        null = null;
+
+      if (
+        canvasElement &&
+        domElements.length ===
+          unlocked.length
+      ) {
+        const canvasRect =
+          canvasElement
+            .getBoundingClientRect();
+
+        if (
+          canvasRect.width >
+            0 &&
+          canvasRect.height >
+            0
+        ) {
+          const rects =
+            domElements.map(
+              (
+                element
+              ) =>
+                element
+                  .getBoundingClientRect()
+            );
+
+          const leftPx =
+            Math.min(
+              ...rects.map(
+                (
+                  rect
+                ) =>
+                  rect.left
+              )
+            );
+
+          const topPx =
+            Math.min(
+              ...rects.map(
+                (
+                  rect
+                ) =>
+                  rect.top
+              )
+            );
+
+          const rightPx =
+            Math.max(
+              ...rects.map(
+                (
+                  rect
+                ) =>
+                  rect.right
+              )
+            );
+
+          const bottomPx =
+            Math.max(
+              ...rects.map(
+                (
+                  rect
+                ) =>
+                  rect.bottom
+              )
+            );
+
+          const left =
+            (
+              leftPx -
+              canvasRect.left
+            ) /
+            canvasRect.width *
+            100;
+
+          const top =
+            (
+              topPx -
+              canvasRect.top
+            ) /
+            canvasRect.height *
+            100;
+
+          const right =
+            (
+              rightPx -
+              canvasRect.left
+            ) /
+            canvasRect.width *
+            100;
+
+          const bottom =
+            (
+              bottomPx -
+              canvasRect.top
+            ) /
+            canvasRect.height *
+            100;
+
+          bounds = {
+            left,
+            top,
+            right,
+            bottom,
+            centerX:
+              (
+                left +
+                right
+              ) /
+              2,
+            centerY:
+              (
+                top +
+                bottom
+              ) /
+              2,
+          };
+        }
+      }
+
+      if (
+        !bounds
+      ) {
+        const fallback =
+          getSelectionBounds(
+            unlocked,
+            device
+          );
+
+        if (
+          !fallback
+        ) {
+          return;
+        }
+
+        bounds =
+          fallback;
+      }
+
+      let dx = 0;
+      let dy = 0;
+
+      if (
+        action ===
+        'left'
+      ) {
+        dx =
+          -bounds.left;
+      }
+
+      if (
+        action ===
+        'center-x'
+      ) {
+        dx =
+          50 -
+          bounds.centerX;
+      }
+
+      if (
+        action ===
+        'right'
+      ) {
+        dx =
+          100 -
+          bounds.right;
+      }
+
+      if (
+        action ===
+        'top'
+      ) {
+        dy =
+          -bounds.top;
+      }
+
+      if (
+        action ===
+        'center-y'
+      ) {
+        dy =
+          50 -
+          bounds.centerY;
+      }
+
+      if (
+        action ===
+        'bottom'
+      ) {
+        dy =
+          100 -
+          bounds.bottom;
+      }
+
+      const nextFrames:
+        Record<
+          string,
+          SceneElementFrame
+        > = {};
+
+      unlocked.forEach(
+        (
+          element
+        ) => {
+          const frame =
+            getEffectiveFrame(
+              element,
+              device
+            );
+
+          nextFrames[
+            element.id
+          ] = {
+            ...frame,
+            x:
+              frame.x +
+              dx,
+            y:
+              frame.y +
+              dy,
+          };
+        }
+      );
+
+      updateFrames(
+        nextFrames,
+        'commit'
+      );
+    };
+
+  const rotateSelection =
+    (
+      action:
+        'left' |
+        'reset' |
+        'right'
+    ) => {
+      if (
+        !scene ||
+        selectedElements.length ===
+        0
+      ) {
+        return;
+      }
+
+      const nextFrames:
+        Record<
+          string,
+          SceneElementFrame
+        > = {};
+
+      selectedElements.forEach(
+        (
+          element
+        ) => {
+          if (
+            element.locked
+          ) {
+            return;
+          }
+
+          const frame =
+            getEffectiveFrame(
+              element,
+              device
+            );
+
+          const current =
+            frame.rotate ||
+            0;
+
+          nextFrames[
+            element.id
+          ] = {
+            ...frame,
+            rotate:
+              action ===
+              'reset'
+                ? 0
+                : action ===
+                    'left'
+                  ? current -
+                    90
+                  : current +
+                    90,
+          };
+        }
+      );
+
+      updateFrames(
+        nextFrames,
+        'commit'
+      );
+    };
+
   const moveLayer = (
     action:
       LayerAction
@@ -1797,7 +2209,7 @@ React.FC<Props> = ({
           }
           className="mt-4 rounded-[10px] bg-black px-4 py-2.5 text-xs font-bold text-white"
         >
-          Tạo scene đầu tiên
+          Tạo trang đầu tiên
         </button>
       </div>
     );
@@ -1817,7 +2229,7 @@ React.FC<Props> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-xs font-black sm:text-sm">
-                Visual Editor
+                Trình thiết kế
               </h3>
 
               <span className="rounded-full bg-[#f4e9ec] px-2 py-1 text-[8px] font-black text-[#a63550]">
@@ -1828,7 +2240,7 @@ React.FC<Props> = ({
             <p className="mt-0.5 hidden truncate text-[9px] text-black/30 md:block">
               {scene.title || scene.id}
               {' · '}
-              {selectedElements.length} selected
+              {selectedElements.length} đối tượng đã chọn
             </p>
           </div>
 
@@ -1838,7 +2250,7 @@ React.FC<Props> = ({
                 device ===
                 'desktop'
               }
-              label="Desktop"
+              label="Máy tính"
               onClick={() => {
                 setDevice(
                   'desktop'
@@ -1855,7 +2267,7 @@ React.FC<Props> = ({
                 device ===
                 'mobile'
               }
-              label="Mobile"
+              label="Điện thoại"
               onClick={() => {
                 setDevice(
                   'mobile'
@@ -1882,7 +2294,7 @@ React.FC<Props> = ({
                   : 'border-black/8 bg-white text-black/35',
               ].join(' ')}
             >
-              Layers
+              Lớp
             </button>
 
             <button
@@ -1900,7 +2312,7 @@ React.FC<Props> = ({
                   : 'border-black/8 bg-white text-black/35',
               ].join(' ')}
             >
-              Properties
+              Thuộc tính
             </button>
 
             <button
@@ -1927,7 +2339,7 @@ React.FC<Props> = ({
               }
               className="rounded-[8px] bg-[#191919] px-3 py-2 text-[9px] font-black text-white"
             >
-              Preview
+              Xem thử
             </button>
           </div>
         </div>
@@ -1982,7 +2394,7 @@ React.FC<Props> = ({
               }
               className="rounded-[8px] border border-black/9 bg-white px-2.5 py-2 text-[9px] font-black text-black/45"
             >
-              + Scene
+              + Trang
             </button>
 
             <button
@@ -1992,7 +2404,7 @@ React.FC<Props> = ({
               }
               className="rounded-[8px] border border-black/9 bg-white px-2.5 py-2 text-[9px] font-black text-black/45"
             >
-              Duplicate
+              Nhân bản
             </button>
 
             <button
@@ -2032,8 +2444,8 @@ React.FC<Props> = ({
             >
               {config.initialSceneId ===
               scene.id
-                ? 'Scene đầu ✓'
-                : 'Đặt làm scene đầu'}
+                ? 'Trang đầu ✓'
+                : 'Đặt làm trang đầu'}
             </button>
           </div>
 
@@ -2055,7 +2467,7 @@ React.FC<Props> = ({
               className="h-4 w-4 accent-[#b83e57]"
             />
 
-            Dùng Visual Engine
+            Bật hiển thị động
           </label>
         </div>
 
@@ -2093,7 +2505,7 @@ React.FC<Props> = ({
           onPaste={
             paste
           }
-          onDuplicate={
+          onNhân bản={
             duplicateSelected
           }
           onDelete={
@@ -2138,7 +2550,7 @@ React.FC<Props> = ({
 
         <div className="mt-3 flex flex-wrap gap-2">
           <AddElementButton
-            label="+ Text"
+            label="+ Chữ"
             onClick={() =>
               addElement(
                 'text'
@@ -2162,14 +2574,22 @@ React.FC<Props> = ({
           <AddElementButton
             label="+ Ảnh"
             onClick={() =>
-              addElement(
-                'image'
-              )
+              setAssetPickerTarget({
+                kind:
+                  'insert',
+              })
             }
           />
 
           <AddElementButton
-            label="+ Shape"
+            label="+ Khung Polaroid"
+            onClick={
+              addPolaroid
+            }
+          />
+
+          <AddElementButton
+            label="+ Hình"
             onClick={() =>
               addElement(
                 'shape'
@@ -2187,7 +2607,7 @@ React.FC<Props> = ({
           />
 
           <AddElementButton
-            label="+ Decor"
+            label="+ Trang trí"
             onClick={() =>
               addElement(
                 'decor'
@@ -2241,35 +2661,58 @@ React.FC<Props> = ({
           />
           )}
 
-          <EditorCanvas
-            scene={
-              scene
-            }
-            device={
-              device
-            }
-            selectedElementIds={
-              selectedElementIds
-            }
-            zoom={
-              zoom
-            }
-            gridEnabled={
-              gridEnabled
-            }
-            snapEnabled={
-              snapEnabled
-            }
-            onSelectionChange={
-              setSelectedElementIds
-            }
-            onTransformStart={
-              history.checkpoint
-            }
-            onFramesChange={
-              updateFrames
-            }
-          />
+          <div className="min-w-0">
+            <EditorCanvas
+              scene={
+                scene
+              }
+              device={
+                device
+              }
+              selectedElementIds={
+                selectedElementIds
+              }
+              zoom={
+                zoom
+              }
+              gridEnabled={
+                gridEnabled
+              }
+              snapEnabled={
+                snapEnabled
+              }
+              onSelectionChange={
+                setSelectedElementIds
+              }
+              onTransformStart={
+                history.checkpoint
+              }
+              onFramesChange={
+                updateFrames
+              }
+            />
+
+            <CanvasQuickBar
+              selectionCount={
+                selectedElements.length
+              }
+              onAlignCanvas={
+                alignSelectionToCanvas
+              }
+              onRotate={
+                rotateSelection
+              }
+              onLayer={
+                moveLayer
+              }
+              onDuplicate={
+                duplicateSelected
+              }
+              onToggleLock={
+                toggleSelectedLock
+              }
+            />
+          </div>
 
           {inspectorOpen && (
           <InspectorPanel
@@ -2294,7 +2737,7 @@ React.FC<Props> = ({
             onFrameChange={
               updateElementFrame
             }
-            onDuplicate={
+            onNhân bản={
               duplicateSelected
             }
             onDelete={
@@ -2337,7 +2780,7 @@ React.FC<Props> = ({
 
         {!fullscreen && (
         <div className="mt-2 rounded-[9px] border border-[#cf5068]/10 bg-[#fff9fa] px-3 py-2 text-[9px] leading-4 text-black/35">
-          Thiết kế trong Admin → Lưu thay đổi. Dùng Toàn màn hình khi cần không gian canvas lớn hơn.
+          Thiết kế trong Admin → Lưu thay đổi. Dùng Toàn màn hình khi cần không gian khung vẽ lớn hơn.
         </div>
         )}
       </div>
@@ -2347,7 +2790,7 @@ React.FC<Props> = ({
           title={
             assetPickerTarget.kind ===
               'insert'
-              ? 'Chọn tài nguyên để thêm vào canvas'
+              ? 'Chọn tài nguyên để thêm vào khung vẽ'
               : assetPickerTarget.kind ===
                   'background'
                 ? 'Chọn ảnh nền'
@@ -2368,6 +2811,9 @@ React.FC<Props> = ({
         <PreviewOverlay
           config={
             config
+          }
+          initialDevice={
+            device
           }
           onClose={() =>
             setPreviewOpen(

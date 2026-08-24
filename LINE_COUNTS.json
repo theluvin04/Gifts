@@ -1,66 +1,108 @@
 {
   "files": [
     {
-      "path": "src/config/firebase.ts",
-      "old": 122,
-      "new": 131,
-      "diff": 9,
+      "path": "src/components/admin/AdminVisualTemplateEditor.tsx",
+      "old": 2644,
+      "new": 2647,
+      "diff": 3,
       "new_file": false
     },
     {
-      "path": "src/services/assetLibraryService.ts",
-      "old": 0,
-      "new": 1024,
-      "diff": 1024,
-      "new_file": true
-    },
-    {
-      "path": "src/components/admin/AdminVisualTemplateEditor.tsx",
-      "old": 2155,
-      "new": 2391,
-      "diff": 236,
+      "path": "src/components/admin/visual-editor/EditorCanvas.tsx",
+      "old": 1882,
+      "new": 1898,
+      "diff": 16,
       "new_file": false
     },
     {
       "path": "src/components/admin/visual-editor/InspectorPanel.tsx",
-      "old": 2525,
-      "new": 2605,
-      "diff": 80,
+      "old": 3088,
+      "new": 3194,
+      "diff": 106,
       "new_file": false
     },
     {
-      "path": "src/components/admin/visual-editor/AssetLibraryModal.tsx",
-      "old": 0,
-      "new": 1416,
-      "diff": 1416,
-      "new_file": true
-    },
-    {
-      "path": "src/types/dearly-code-assets.d.ts",
-      "old": 0,
-      "new": 21,
-      "diff": 21,
-      "new_file": true
-    },
-    {
-      "path": "firestore.rules",
-      "old": 190,
-      "new": 201,
-      "diff": 11,
+      "path": "src/components/admin/visual-editor/LayersPanel.tsx",
+      "old": 284,
+      "new": 284,
+      "diff": 0,
       "new_file": false
     },
     {
-      "path": "storage.rules",
+      "path": "src/components/admin/visual-editor/PreviewOverlay.tsx",
+      "old": 60,
+      "new": 230,
+      "diff": 170,
+      "new_file": false
+    },
+    {
+      "path": "src/engine/animation/AnimatedTextContent.tsx",
       "old": 0,
-      "new": 28,
-      "diff": 28,
+      "new": 403,
+      "diff": 403,
       "new_file": true
     },
     {
-      "path": "vite.config.ts",
-      "old": 24,
-      "new": 625,
-      "diff": 601,
+      "path": "src/engine/animation/presets.ts",
+      "old": 418,
+      "new": 591,
+      "diff": 173,
+      "new_file": false
+    },
+    {
+      "path": "src/engine/animation/types.ts",
+      "old": 105,
+      "new": 123,
+      "diff": 18,
+      "new_file": false
+    },
+    {
+      "path": "src/engine/index.ts",
+      "old": 95,
+      "new": 110,
+      "diff": 15,
+      "new_file": false
+    },
+    {
+      "path": "src/engine/scene/SceneCanvas.tsx",
+      "old": 293,
+      "new": 303,
+      "diff": 10,
+      "new_file": false
+    },
+    {
+      "path": "src/engine/scene/SceneElementView.tsx",
+      "old": 654,
+      "new": 690,
+      "diff": 36,
+      "new_file": false
+    },
+    {
+      "path": "src/engine/scene/VisualSceneExperience.tsx",
+      "old": 198,
+      "new": 205,
+      "diff": 7,
+      "new_file": false
+    },
+    {
+      "path": "src/engine/scene/elementTypes.ts",
+      "old": 368,
+      "new": 373,
+      "diff": 5,
+      "new_file": false
+    },
+    {
+      "path": "src/engine/scene/photoFramePresets.ts",
+      "old": 0,
+      "new": 359,
+      "diff": 359,
+      "new_file": true
+    },
+    {
+      "path": "src/templates/visualEditor.ts",
+      "old": 1676,
+      "new": 1739,
+      "diff": 63,
       "new_file": false
     }
   ]

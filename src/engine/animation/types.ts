@@ -11,8 +11,22 @@ export type AnimationPreset =
   | 'zoom-out'
   | 'pop'
   | 'rotate-in'
+  | 'zigzag-left'
+  | 'zigzag-right'
+  | 'blur-reveal'
+  | 'wipe-left'
+  | 'wipe-up'
+  | 'bounce-in'
+  | 'flip-in'
+  | 'typewriter'
+  | 'word-reveal'
+  | 'line-reveal'
+  | 'spin'
+  | 'spin-reverse'
   | 'float'
-  | 'swing';
+  | 'swing'
+  | 'shake'
+  | 'pulse';
 
 export type AnimationEasing =
   | 'linear'
@@ -47,6 +61,12 @@ export interface AnimationConfig {
     AnimationTrigger;
 
   viewportAmount?: number;
+
+  /**
+   * Used by typewriter animation.
+   * Defaults to true when preset = typewriter.
+   */
+  showCursor?: boolean;
 }
 
 export interface StaggerConfig {

@@ -11,6 +11,13 @@ import type {
 } from '../../../engine';
 
 import {
+  AnimatedElement,
+  AnimatedTextContent,
+  isTextRevealPreset,
+  resolvePhotoFrameStyle,
+} from '../../../engine';
+
+import {
   anchorTranslate,
   clamp,
   DeviceMode,
@@ -1022,15 +1029,15 @@ React.FC<Props> = ({
     <section className="min-w-0 overflow-hidden rounded-[11px] border border-black/8 bg-[#eeeeec] p-2 sm:p-3">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[9px] font-black uppercase tracking-[0.14em] text-black/30">
-          Canvas ·{' '}
+          Khung vẽ ·{' '}
           {device ===
           'desktop'
-            ? 'Desktop'
-            : 'Mobile'}
+            ? 'Máy tính'
+            : 'Điện thoại'}
         </p>
 
         <p className="text-[9px] text-black/30">
-          Shift kéo = khóa trục · Alt kéo = bỏ Snap · Shift resize = giữ tỉ lệ
+          Shift + kéo = khóa trục · Alt + kéo = tắt bắt dính · Shift + co giãn = giữ tỉ lệ
         </p>
       </div>
 
@@ -1408,11 +1415,55 @@ React.FC<{
           : 'hover:outline hover:outline-1 hover:outline-[#ff245a]/35',
       ].join(' ')}
     >
-      <EditorElementContent
-        element={
-          element
+      <AnimatedElement
+        replayKey={
+          [
+            element.id,
+            element.animation
+              ?.preset ||
+              'none',
+            element.animation
+              ?.durationMs ||
+              0,
+            element.animation
+              ?.delayMs ||
+              0,
+            element.animation
+              ?.easing ||
+              '',
+          ].join('-')
         }
-      />
+        animation={
+          element.type ===
+            'text' &&
+          isTextRevealPreset(
+            element.animation
+              ?.preset
+          )
+            ? {
+                ...element.animation,
+                preset:
+                  'none',
+                delayMs: 0,
+                durationMs: 0,
+              }
+            : element.animation
+        }
+        style={{
+          width:
+            '100%',
+          height:
+            '100%',
+          transformOrigin:
+            'center center',
+        }}
+      >
+        <EditorElementContent
+          element={
+            element
+          }
+        />
+      </AnimatedElement>
 
       {element.locked &&
       selected && (
@@ -1430,7 +1481,7 @@ React.FC<{
 
           <button
             type="button"
-            aria-label="Resize"
+            aria-label="Co giãn"
             onPointerDown={(
               event
             ) =>
@@ -1446,7 +1497,7 @@ React.FC<{
 
           <button
             type="button"
-            aria-label="Rotate"
+            aria-label="Xoay"
             onPointerDown={(
               event
             ) =>
@@ -1513,7 +1564,17 @@ React.FC<{
         }}
         className="break-words"
       >
-        {element.text}
+        <AnimatedTextContent
+          text={
+            element.text
+          }
+          animation={
+            element.animation
+          }
+          replayKey={
+            `${element.id}-${element.animation?.preset || 'none'}-${element.animation?.durationMs || 0}-${element.animation?.delayMs || 0}`
+          }
+        />
       </div>
     );
   }
@@ -1527,6 +1588,16 @@ React.FC<{
     const style =
       element.imageStyle ||
       {};
+
+    if (
+      !element.src
+    ) {
+      return (
+        <div className="flex h-full min-h-16 w-full items-center justify-center rounded-[8px] border border-dashed border-black/15 bg-white/70 px-2 text-center text-[9px] font-bold text-black/30">
+          Chọn ảnh từ kho tài nguyên
+        </div>
+      );
+    }
 
     return (
       <img
@@ -1564,6 +1635,145 @@ React.FC<{
         }}
         className="h-full w-full select-none"
       />
+    );
+  }
+
+  if (
+    element.type ===
+    'photo-frame'
+  ) {
+    const style =
+      resolvePhotoFrameStyle(
+        element.frameStyle
+      );
+
+    const padding =
+      Math.max(
+        0,
+        style.paddingPercent ??
+          6
+      );
+
+    const captionArea =
+      Math.max(
+        12,
+        style.captionAreaPercent ??
+          22
+      );
+
+    return (
+      <div
+        style={{
+          width:
+            '100%',
+          height:
+            '100%',
+          display:
+            'flex',
+          flexDirection:
+            'column',
+          gap:
+            `${Math.max(2, padding * 0.45)}%`,
+          padding:
+            `${padding}%`,
+          paddingBottom:
+            `${Math.max(padding, padding * 0.7)}%`,
+          background:
+            style.background ||
+            '#fffdf8',
+          borderRadius:
+            style.outerRadius ??
+            4,
+          boxShadow:
+            style.boxShadow ||
+            '0 18px 38px rgba(40,25,25,0.18)',
+          overflow:
+            'hidden',
+        }}
+      >
+        <div
+          style={{
+            minHeight: 0,
+            flex:
+              `1 1 ${100 - captionArea}%`,
+            overflow:
+              'hidden',
+            borderRadius:
+              style.innerRadius ??
+              2,
+            background:
+              '#eeeae5',
+          }}
+        >
+          {element.src ? (
+            <img
+              src={
+                element.src
+              }
+              alt=""
+              draggable={
+                false
+              }
+              style={{
+                width:
+                  '100%',
+                height:
+                  '100%',
+                objectFit:
+                  style.imageFit ||
+                  'cover',
+              }}
+              className="select-none"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center px-2 text-center text-[8px] font-bold text-black/28">
+              Chọn ảnh
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            minHeight:
+              `${captionArea}%`,
+            display:
+              'flex',
+            alignItems:
+              'center',
+            justifyContent:
+              style.captionAlign ===
+              'left'
+                ? 'flex-start'
+                : style.captionAlign ===
+                    'right'
+                  ? 'flex-end'
+                  : 'center',
+            color:
+              style.captionColor ||
+              '#34302f',
+            fontFamily:
+              style.captionFontFamily,
+            fontSize:
+              style.captionFontSize ||
+              16,
+            fontWeight:
+              style.captionFontWeight ||
+              600,
+            textAlign:
+              style.captionAlign ||
+              'center',
+            lineHeight:
+              1.2,
+            whiteSpace:
+              'pre-line',
+            overflow:
+              'hidden',
+          }}
+        >
+          {element.caption ||
+            ''}
+        </div>
+      </div>
     );
   }
 

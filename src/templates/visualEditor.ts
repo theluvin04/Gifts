@@ -27,15 +27,15 @@ Array<{
   },
   {
     value: 'fade',
-    label: 'Fade',
+    label: 'Mờ dần',
   },
   {
     value: 'fade-up',
-    label: 'Fade từ dưới',
+    label: 'Mờ dần từ dưới',
   },
   {
     value: 'fade-down',
-    label: 'Fade từ trên',
+    label: 'Mờ dần từ trên',
   },
   {
     value: 'slide-left',
@@ -54,20 +54,56 @@ Array<{
     label: 'Bay từ trên xuống',
   },
   {
+    value: 'zigzag-left',
+    label: 'Zic-zac từ trái',
+  },
+  {
+    value: 'zigzag-right',
+    label: 'Zic-zac từ phải',
+  },
+  {
     value: 'zoom-in',
-    label: 'Zoom vào',
+    label: 'Phóng to vào',
   },
   {
     value: 'zoom-out',
-    label: 'Zoom ra',
+    label: 'Thu nhỏ ra',
   },
   {
     value: 'pop',
-    label: 'Pop',
+    label: 'Bật nảy',
+  },
+  {
+    value: 'bounce-in',
+    label: 'Nảy vào',
   },
   {
     value: 'rotate-in',
-    label: 'Xoay vào',
+    label: 'Xoay xuất hiện',
+  },
+  {
+    value: 'flip-in',
+    label: 'Lật vào',
+  },
+  {
+    value: 'blur-reveal',
+    label: 'Mờ → rõ',
+  },
+  {
+    value: 'wipe-left',
+    label: 'Quét từ trái sang',
+  },
+  {
+    value: 'wipe-up',
+    label: 'Quét từ dưới lên',
+  },
+  {
+    value: 'spin',
+    label: 'Xoay thuận liên tục',
+  },
+  {
+    value: 'spin-reverse',
+    label: 'Xoay ngược liên tục',
   },
   {
     value: 'float',
@@ -75,8 +111,43 @@ Array<{
   },
   {
     value: 'swing',
-    label: 'Lắc nhẹ',
+    label: 'Lắc nhẹ liên tục',
   },
+  {
+    value: 'shake',
+    label: 'Rung liên tục',
+  },
+  {
+    value: 'pulse',
+    label: 'Nhịp thở liên tục',
+  },
+];
+
+export const VISUAL_EDITOR_TEXT_ANIMATION_PRESETS:
+Array<{
+  value: AnimationPreset;
+  label: string;
+}> = [
+  ...VISUAL_EDITOR_ANIMATION_PRESETS,
+  {
+    value: 'typewriter',
+    label: 'Đánh chữ từng ký tự',
+  },
+  {
+    value: 'word-reveal',
+    label: 'Hiện từng từ',
+  },
+  {
+    value: 'line-reveal',
+    label: 'Hiện từng dòng',
+  },
+];
+
+export const TEXT_REVEAL_ANIMATION_PRESETS:
+AnimationPreset[] = [
+  'typewriter',
+  'word-reveal',
+  'line-reveal',
 ];
 
 export const VISUAL_EDITOR_TRANSITION_PRESETS:
@@ -87,15 +158,15 @@ Array<{
 }> = [
   {
     value: 'none',
-    label: 'Không transition',
+    label: 'Không chuyển cảnh',
   },
   {
     value: 'fade',
-    label: 'Fade',
+    label: 'Mờ dần',
   },
   {
     value: 'crossfade',
-    label: 'Crossfade',
+    label: 'Mờ chéo',
   },
   {
     value: 'slide-left',
@@ -115,11 +186,11 @@ Array<{
   },
   {
     value: 'zoom',
-    label: 'Zoom',
+    label: 'Phóng to',
   },
   {
     value: 'blur',
-    label: 'Blur → rõ',
+    label: 'Mờ → rõ',
   },
 ];
 
@@ -173,7 +244,7 @@ export const createVisualScene = (
     ),
 
   title:
-    `Scene ${index}`,
+    `Trang ${index}`,
 
   transition: {
     preset: 'fade',
@@ -265,8 +336,11 @@ export const createImageElement =
 
     type: 'image',
 
+    name:
+      `Ảnh ${index}`,
+
     src:
-      '/images/cat-default.gif',
+      '',
 
     alt:
       `Ảnh ${index}`,
@@ -449,6 +523,77 @@ export const createShapeElement =
 
     actions: [],
   });
+
+export const createPolaroidElement =
+  (
+    index = 1
+  ):
+    SceneElement => ({
+    id:
+      createId(
+        'polaroid'
+      ),
+
+    type:
+      'photo-frame',
+
+    name:
+      `Khung Polaroid ${index}`,
+
+    src:
+      '',
+
+    alt:
+      `Ảnh Polaroid ${index}`,
+
+    caption:
+      '',
+
+    frame: {
+      ...DEFAULT_FRAME,
+      width: 26,
+      height: 39,
+      zIndex: 2,
+    },
+
+    mobileFrame: {
+      width: 52,
+      height: 34,
+    },
+
+    frameStyle: {
+      preset:
+        'polaroid',
+      background:
+        '#fffdf8',
+      imageFit:
+        'cover',
+      innerRadius: 2,
+      outerRadius: 4,
+      paddingPercent: 6,
+      captionAreaPercent: 22,
+      boxShadow:
+        '0 18px 38px rgba(40,25,25,0.18)',
+      captionColor:
+        '#34302f',
+      captionFontSize: 16,
+      captionFontWeight: 600,
+      captionAlign:
+        'center',
+    },
+
+    animation: {
+      preset:
+        'fade-up',
+      durationMs: 520,
+      delayMs: 0,
+      easing:
+        'easeOut',
+    },
+
+    actions: [],
+  });
+
 
 const introScene:
 SceneCanvasDefinition = {
@@ -987,7 +1132,9 @@ const normalizeElement = (
     data.type ===
       'decor' ||
     data.type ===
-      'shape'
+      'shape' ||
+    data.type ===
+      'photo-frame'
       ? data.type
       : null;
 
@@ -1130,7 +1277,7 @@ const normalizeElement = (
       src:
         safeString(
           data.src,
-          '/images/cat-default.gif',
+          '',
           2000
         ),
 
@@ -1150,6 +1297,60 @@ const normalizeElement = (
               ...data.imageStyle,
             }
           : {},
+    };
+  }
+
+  if (
+    type ===
+    'photo-frame'
+  ) {
+    return {
+      ...base,
+
+      type:
+        'photo-frame',
+
+      src:
+        safeString(
+          data.src,
+          '',
+          2000
+        ),
+
+      alt:
+        safeString(
+          data.alt,
+          '',
+          300
+        ),
+
+      caption:
+        safeString(
+          data.caption,
+          '',
+          500
+        ),
+
+      frameStyle:
+        data.frameStyle &&
+        typeof data
+          .frameStyle ===
+          'object'
+          ? {
+              ...data.frameStyle,
+            }
+          : {
+              preset:
+                'polaroid',
+              background:
+                '#fffdf8',
+              imageFit:
+                'cover',
+              paddingPercent:
+                6,
+              captionAreaPercent:
+                22,
+            },
     };
   }
 
@@ -1246,7 +1447,7 @@ const normalizeScene = (
     title:
       safeString(
         data.title,
-        `Scene ${index + 1}`,
+        `Trang ${index + 1}`,
         160
       ),
 

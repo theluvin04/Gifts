@@ -26,6 +26,11 @@ export {
   AnimatedGroup,
 } from './animation/AnimatedGroup';
 
+export {
+  AnimatedTextContent,
+  isTextRevealPreset,
+} from './animation/AnimatedTextContent';
+
 export type {
   GoToSceneOptions,
   SceneDefinition,
@@ -59,6 +64,9 @@ export type {
   SceneElementType,
   SceneImageElement,
   SceneImageStyle,
+  ScenePhotoFrameElement,
+  ScenePhotoFramePreset,
+  ScenePhotoFrameStyle,
   SceneShapeElement,
   SceneShapeKind,
   SceneShapeStyle,
@@ -82,6 +90,16 @@ export {
 export {
   SceneElementView,
 } from './scene/SceneElementView';
+
+export {
+  PHOTO_FRAME_PRESETS,
+  getPhotoFramePreset,
+  resolvePhotoFrameStyle,
+} from './scene/photoFramePresets';
+
+export type {
+  PhotoFramePresetDefinition,
+} from './scene/photoFramePresets';
 
 export {
   SceneCanvas,

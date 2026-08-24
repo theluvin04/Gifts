@@ -75,13 +75,13 @@ React.FC<Props> = ({
       return;
     }
 
-    const groupIds =
-      element.groupId
+    const nhómIds =
+      element.nhómId
         ? scene.elements
             .filter(
               (item) =>
-                item.groupId ===
-                element.groupId
+                item.nhómId ===
+                element.nhómId
             )
             .map(
               (item) =>
@@ -93,7 +93,7 @@ React.FC<Props> = ({
 
     if (!additive) {
       onSelectionChange(
-        groupIds
+        nhómIds
       );
       return;
     }
@@ -104,14 +104,14 @@ React.FC<Props> = ({
       );
 
     const allSelected =
-      groupIds.every(
+      nhómIds.every(
         (id) =>
           next.has(
             id
           )
       );
 
-    groupIds.forEach(
+    nhómIds.forEach(
       (id) => {
         if (
           allSelected
@@ -138,7 +138,7 @@ React.FC<Props> = ({
     <aside className="min-w-0 overflow-hidden rounded-[11px] border border-black/8 bg-[#faf9f8] p-2">
       <div className="flex items-center justify-between gap-2 px-1">
         <p className="text-[9px] font-black uppercase tracking-[0.14em] text-black/30">
-          Layers
+          Lớp
         </p>
 
         <span className="text-[8px] font-bold text-black/25">
@@ -210,15 +210,33 @@ React.FC<Props> = ({
                       )}
                     </p>
 
-                    {element.groupId && (
+                    {element.nhómId && (
                       <span className="shrink-0 rounded bg-[#f4e6ea] px-1 py-0.5 text-[7px] font-black uppercase text-[#a2344f]">
-                        group
+                        nhóm
                       </span>
                     )}
                   </div>
 
                   <p className="mt-0.5 text-[8px] uppercase text-black/25">
-                    {element.type}{' '}
+                    {element.type ===
+                    'text'
+                      ? 'CHỮ'
+                      : element.type ===
+                          'image'
+                        ? 'ẢNH'
+                        : element.type ===
+                            'decor'
+                          ? 'TRANG TRÍ'
+                          : element.type ===
+                              'shape'
+                            ? 'HÌNH'
+                            : element.type ===
+                                'photo-frame'
+                              ? 'KHUNG ẢNH'
+                              : element.type ===
+                                  'button'
+                                ? 'NÚT'
+                                : 'TÙY CHỈNH'}{' '}
                     · z
                     {element.frame
                       .zIndex ||
@@ -259,7 +277,7 @@ React.FC<Props> = ({
       </div>
 
       <p className="mt-2 px-1 text-[8px] leading-4 text-black/25">
-        Shift/Ctrl/Cmd + click để chọn nhiều layer.
+        Shift/Ctrl/Cmd + click để chọn nhiều lớp.
       </p>
     </aside>
   );

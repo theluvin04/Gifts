@@ -30,7 +30,7 @@ React.FC<Props> = ({
       <header className="flex items-center justify-between border-b border-black/7 px-5 py-4">
         <div>
           <h3 className="text-base font-black">
-            Phím tắt Visual Editor
+            Phím tắt trình thiết kế
           </h3>
 
           <p className="mt-1 text-[10px] text-black/35">

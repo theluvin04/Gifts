@@ -39,6 +39,9 @@ interface SceneCanvasProps {
 
   className?: string;
 
+  mobileOverride?:
+    boolean;
+
   renderCustomElement?: (
     element:
       Extract<
@@ -103,10 +106,17 @@ React.FC<
   scene,
   actionContext,
   className = '',
+  mobileOverride,
   renderCustomElement,
 }) => {
-  const mobile =
+  const detectedMobile =
     useMobileCanvas();
+
+  const mobile =
+    typeof mobileOverride ===
+      'boolean'
+      ? mobileOverride
+      : detectedMobile;
 
   const runtime =
     useSceneElementRuntime(

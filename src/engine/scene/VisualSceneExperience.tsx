@@ -27,6 +27,9 @@ interface VisualSceneExperienceProps {
 
   className?: string;
 
+  mobileOverride?:
+    boolean;
+
   onSceneChange?: (
     sceneId: string
   ) => void;
@@ -39,6 +42,7 @@ React.FC<
   scenes,
   initialSceneId,
   className = '',
+  mobileOverride,
   onSceneChange,
 }) => {
   const validInitial =
@@ -191,6 +195,9 @@ React.FC<
             backScene,
             resetScene,
           }}
+          mobileOverride={
+            mobileOverride
+          }
         />
       </SceneTransition>
     </div>

@@ -76,8 +76,8 @@ React.FC<Props> = ({
   return (
     <div className="sticky top-2 z-30 mt-2 flex min-w-0 flex-wrap items-center gap-1 rounded-[10px] border border-black/8 bg-white/95 p-1.5 shadow-[0_8px_24px_rgba(20,20,20,0.06)] backdrop-blur-xl">
       <ToolButton
-        label="↶"
-        title="Undo · Ctrl/Cmd+Z"
+        label="↶ Hoàn tác"
+        title="Hoàn tác · Ctrl/Cmd+Z"
         disabled={
           !canUndo
         }
@@ -87,8 +87,8 @@ React.FC<Props> = ({
       />
 
       <ToolButton
-        label="↷"
-        title="Redo · Ctrl/Cmd+Shift+Z"
+        label="↷ Làm lại"
+        title="Làm lại · Ctrl/Cmd+Shift+Z"
         disabled={
           !canRedo
         }
@@ -100,8 +100,8 @@ React.FC<Props> = ({
       <Divider />
 
       <ToolButton
-        label="Copy"
-        title="Copy · Ctrl/Cmd+C"
+        label="Sao chép"
+        title="Sao chép · Ctrl/Cmd+C"
         disabled={
           !hasSelection
         }
@@ -111,16 +111,16 @@ React.FC<Props> = ({
       />
 
       <ToolButton
-        label="Paste"
-        title="Paste · Ctrl/Cmd+V"
+        label="Dán"
+        title="Dán · Ctrl/Cmd+V"
         onClick={
           onPaste
         }
       />
 
       <ToolButton
-        label="Duplicate"
-        title="Duplicate · Ctrl/Cmd+D"
+        label="Nhân bản"
+        title="Nhân bản · Ctrl/Cmd+D"
         disabled={
           !hasSelection
         }
@@ -130,8 +130,8 @@ React.FC<Props> = ({
       />
 
       <ToolButton
-        label="Delete"
-        title="Delete / Backspace"
+        label="Xóa"
+        title="Xóa · Delete / Backspace"
         danger
         disabled={
           !hasSelection
@@ -146,13 +146,13 @@ React.FC<Props> = ({
       <ToolButton
         label={
           groupedSelection
-            ? 'Ungroup'
-            : 'Group'
+            ? 'Bỏ nhóm'
+            : 'Nhóm'
         }
         title={
           groupedSelection
-            ? 'Ungroup · Ctrl/Cmd+Shift+G'
-            : 'Group · Ctrl/Cmd+G'
+            ? 'Bỏ nhóm · Ctrl/Cmd+Shift+G'
+            : 'Nhóm · Ctrl/Cmd+G'
         }
         disabled={
           groupedSelection
@@ -167,7 +167,7 @@ React.FC<Props> = ({
       />
 
       <ToolButton
-        label="Lock"
+        label="Khóa"
         title="Khóa / mở khóa · L"
         disabled={
           !hasSelection
@@ -180,7 +180,7 @@ React.FC<Props> = ({
       <Divider />
 
       <CompactSelect
-        label="Căn"
+        label="Căn các đối tượng"
         disabled={
           !multi
         }
@@ -205,7 +205,7 @@ React.FC<Props> = ({
       />
 
       <CompactSelect
-        label="Layer"
+        label="Lớp"
         disabled={
           !hasSelection
         }
@@ -228,7 +228,7 @@ React.FC<Props> = ({
       <Divider />
 
       <ToggleButton
-        label="Grid"
+        label="Lưới"
         active={
           gridEnabled
         }
@@ -238,7 +238,7 @@ React.FC<Props> = ({
       />
 
       <ToggleButton
-        label="Snap"
+        label="Bắt dính"
         active={
           snapEnabled
         }
@@ -251,7 +251,7 @@ React.FC<Props> = ({
 
       <ToolButton
         label="−"
-        title="Zoom out · Ctrl/Cmd+-"
+        title="Thu nhỏ · Ctrl/Cmd+-"
         onClick={() =>
           onZoomChange(
             Math.max(
@@ -269,7 +269,7 @@ React.FC<Props> = ({
 
       <ToolButton
         label="+"
-        title="Zoom in · Ctrl/Cmd++"
+        title="Phóng to · Ctrl/Cmd++"
         onClick={() =>
           onZoomChange(
             Math.min(
@@ -283,7 +283,7 @@ React.FC<Props> = ({
 
       <ToolButton
         label="100%"
-        title="Reset zoom · Ctrl/Cmd+0"
+        title="Đưa độ phóng về 100% · Ctrl/Cmd+0"
         onClick={() =>
           onZoomChange(
             100
@@ -293,7 +293,7 @@ React.FC<Props> = ({
 
       <div className="ml-auto">
         <ToolButton
-          label="⌨ Shortcuts"
+          label="⌨ Phím tắt"
           title="Phím tắt · ?"
           onClick={
             onOpenShortcuts
@@ -305,12 +305,8 @@ React.FC<Props> = ({
         <div className="w-full border-t border-black/6 pt-2 text-[9px] font-semibold text-black/30">
           Đã chọn{' '}
           {selectionCount}{' '}
-          element
-          {selectionCount >
-          1
-            ? 's'
-            : ''}
-          . Shift-click để chọn thêm · kéo vùng trống để chọn nhiều.
+          đối tượng
+          . Shift + click để chọn thêm · kéo vùng trống để chọn nhiều.
         </div>
       )}
     </div>

@@ -8,10 +8,19 @@ import {
   AnimatedElement,
 } from '../animation/AnimatedElement';
 
+import {
+  AnimatedTextContent,
+  isTextRevealPreset,
+} from '../animation/AnimatedTextContent';
+
 import type {
   SceneElement,
   SceneElementFrame,
 } from './elementTypes';
+
+import {
+  resolvePhotoFrameStyle,
+} from './photoFramePresets';
 
 const getAnchorTransform = (
   anchor:
@@ -240,7 +249,17 @@ React.FC<
             }}
             className="break-words"
           >
-            {element.text}
+            <AnimatedTextContent
+              text={
+                element.text
+              }
+              animation={
+                element.animation
+              }
+              replayKey={
+                `${element.id}-${animationVersion}`
+              }
+            />
           </div>
         );
       }
@@ -254,6 +273,12 @@ React.FC<
         const style =
           element.imageStyle ||
           {};
+
+        if (
+          !element.src
+        ) {
+          return null;
+        }
 
         return (
           <img
@@ -288,6 +313,144 @@ React.FC<
             }}
             className="h-full w-full select-none"
           />
+        );
+      }
+
+      if (
+        element.type ===
+        'photo-frame'
+      ) {
+        const style =
+          resolvePhotoFrameStyle(
+            element.frameStyle
+          );
+
+        const padding =
+          Math.max(
+            0,
+            style.paddingPercent ??
+              6
+          );
+
+        const captionArea =
+          Math.max(
+            12,
+            style.captionAreaPercent ??
+              22
+          );
+
+        return (
+          <div
+            style={{
+              width:
+                '100%',
+              height:
+                '100%',
+              display:
+                'flex',
+              flexDirection:
+                'column',
+              gap:
+                `${Math.max(2, padding * 0.45)}%`,
+              padding:
+                `${padding}%`,
+              paddingBottom:
+                `${Math.max(padding, padding * 0.7)}%`,
+              background:
+                style.background ||
+                '#fffdf8',
+              borderRadius:
+                style.outerRadius ??
+                4,
+              boxShadow:
+                style.boxShadow ||
+                '0 18px 38px rgba(40,25,25,0.18)',
+              overflow:
+                'hidden',
+            }}
+          >
+            <div
+              style={{
+                minHeight: 0,
+                flex:
+                  `1 1 ${100 - captionArea}%`,
+                overflow:
+                  'hidden',
+                borderRadius:
+                  style.innerRadius ??
+                  2,
+                background:
+                  '#eeeae5',
+              }}
+            >
+              {element.src ? (
+                <img
+                  src={
+                    element.src
+                  }
+                  alt={
+                    element.alt ||
+                    ''
+                  }
+                  draggable={
+                    false
+                  }
+                  style={{
+                    width:
+                      '100%',
+                    height:
+                      '100%',
+                    objectFit:
+                      style.imageFit ||
+                      'cover',
+                  }}
+                  className="select-none"
+                />
+              ) : null}
+            </div>
+
+            <div
+              style={{
+                minHeight:
+                  `${captionArea}%`,
+                display:
+                  'flex',
+                alignItems:
+                  'center',
+                justifyContent:
+                  style.captionAlign ===
+                  'left'
+                    ? 'flex-start'
+                    : style.captionAlign ===
+                        'right'
+                      ? 'flex-end'
+                      : 'center',
+                color:
+                  style.captionColor ||
+                  '#34302f',
+                fontFamily:
+                  style.captionFontFamily,
+                fontSize:
+                  style.captionFontSize ||
+                  16,
+                fontWeight:
+                  style.captionFontWeight ||
+                  600,
+                textAlign:
+                  style.captionAlign ||
+                  'center',
+                lineHeight:
+                  1.2,
+                whiteSpace:
+                  'pre-line',
+                overflow:
+                  'hidden',
+              }}
+            >
+              {element.caption ||
+                ''}
+            </div>
+          </div>
         );
       }
 
@@ -448,13 +611,29 @@ React.FC<
       return null;
     };
 
+  const outerAnimation =
+    element.type ===
+      'text' &&
+    isTextRevealPreset(
+      element.animation
+        ?.preset
+    )
+      ? {
+          ...element.animation,
+          preset:
+            'none' as const,
+          delayMs: 0,
+          durationMs: 0,
+        }
+      : element.animation;
+
   return (
     <AnimatedElement
       replayKey={
         `${element.id}-${animationVersion}`
       }
       animation={
-        element.animation
+        outerAnimation
       }
       style={
         wrapperStyle
