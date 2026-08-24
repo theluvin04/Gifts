@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Heart, Settings, Share2, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import {
+  Heart,
+  Settings,
+  Share2,
+  Sparkles,
+} from 'lucide-react';
 
 import { loveConfig as initialConfig } from './config/loveConfig';
 import { LoveConfig } from './types';
@@ -40,11 +45,15 @@ const cleanPath = (pathname: string) => {
   if (pathname.length > 1 && pathname.endsWith('/')) {
     return pathname.slice(0, -1);
   }
+
   return pathname;
 };
 
-const getRouteFromPath = (pathname: string): AppRoute | null => {
+const getRouteFromPath = (
+  pathname: string
+): AppRoute | null => {
   const path = cleanPath(pathname);
+
   const matched = (
     Object.entries(ROUTES) as [AppRoute, string][]
   ).find(([, value]) => value === path);
@@ -52,11 +61,37 @@ const getRouteFromPath = (pathname: string): AppRoute | null => {
   return matched?.[0] ?? null;
 };
 
+const getGiftIdFromPath = (
+  pathname: string
+): string | null => {
+  const path = cleanPath(pathname);
+  const match = path.match(
+    /^\/gift\/([a-z0-9_-]{4,64})$/i
+  );
+
+  return match?.[1] ?? null;
+};
+
+const getLegacyGiftIdFromQuery = () => {
+  const params = new URLSearchParams(
+    window.location.search
+  );
+
+  return params.get('gift') || params.get('g');
+};
+
 const loadDraftConfig = (): LoveConfig => {
   try {
-    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
-    if (!raw) return initialConfig;
+    const raw = window.localStorage.getItem(
+      DRAFT_STORAGE_KEY
+    );
+
+    if (!raw) {
+      return initialConfig;
+    }
+
     const parsed = JSON.parse(raw) as LoveConfig;
+
     if (
       !parsed?.couple ||
       !parsed?.proposal ||
@@ -65,6 +100,7 @@ const loadDraftConfig = (): LoveConfig => {
     ) {
       return initialConfig;
     }
+
     return parsed;
   } catch {
     return initialConfig;
@@ -79,32 +115,157 @@ const isTemplateRoute = (route: AppRoute) =>
   route === 'gift3';
 
 export default function App() {
-  const initialRoute = getRouteFromPath(window.location.pathname);
+  const initialGiftId =
+    getGiftIdFromPath(window.location.pathname) ||
+    getLegacyGiftIdFromQuery();
 
-  const [route, setRoute] = useState<AppRoute>(initialRoute ?? 'home');
-  const [invalidRoute, setInvalidRoute] = useState(initialRoute === null);
-  const [config, setConfig] = useState<LoveConfig>(loadDraftConfig);
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const initialRoute = initialGiftId
+    ? 'proposal'
+    : getRouteFromPath(window.location.pathname);
 
-  // Firestore cloud gift loading state
-  const [isLoadingCloudGift, setIsLoadingCloudGift] = useState(false);
-  const [cloudGiftId, setCloudGiftId] = useState<string | null>(null);
-  const [cloudGiftError, setCloudGiftError] = useState<string | null>(null);
-  const [isSharedGiftMode, setIsSharedGiftMode] = useState(false);
+  const [route, setRoute] = useState<AppRoute>(
+    initialRoute ?? 'home'
+  );
 
-  const navigate = (nextRoute: AppRoute, replace = false) => {
-    const nextPath = ROUTES[nextRoute];
-    const currentPath = cleanPath(window.location.pathname);
+  const [invalidRoute, setInvalidRoute] = useState(
+    !initialGiftId && initialRoute === null
+  );
 
+  const [config, setConfig] =
+    useState<LoveConfig>(loadDraftConfig);
+
+  const [isConfigOpen, setIsConfigOpen] =
+    useState(false);
+
+  const [isShareModalOpen, setIsShareModalOpen] =
+    useState(false);
+
+  const [
+    isLoadingCloudGift,
+    setIsLoadingCloudGift,
+  ] = useState(Boolean(initialGiftId));
+
+  const [cloudGiftId, setCloudGiftId] = useState<
+    string | null
+  >(initialGiftId);
+
+  const [cloudGiftError, setCloudGiftError] =
+    useState<string | null>(null);
+
+  const [isSharedGiftMode, setIsSharedGiftMode] =
+    useState(false);
+
+  const loadSharedGift = async (
+    giftId: string,
+    normalizeUrl = false
+  ) => {
+    setCloudGiftId(giftId);
+    setCloudGiftError(null);
     setInvalidRoute(false);
+    setIsLoadingCloudGift(true);
+
+    try {
+      const gift = await fetchGiftFromFirestore(
+        giftId
+      );
+
+      if (!gift?.config) {
+        setCloudGiftError(
+          'Món quà này không tồn tại, chưa được xuất bản hoặc đã hết hạn.'
+        );
+        return;
+      }
+
+      setConfig(gift.config);
+      setIsSharedGiftMode(true);
+      setRoute('proposal');
+
+      if (normalizeUrl) {
+        const cleanGiftUrl = `/gift/${giftId}`;
+
+        if (
+          cleanPath(window.location.pathname) !==
+            cleanGiftUrl ||
+          window.location.search
+        ) {
+          window.history.replaceState(
+            {},
+            '',
+            cleanGiftUrl
+          );
+        }
+      }
+
+      window.scrollTo({
+        top: 0,
+        behavior: 'instant',
+      });
+    } catch (error) {
+      console.error(error);
+
+      setCloudGiftError(
+        'Không thể tải món quà từ đám mây.'
+      );
+    } finally {
+      setIsLoadingCloudGift(false);
+    }
+  };
+
+  const navigate = (
+    nextRoute: AppRoute,
+    replace = false
+  ) => {
+    setInvalidRoute(false);
+    setCloudGiftError(null);
     setRoute(nextRoute);
 
-    if (currentPath !== nextPath) {
+    if (
+      isSharedGiftMode &&
+      cloudGiftId &&
+      isTemplateRoute(nextRoute)
+    ) {
+      const giftPath = `/gift/${cloudGiftId}`;
+
+      if (
+        cleanPath(window.location.pathname) !==
+        giftPath
+      ) {
+        window.history.replaceState(
+          {},
+          '',
+          giftPath
+        );
+      }
+
+      window.scrollTo({
+        top: 0,
+        behavior: 'instant',
+      });
+
+      return;
+    }
+
+    const nextPath = ROUTES[nextRoute];
+    const currentPath = cleanPath(
+      window.location.pathname
+    );
+
+    if (
+      currentPath !== nextPath ||
+      window.location.search
+    ) {
       if (replace) {
-        window.history.replaceState({}, '', nextPath);
+        window.history.replaceState(
+          {},
+          '',
+          nextPath
+        );
       } else {
-        window.history.pushState({}, '', nextPath);
+        window.history.pushState(
+          {},
+          '',
+          nextPath
+        );
       }
     }
 
@@ -114,45 +275,38 @@ export default function App() {
     });
   };
 
-  // Check URL query param ?gift=<id> or path /gift/<id> on mount
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const giftParam = searchParams.get('gift') || searchParams.get('g');
-
-    if (giftParam) {
-      setCloudGiftId(giftParam);
-      setIsLoadingCloudGift(true);
-      fetchGiftFromFirestore(giftParam)
-        .then((doc) => {
-          if (doc && doc.config) {
-            setConfig(doc.config);
-            setIsSharedGiftMode(true);
-            setRoute('proposal');
-            setInvalidRoute(false);
-          } else {
-            setCloudGiftError('Món quà này không tồn tại hoặc đã hết hạn.');
-          }
-        })
-        .catch((err) => {
-          console.error(err);
-          setCloudGiftError('Không thể tải món quà từ đám mây.');
-        })
-        .finally(() => {
-          setIsLoadingCloudGift(false);
-        });
+    if (initialGiftId) {
+      loadSharedGift(initialGiftId, true);
     }
   }, []);
 
   useEffect(() => {
     const handlePopState = () => {
-      const nextRoute = getRouteFromPath(window.location.pathname);
+      const giftId = getGiftIdFromPath(
+        window.location.pathname
+      );
+
+      if (giftId) {
+        loadSharedGift(giftId);
+        return;
+      }
+
+      const nextRoute = getRouteFromPath(
+        window.location.pathname
+      );
 
       if (!nextRoute) {
         setInvalidRoute(true);
+        setIsSharedGiftMode(false);
+        setCloudGiftId(null);
         return;
       }
 
       setInvalidRoute(false);
+      setCloudGiftError(null);
+      setIsSharedGiftMode(false);
+      setCloudGiftId(null);
       setRoute(nextRoute);
 
       window.scrollTo({
@@ -161,41 +315,64 @@ export default function App() {
       });
     };
 
-    window.addEventListener('popstate', handlePopState);
+    window.addEventListener(
+      'popstate',
+      handlePopState
+    );
+
     return () => {
-      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener(
+        'popstate',
+        handlePopState
+      );
     };
   }, []);
 
   useEffect(() => {
+    if (initialGiftId) {
+      return;
+    }
+
     const pathname = window.location.pathname;
     const cleaned = cleanPath(pathname);
 
-    if (pathname !== cleaned && getRouteFromPath(cleaned)) {
-      window.history.replaceState({}, '', cleaned);
+    if (
+      pathname !== cleaned &&
+      getRouteFromPath(cleaned)
+    ) {
+      window.history.replaceState(
+        {},
+        '',
+        cleaned
+      );
     }
   }, []);
 
   useEffect(() => {
-    // Only update local draft if not viewing a shared cloud gift
-    if (!isSharedGiftMode) {
-      try {
-        window.localStorage.setItem(
-          DRAFT_STORAGE_KEY,
-          JSON.stringify(config)
-        );
-      } catch {
-        // Ignore quota exceeded
-      }
+    if (isSharedGiftMode) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        DRAFT_STORAGE_KEY,
+        JSON.stringify(config)
+      );
+    } catch {
+      // Draft local có thể vượt quota khi dùng nhiều ảnh base64.
+      // Không chặn trải nghiệm chỉnh sửa trong phiên hiện tại.
     }
   }, [config, isSharedGiftMode]);
 
   const resetDraft = () => {
     setConfig(initialConfig);
+
     try {
-      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+      window.localStorage.removeItem(
+        DRAFT_STORAGE_KEY
+      );
     } catch {
-      // Ignore
+      // Không cần chặn UI nếu localStorage không khả dụng.
     }
   };
 
@@ -204,12 +381,34 @@ export default function App() {
     navigate('proposal');
   };
 
+  const handleCreateSimilar = () => {
+    setIsSharedGiftMode(false);
+    setCloudGiftId(null);
+    setCloudGiftError(null);
+
+    try {
+      window.localStorage.setItem(
+        DRAFT_STORAGE_KEY,
+        JSON.stringify(config)
+      );
+    } catch {
+      // Vẫn cho phép tiếp tục với state hiện tại.
+    }
+
+    navigate('create');
+  };
+
   if (isLoadingCloudGift) {
     return (
       <main className="flex min-h-[100svh] flex-col items-center justify-center bg-gradient-to-b from-pink-50 via-rose-50 to-pink-100 px-5 text-center">
         <motion.div
-          animate={{ scale: [1, 1.15, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
+          animate={{
+            scale: [1, 1.15, 1],
+          }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+          }}
           className="flex h-16 w-16 items-center justify-center rounded-3xl bg-rose-500 text-white shadow-xl shadow-rose-200"
         >
           <Heart className="h-8 w-8 fill-current" />
@@ -218,8 +417,10 @@ export default function App() {
         <h2 className="mt-6 font-heading text-xl font-bold text-slate-800">
           Đang mở hộp quà đặc biệt...
         </h2>
-        <p className="mt-2 text-xs text-rose-500 font-medium">
-          Chờ một chút để tải đầy đủ hình ảnh và giai điệu tình yêu ✨
+
+        <p className="mt-2 text-xs font-medium text-rose-500">
+          Chờ một chút để tải đầy đủ câu chuyện
+          tình yêu ✨
         </p>
       </main>
     );
@@ -230,22 +431,33 @@ export default function App() {
       <main className="flex min-h-[100svh] items-center justify-center bg-[#fff9fb] px-5">
         <div className="w-full max-w-sm rounded-[28px] border border-rose-100 bg-white p-7 text-center shadow-xl">
           <div className="text-4xl">💌</div>
+
           <h1 className="mt-3 text-xl font-bold text-slate-900">
             Không tìm thấy món quà
           </h1>
+
           <p className="mt-2 text-sm leading-6 text-slate-500">
             {cloudGiftError}
           </p>
+
           <button
             type="button"
             onClick={() => {
               setCloudGiftError(null);
-              window.history.replaceState({}, '', '/');
+              setIsSharedGiftMode(false);
+              setCloudGiftId(null);
+
+              window.history.replaceState(
+                {},
+                '',
+                '/'
+              );
+
               setRoute('home');
             }}
             className="mt-5 rounded-full bg-rose-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-rose-200 transition hover:bg-rose-600"
           >
-            Về trang chủ tạo quà mới
+            Về trang chủ
           </button>
         </div>
       </main>
@@ -257,15 +469,21 @@ export default function App() {
       <main className="flex min-h-[100svh] items-center justify-center bg-[#fff9fb] px-5">
         <div className="w-full max-w-sm rounded-[28px] border border-rose-100 bg-white p-7 text-center shadow-xl">
           <div className="text-4xl">💌</div>
+
           <h1 className="mt-3 text-xl font-bold text-slate-900">
             Trang không tồn tại
           </h1>
+
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Đường dẫn này chưa có trong hệ thống Gifts.
+            Đường dẫn này chưa có trong hệ thống
+            Gifts.
           </p>
+
           <button
             type="button"
-            onClick={() => navigate('home', true)}
+            onClick={() =>
+              navigate('home', true)
+            }
             className="mt-5 rounded-full bg-rose-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-rose-200 transition hover:bg-rose-600"
           >
             Về trang chủ
@@ -278,7 +496,9 @@ export default function App() {
   if (route === 'home') {
     return (
       <HomePage
-        onOpenLoveTemplate={() => navigate('product')}
+        onOpenLoveTemplate={() =>
+          navigate('product')
+        }
       />
     );
   }
@@ -312,43 +532,60 @@ export default function App() {
   return (
     <main className="relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-gradient-to-b from-pink-50 via-rose-50 to-pink-100 text-slate-800 selection:bg-pink-300 selection:text-pink-900">
       <AudioPlayer
-        musicUrl={config.audio.backgroundMusicUrl}
-        musicTitle={config.audio.backgroundMusicTitle}
+        musicUrl={
+          config.audio.backgroundMusicUrl
+        }
+        musicTitle={
+          config.audio.backgroundMusicTitle
+        }
       />
 
-      {/* Top Floating Controls */}
       <div className="fixed left-4 top-4 z-40 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setIsConfigOpen(true)}
-          className="flex items-center gap-1.5 rounded-full border border-rose-200 bg-white/85 px-3 py-2 text-xs font-bold text-rose-700 shadow-sm backdrop-blur-md transition hover:bg-white"
-          title="Tùy chỉnh nhanh"
-        >
-          <Settings className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Chỉnh sửa nhanh</span>
-        </button>
+        {!isSharedGiftMode && (
+          <>
+            <button
+              type="button"
+              onClick={() =>
+                setIsConfigOpen(true)
+              }
+              className="flex items-center gap-1.5 rounded-full border border-rose-200 bg-white/85 px-3 py-2 text-xs font-bold text-rose-700 shadow-sm backdrop-blur-md transition hover:bg-white"
+              title="Tùy chỉnh nhanh"
+            >
+              <Settings className="h-3.5 w-3.5" />
 
-        <button
-          type="button"
-          onClick={() => setIsShareModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-full bg-rose-500 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 transition hover:bg-rose-600"
-          title="Lưu & Chia sẻ link món quà"
-        >
-          <Share2 className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Chia sẻ món quà</span>
-        </button>
+              <span className="hidden sm:inline">
+                Chỉnh sửa nhanh
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setIsShareModalOpen(true)
+              }
+              className="flex items-center gap-1.5 rounded-full bg-rose-500 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 transition hover:bg-rose-600"
+              title="Xuất bản và lấy link món quà"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+
+              <span className="hidden sm:inline">
+                Chia sẻ món quà
+              </span>
+            </button>
+          </>
+        )}
 
         {isSharedGiftMode && (
           <button
             type="button"
-            onClick={() => {
-              setIsSharedGiftMode(false);
-              navigate('create');
-            }}
+            onClick={handleCreateSimilar}
             className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-md transition hover:bg-white"
           >
             <Sparkles className="h-3.5 w-3.5 text-rose-500" />
-            <span className="hidden sm:inline">Tạo quà tương tự</span>
+
+            <span className="hidden sm:inline">
+              Tạo quà tương tự
+            </span>
           </button>
         )}
       </div>
@@ -359,7 +596,9 @@ export default function App() {
             <ProposalScreen
               key="proposal-stage"
               config={config}
-              onYesAccepted={() => navigate('gifts')}
+              onYesAccepted={() =>
+                navigate('gifts')
+              }
             />
           )}
 
@@ -367,18 +606,26 @@ export default function App() {
             <GiftSelector
               key="gifts-stage"
               config={config}
-              onSelectGift={(selectedStage) => {
-                if (selectedStage === 'gift1') {
+              onSelectGift={(
+                selectedStage
+              ) => {
+                if (
+                  selectedStage === 'gift1'
+                ) {
                   navigate('gift1');
                   return;
                 }
 
-                if (selectedStage === 'gift2') {
+                if (
+                  selectedStage === 'gift2'
+                ) {
                   navigate('gift2');
                   return;
                 }
 
-                if (selectedStage === 'gift3') {
+                if (
+                  selectedStage === 'gift3'
+                ) {
                   navigate('gift3');
                 }
               }}
@@ -389,26 +636,42 @@ export default function App() {
           {route === 'gift1' && (
             <PolaroidGallery
               key="gift1-stage"
-              photos={config.gifts.gift1.photos}
-              onBack={() => navigate('gifts')}
+              photos={
+                config.gifts.gift1.photos
+              }
+              onBack={() =>
+                navigate('gifts')
+              }
             />
           )}
 
           {route === 'gift2' && (
             <VinylMusicPlayer
               key="gift2-stage"
-              playlist={config.gifts.gift2.playlist}
-              onBack={() => navigate('gifts')}
+              playlist={
+                config.gifts.gift2.playlist
+              }
+              onBack={() =>
+                navigate('gifts')
+              }
             />
           )}
 
           {route === 'gift3' && (
             <LoveLetter
               key="gift3-stage"
-              letterData={config.gifts.gift3.letter}
-              senderName={config.couple.senderName}
-              receiverName={config.couple.receiverName}
-              onBack={() => navigate('gifts')}
+              letterData={
+                config.gifts.gift3.letter
+              }
+              senderName={
+                config.couple.senderName
+              }
+              receiverName={
+                config.couple.receiverName
+              }
+              onBack={() =>
+                navigate('gifts')
+              }
             />
           )}
         </AnimatePresence>
@@ -417,24 +680,34 @@ export default function App() {
       <footer className="relative z-10 py-4 text-center text-xs font-medium text-rose-800/60">
         <p className="flex items-center justify-center gap-1">
           <span>Made with</span>
+
           <Heart className="h-3.5 w-3.5 fill-rose-500 text-rose-500" />
+
           <span>for someone special</span>
         </p>
       </footer>
 
-      <QuickConfigModal
-        open={isConfigOpen}
-        config={config}
-        onClose={() => setIsConfigOpen(false)}
-        onSave={setConfig}
-        onReset={resetDraft}
-      />
+      {!isSharedGiftMode && (
+        <>
+          <QuickConfigModal
+            open={isConfigOpen}
+            config={config}
+            onClose={() =>
+              setIsConfigOpen(false)
+            }
+            onSave={setConfig}
+            onReset={resetDraft}
+          />
 
-      <ShareGiftModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        config={config}
-      />
+          <ShareGiftModal
+            isOpen={isShareModalOpen}
+            onClose={() =>
+              setIsShareModalOpen(false)
+            }
+            config={config}
+          />
+        </>
+      )}
     </main>
   );
 }

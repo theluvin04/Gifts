@@ -11,6 +11,10 @@
     {
       "source": "/create/:path*",
       "destination": "/index.html"
+    },
+    {
+      "source": "/gift/:path*",
+      "destination": "/index.html"
     }
   ]
 }
