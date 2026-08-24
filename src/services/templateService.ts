@@ -47,10 +47,11 @@ const toSafeNumber = (
 };
 
 export const normalizeTemplateConfig = (
-  data?: Record<string, any> | null
+  data?: Record<string, any> | null,
+  fallback:
+    TemplateConfig =
+      DEFAULT_LOVE_TEMPLATE_CONFIG
 ): TemplateConfig => {
-  const fallback =
-    DEFAULT_LOVE_TEMPLATE_CONFIG;
 
   if (!data) {
     return { ...fallback };
@@ -136,25 +137,57 @@ export const getTemplateDiscountPercent = (
   );
 };
 
-export const getPublicTemplateConfig =
-  async (): Promise<TemplateConfig> => {
-    try {
-      const snapshot = await getDoc(
-        doc(
-          db,
-          'templates',
-          'love-01'
-        )
+const getFallbackForTemplate = (
+  templateId: string
+): TemplateConfig => {
+  if (
+    templateId ===
+    'love-01'
+  ) {
+    return {
+      ...DEFAULT_LOVE_TEMPLATE_CONFIG,
+    };
+  }
+
+  return {
+    id: templateId,
+    name: templateId,
+    basePrice: 0,
+    salePrice: 0,
+    saleEnabled: false,
+    promotionLabel: '',
+    currency: 'VND',
+    status: 'coming_soon',
+    visible: false,
+  };
+};
+
+export const getPublicTemplateConfigById =
+  async (
+    templateId: string
+  ): Promise<TemplateConfig> => {
+    const fallback =
+      getFallbackForTemplate(
+        templateId
       );
 
+    try {
+      const snapshot =
+        await getDoc(
+          doc(
+            db,
+            'templates',
+            templateId
+          )
+        );
+
       if (!snapshot.exists()) {
-        return {
-          ...DEFAULT_LOVE_TEMPLATE_CONFIG,
-        };
+        return fallback;
       }
 
       return normalizeTemplateConfig(
-        snapshot.data()
+        snapshot.data(),
+        fallback
       );
     } catch (error) {
       console.warn(
@@ -162,30 +195,48 @@ export const getPublicTemplateConfig =
         error
       );
 
-      return {
-        ...DEFAULT_LOVE_TEMPLATE_CONFIG,
-      };
+      return fallback;
     }
   };
 
-export const getRequiredPublicTemplateConfig =
-  async (): Promise<TemplateConfig> => {
+export const getRequiredPublicTemplateConfigById =
+  async (
+    templateId: string
+  ): Promise<TemplateConfig> => {
+    const fallback =
+      getFallbackForTemplate(
+        templateId
+      );
+
     const snapshot =
       await getDoc(
         doc(
           db,
           'templates',
-          'love-01'
+          templateId
         )
       );
 
     if (!snapshot.exists()) {
-      return {
-        ...DEFAULT_LOVE_TEMPLATE_CONFIG,
-      };
+      return fallback;
     }
 
     return normalizeTemplateConfig(
-      snapshot.data()
+      snapshot.data(),
+      fallback
+    );
+  };
+
+export const getPublicTemplateConfig =
+  async () => {
+    return getPublicTemplateConfigById(
+      'love-01'
+    );
+  };
+
+export const getRequiredPublicTemplateConfig =
+  async () => {
+    return getRequiredPublicTemplateConfigById(
+      'love-01'
     );
   };

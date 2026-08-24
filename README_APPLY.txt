@@ -1,35 +1,70 @@
-DEARLY — SECURE GIFT LINK + SUCCESS UI + VINYL FIX
+DEARLY — BRAND + NO DEMO + TEMPLATE ARCHITECTURE
 
-THAY 5 FILE:
-1. src/components/CheckoutPage.tsx
-2. src/services/giftService.ts
-3. src/config/payment.ts
-4. src/components/gifts/VinylMusicPlayer.tsx
-5. firestore.rules
+MỤC TIÊU:
+1. Xóa hoàn toàn live demo khỏi Product Detail.
+2. Không còn logo "Gifts" cũ ở Product Detail.
+3. /templates/love-01 và các link demo cũ tự chuyển về /products/love-01.
+4. App.tsx không còn chứa toàn bộ logic riêng của Love Story 01.
+5. Chuẩn bị cấu trúc để thêm template mới mà không phình App.tsx.
 
-QUAN TRỌNG:
-Sau khi thay firestore.rules phải Publish rules vào đúng Firestore database.
+THAY FILE:
+- src/App.tsx
+- src/components/ProductDetailPage.tsx
+- src/services/templateService.ts
+- index.html
+- metadata.json
 
-MÃ ĐƠN VS LINK:
-- Mã đơn thanh toán: Dearly8888
-- orderNumber: 8888
-- Public gift token: random 24 ký tự, ví dụ J7kP2m...
-- Link: /gift/J7kP2m...
-- Không thể suy ra gift link từ Dearly8888.
+THÊM FILE MỚI:
+- src/components/BrandLogo.tsx
+- src/routing/appRouter.ts
+- src/templates/types.ts
+- src/templates/registry.ts
+- src/templates/love-01/index.tsx
+- src/templates/love-01/LoveStoryExperience.tsx
 
-CHỐNG TRÙNG MÃ ĐƠN:
-- Tạo /orderCodes/{8888} bằng create-only Firestore rule.
-- Nếu 8888 đã tồn tại, write bị từ chối và client tự thử mã 4 số khác.
-- Public user không được list/read orderCodes.
+CẤU TRÚC MỚI:
 
-SUCCESS SCREEN:
-- UI mới tối giản hơn.
-- Có QR riêng để mở gift.
-- Có Copy link.
-- Có nút Mở món quà.
-- Hiển thị mã đơn Dearly#### riêng biệt với URL.
+src/
+├── App.tsx
+├── hooks/
+│   ├── useAppNavigation.ts
+│   ├── useSharedGift.ts
+│   └── useTemplateDrafts.ts
+├── routing/
+│   └── appRouter.ts
+└── templates/
+    ├── types.ts
+    ├── registry.ts
+    └── love-01/
+        ├── index.tsx
+        └── LoveStoryExperience.tsx
 
-VINYL:
-- YouTube track: đĩa vinyl xoay rõ ràng.
-- Audio track: xoay khi audio đang play.
-- Ảnh giữa đĩa scale/crop kín hình tròn.
+CÁCH THÊM TEMPLATE MỚI SAU NÀY:
+
+src/templates/birthday-01/
+├── index.tsx
+├── BirthdayProductPage.tsx
+├── BirthdayEditorPage.tsx
+├── BirthdayCheckoutPage.tsx
+└── BirthdayExperience.tsx
+
+Sau đó chỉ đăng ký module trong:
+src/templates/registry.ts
+
+App.tsx KHÔNG cần nhét thêm proposal/gift/music/letter route của template mới.
+
+LƯU Ý:
+- Không sửa Firebase config.
+- Không sửa Firestore rules.
+- Không sửa payment/order code.
+- Không sửa Admin auth.
+- Gift đã thanh toán vẫn mở bằng /gift/<random-token>.
+- Không còn public live demo từ Product Detail.
+
+THÊM FILE MỚI:
+- src/hooks/useAppNavigation.ts
+- src/hooks/useSharedGift.ts
+- src/hooks/useTemplateDrafts.ts
+
+App.tsx giờ chỉ làm nhiệm vụ điều phối page/module.
+Routing, draft local và load gift đã được tách ra hook riêng.

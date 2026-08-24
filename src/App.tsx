@@ -1,843 +1,384 @@
-import React, { useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import React, {
+  useEffect,
+} from 'react';
+
+import {
+  motion,
+} from 'motion/react';
+
 import {
   Heart,
-  Sparkles,
 } from 'lucide-react';
 
-import { loveConfig as initialConfig } from './config/loveConfig';
-import { LoveConfig } from './types';
+import {
+  HomePage,
+} from './components/Homepage';
 
-import { HomePage } from './components/Homepage';
-import { ProductDetailPage } from './components/ProductDetailPage';
-import { CreateLovePage } from './components/CreateLovePage';
-import { CheckoutPage } from './components/CheckoutPage';
-import { AdminOrdersPage } from './components/admin/AdminOrdersPage';
-import { AdminOrderDetailPage } from './components/admin/AdminOrderDetailPage';
+import {
+  AdminOrdersPage,
+} from './components/admin/AdminOrdersPage';
 
-import { ProposalScreen } from './components/ProposalScreen';
-import { GiftSelector } from './components/GiftSelector';
-import { PolaroidGallery } from './components/gifts/PolaroidGallery';
-import { VinylMusicPlayer } from './components/gifts/VinylMusicPlayer';
-import { LoveLetter } from './components/gifts/LoveLetter';
-import { AudioPlayer } from './components/AudioPlayer';
-import { sfx } from './utils/soundEffects';
-import { fetchGiftFromFirestore } from './services/giftService';
+import {
+  AdminOrderDetailPage,
+} from './components/admin/AdminOrderDetailPage';
 
-const TEMPLATE_BASE = '/templates/love-01';
-const DRAFT_STORAGE_KEY = 'gifts:love-01:draft';
+import {
+  BRAND,
+} from './config/brand';
 
-const ROUTES = {
-  home: '/',
-  product: '/products/love-01',
-  create: '/create/love-01',
-  checkout: '/checkout/love-01',
-  admin: '/admin',
-  adminOrders: '/admin/orders',
-  adminTemplates: '/admin/templates',
-  adminCustomers: '/admin/customers',
-  adminDiscounts: '/admin/discounts',
-  adminSettings: '/admin/settings',
-  proposal: TEMPLATE_BASE,
-  gifts: `${TEMPLATE_BASE}/gifts`,
-  gift1: `${TEMPLATE_BASE}/gifts/memories`,
-  gift2: `${TEMPLATE_BASE}/gifts/music`,
-  gift3: `${TEMPLATE_BASE}/gifts/letter`,
-} as const;
+import {
+  useAppNavigation,
+} from './hooks/useAppNavigation';
 
-type AppRoute = keyof typeof ROUTES;
+import {
+  useTemplateDrafts,
+} from './hooks/useTemplateDrafts';
 
-type PreviewSource =
-  | 'product'
-  | null;
+import {
+  useSharedGift,
+} from './hooks/useSharedGift';
 
-const cleanPath = (pathname: string) => {
-  if (pathname.length > 1 && pathname.endsWith('/')) {
-    return pathname.slice(0, -1);
-  }
-
-  return pathname;
-};
-
-const getRouteFromPath = (
-  pathname: string
-): AppRoute | null => {
-  const path = cleanPath(pathname);
-
-  const matched = (
-    Object.entries(ROUTES) as [AppRoute, string][]
-  ).find(([, value]) => value === path);
-
-  return matched?.[0] ?? null;
-};
-
-const getGiftIdFromPath = (
-  pathname: string
-): string | null => {
-  const path = cleanPath(pathname);
-  const match = path.match(
-    /^\/gift\/([a-z0-9_-]{4,64})$/i
-  );
-
-  return match?.[1] ?? null;
-};
-
-const getAdminOrderIdFromPath = (
-  pathname: string
-): string | null => {
-  const path = cleanPath(pathname);
-
-  const match = path.match(
-    /^\/admin\/orders\/([a-z0-9_-]{4,64})$/i
-  );
-
-  return match?.[1] ?? null;
-};
-
-const getLegacyGiftIdFromQuery = () => {
-  const params = new URLSearchParams(
-    window.location.search
-  );
-
-  return params.get('gift') || params.get('g');
-};
-
-const loadDraftConfig = (): LoveConfig => {
-  try {
-    const raw = window.localStorage.getItem(
-      DRAFT_STORAGE_KEY
-    );
-
-    if (!raw) {
-      return initialConfig;
-    }
-
-    const parsed = JSON.parse(raw) as LoveConfig;
-
-    if (
-      !parsed?.couple ||
-      !parsed?.proposal ||
-      !parsed?.gifts ||
-      !parsed?.audio
-    ) {
-      return initialConfig;
-    }
-
-    return parsed;
-  } catch {
-    return initialConfig;
-  }
-};
-
-const isTemplateRoute = (route: AppRoute) =>
-  route === 'proposal' ||
-  route === 'gifts' ||
-  route === 'gift1' ||
-  route === 'gift2' ||
-  route === 'gift3';
+import {
+  DEFAULT_TEMPLATE_ID,
+  getTemplateModule,
+} from './templates/registry';
 
 export default function App() {
-  const initialGiftId =
-    getGiftIdFromPath(window.location.pathname) ||
-    getLegacyGiftIdFromQuery();
+  const {
+    location,
+    navigate,
+  } = useAppNavigation();
 
-  const initialAdminOrderId =
-    getAdminOrderIdFromPath(
-      window.location.pathname
-    );
+  const {
+    getDraft,
+    persistDraft,
+    resetDraft,
+  } = useTemplateDrafts();
 
-  const initialRoute = initialGiftId
-    ? 'proposal'
-    : initialAdminOrderId
-      ? 'adminOrders'
-      : getRouteFromPath(
-          window.location.pathname
-        );
-
-  const [route, setRoute] = useState<AppRoute>(
-    initialRoute ?? 'home'
+  const {
+    sharedGift,
+    isLoadingGift,
+    giftError,
+  } = useSharedGift(
+    location
   );
 
-  const [invalidRoute, setInvalidRoute] = useState(
-    !initialGiftId &&
-      !initialAdminOrderId &&
-      initialRoute === null
-  );
-
-  const [
-    previewSource,
-    setPreviewSource,
-  ] = useState<PreviewSource>(null);
-
-  const [
-    adminOrderId,
-    setAdminOrderId,
-  ] = useState<string | null>(
-    initialAdminOrderId
-  );
-
-  const [config, setConfig] =
-    useState<LoveConfig>(loadDraftConfig);
-
-  const [
-    isLoadingCloudGift,
-    setIsLoadingCloudGift,
-  ] = useState(Boolean(initialGiftId));
-
-  const [cloudGiftId, setCloudGiftId] = useState<
-    string | null
-  >(initialGiftId);
-
-  const [cloudGiftError, setCloudGiftError] =
-    useState<string | null>(null);
-
-  const [isSharedGiftMode, setIsSharedGiftMode] =
-    useState(false);
-
-  const loadSharedGift = async (
-    giftId: string,
-    normalizeUrl = false
-  ) => {
-    setCloudGiftId(giftId);
-    setCloudGiftError(null);
-    setInvalidRoute(false);
-    setIsLoadingCloudGift(true);
-
-    try {
-      const gift = await fetchGiftFromFirestore(
-        giftId
-      );
-
-      if (!gift?.config) {
-        setCloudGiftError(
-          'Món quà này không tồn tại, chưa được xuất bản hoặc đã hết hạn.'
-        );
-        return;
-      }
-
-      setConfig(gift.config);
-      setIsSharedGiftMode(true);
-      setRoute('proposal');
-
-      if (normalizeUrl) {
-        const cleanGiftUrl = `/gift/${giftId}`;
-
-        if (
-          cleanPath(window.location.pathname) !==
-            cleanGiftUrl ||
-          window.location.search
-        ) {
-          window.history.replaceState(
-            {},
-            '',
-            cleanGiftUrl
-          );
-        }
-      }
-
-      window.scrollTo({
-        top: 0,
-        behavior: 'instant',
-      });
-    } catch (error) {
-      console.error(error);
-
-      setCloudGiftError(
-        'Không thể tải món quà từ đám mây.'
-      );
-    } finally {
-      setIsLoadingCloudGift(false);
-    }
-  };
-
-  const navigate = (
-    nextRoute: AppRoute,
-    replace = false
-  ) => {
-    if (!isTemplateRoute(nextRoute)) {
-      setPreviewSource(null);
-    }
-
-    setInvalidRoute(false);
-    setCloudGiftError(null);
-    setAdminOrderId(null);
-    setRoute(nextRoute);
-
+  useEffect(() => {
     if (
-      isSharedGiftMode &&
-      cloudGiftId &&
-      isTemplateRoute(nextRoute)
+      location.kind !==
+      'legacy-template'
     ) {
-      const giftPath = `/gift/${cloudGiftId}`;
-
-      if (
-        cleanPath(window.location.pathname) !==
-        giftPath
-      ) {
-        window.history.replaceState(
-          {},
-          '',
-          giftPath
-        );
-      }
-
-      window.scrollTo({
-        top: 0,
-        behavior: 'instant',
-      });
-
       return;
     }
 
-    const nextPath = ROUTES[nextRoute];
-    const currentPath = cleanPath(
-      window.location.pathname
+    const template =
+      getTemplateModule(
+        location.templateId
+      );
+
+    navigate(
+      template
+        ? template
+            .paths.product
+        : '/',
+      true
     );
+  }, [location]);
 
-    if (
-      currentPath !== nextPath ||
-      window.location.search
-    ) {
-      if (replace) {
-        window.history.replaceState(
-          {},
-          '',
-          nextPath
-        );
-      } else {
-        window.history.pushState(
-          {},
-          '',
-          nextPath
-        );
-      }
-    }
+  const renderMessage = (
+    title: string,
+    message: string
+  ) => (
+    <main className="flex min-h-[100svh] items-center justify-center bg-[#fffaf8] px-5">
+      <div className="w-full max-w-sm rounded-[28px] border border-black/[0.06] bg-white p-7 text-center shadow-[0_24px_70px_rgba(60,25,35,0.08)]">
+        <img
+          src={
+            BRAND.logoPath
+          }
+          alt={
+            BRAND.name
+          }
+          className="mx-auto h-12 w-auto"
+        />
 
-    window.scrollTo({
-      top: 0,
-      behavior: 'instant',
-    });
-  };
+        <h1 className="mt-6 text-xl font-black">
+          {title}
+        </h1>
 
-  const navigateToAdminOrder = (
-    giftId: string,
-    replace = false
-  ) => {
-    const nextPath =
-      `/admin/orders/${giftId}`;
-
-    setInvalidRoute(false);
-    setCloudGiftError(null);
-    setIsSharedGiftMode(false);
-    setCloudGiftId(null);
-    setAdminOrderId(giftId);
-    setRoute('adminOrders');
-
-    if (replace) {
-      window.history.replaceState(
-        {},
-        '',
-        nextPath
-      );
-    } else {
-      window.history.pushState(
-        {},
-        '',
-        nextPath
-      );
-    }
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'instant',
-    });
-  };
-
-  useEffect(() => {
-    if (initialGiftId) {
-      loadSharedGift(initialGiftId, true);
-    }
-  }, []);
-
-  useEffect(() => {
-    const handlePopState = () => {
-      const giftId = getGiftIdFromPath(
-        window.location.pathname
-      );
-
-      if (giftId) {
-        loadSharedGift(giftId);
-        return;
-      }
-
-      const nextAdminOrderId =
-        getAdminOrderIdFromPath(
-          window.location.pathname
-        );
-
-      if (nextAdminOrderId) {
-        setInvalidRoute(false);
-        setCloudGiftError(null);
-        setIsSharedGiftMode(false);
-        setCloudGiftId(null);
-        setAdminOrderId(
-          nextAdminOrderId
-        );
-        setRoute('adminOrders');
-
-        window.scrollTo({
-          top: 0,
-          behavior: 'instant',
-        });
-
-        return;
-      }
-
-      const nextRoute = getRouteFromPath(
-        window.location.pathname
-      );
-
-      if (!nextRoute) {
-        setInvalidRoute(true);
-        setIsSharedGiftMode(false);
-        setCloudGiftId(null);
-        return;
-      }
-
-      setInvalidRoute(false);
-      setCloudGiftError(null);
-      setIsSharedGiftMode(false);
-      setCloudGiftId(null);
-      setAdminOrderId(null);
-      setRoute(nextRoute);
-
-      window.scrollTo({
-        top: 0,
-        behavior: 'instant',
-      });
-    };
-
-    window.addEventListener(
-      'popstate',
-      handlePopState
-    );
-
-    return () => {
-      window.removeEventListener(
-        'popstate',
-        handlePopState
-      );
-    };
-  }, []);
-
-  useEffect(() => {
-    if (initialGiftId) {
-      return;
-    }
-
-    const pathname = window.location.pathname;
-    const cleaned = cleanPath(pathname);
-
-    if (
-      pathname !== cleaned &&
-      (
-        getRouteFromPath(cleaned) ||
-        getAdminOrderIdFromPath(
-          cleaned
-        )
-      )
-    ) {
-      window.history.replaceState(
-        {},
-        '',
-        cleaned
-      );
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isSharedGiftMode) {
-      return;
-    }
-
-    try {
-      window.localStorage.setItem(
-        DRAFT_STORAGE_KEY,
-        JSON.stringify(config)
-      );
-    } catch {
-      // Draft local có thể vượt quota khi dùng nhiều ảnh base64.
-      // Không chặn trải nghiệm chỉnh sửa trong phiên hiện tại.
-    }
-  }, [config, isSharedGiftMode]);
-
-  const openPreview = (
-    source: Exclude<
-      PreviewSource,
-      null
-    >
-  ) => {
-    setPreviewSource(source);
-    navigate('proposal');
-  };
-
-  const exitPreview = () => {
-    setPreviewSource(null);
-    navigate('product');
-  };
-
-  const resetDraft = () => {
-    setConfig(initialConfig);
-
-    try {
-      window.localStorage.removeItem(
-        DRAFT_STORAGE_KEY
-      );
-    } catch {
-      // Không cần chặn UI nếu localStorage không khả dụng.
-    }
-  };
-
-  const handleTemplateReset = () => {
-    sfx.playPop();
-    navigate('proposal');
-  };
-
-  const handleCreateSimilar = () => {
-    setIsSharedGiftMode(false);
-    setCloudGiftId(null);
-    setCloudGiftError(null);
-
-    try {
-      window.localStorage.setItem(
-        DRAFT_STORAGE_KEY,
-        JSON.stringify(config)
-      );
-    } catch {
-      // Vẫn cho phép tiếp tục với state hiện tại.
-    }
-
-    navigate('create');
-  };
-
-  if (isLoadingCloudGift) {
-    return (
-      <main className="flex min-h-[100svh] flex-col items-center justify-center bg-gradient-to-b from-pink-50 via-rose-50 to-pink-100 px-5 text-center">
-        <motion.div
-          animate={{
-            scale: [1, 1.15, 1],
-          }}
-          transition={{
-            duration: 1.5,
-            repeat: Infinity,
-          }}
-          className="flex h-16 w-16 items-center justify-center rounded-3xl bg-rose-500 text-white shadow-xl shadow-rose-200"
-        >
-          <Heart className="h-8 w-8 fill-current" />
-        </motion.div>
-
-        <h2 className="mt-6 font-heading text-xl font-bold text-slate-800">
-          Đang mở hộp quà đặc biệt...
-        </h2>
-
-        <p className="mt-2 text-xs font-medium text-rose-500">
-          Chờ một chút để tải đầy đủ câu chuyện
-          tình yêu ✨
+        <p className="mt-2 text-sm leading-6 text-black/45">
+          {message}
         </p>
-      </main>
-    );
-  }
 
-  if (cloudGiftError) {
-    return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#fff9fb] px-5">
-        <div className="w-full max-w-sm rounded-[28px] border border-rose-100 bg-white p-7 text-center shadow-xl">
-          <div className="text-4xl">💌</div>
-
-          <h1 className="mt-3 text-xl font-bold text-slate-900">
-            Không tìm thấy món quà
-          </h1>
-
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            {cloudGiftError}
-          </p>
-
-          <button
-            type="button"
-            onClick={() => {
-              setCloudGiftError(null);
-              setIsSharedGiftMode(false);
-              setCloudGiftId(null);
-
-              window.history.replaceState(
-                {},
-                '',
-                '/'
-              );
-
-              setRoute('home');
-            }}
-            className="mt-5 rounded-full bg-rose-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-rose-200 transition hover:bg-rose-600"
-          >
-            Về trang chủ
-          </button>
-        </div>
-      </main>
-    );
-  }
-
-  if (invalidRoute) {
-    return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#fff9fb] px-5">
-        <div className="w-full max-w-sm rounded-[28px] border border-rose-100 bg-white p-7 text-center shadow-xl">
-          <div className="text-4xl">💌</div>
-
-          <h1 className="mt-3 text-xl font-bold text-slate-900">
-            Trang không tồn tại
-          </h1>
-
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Đường dẫn này chưa có trong hệ thống
-            Gifts.
-          </p>
-
-          <button
-            type="button"
-            onClick={() =>
-              navigate('home', true)
-            }
-            className="mt-5 rounded-full bg-rose-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-rose-200 transition hover:bg-rose-600"
-          >
-            Về trang chủ
-          </button>
-        </div>
-      </main>
-    );
-  }
-
-  if (route === 'home') {
-    return (
-      <HomePage
-        onOpenLoveTemplate={() =>
-          navigate('product')
-        }
-      />
-    );
-  }
-
-  if (route === 'product') {
-    return (
-      <ProductDetailPage
-        onBackHome={() => navigate('home')}
-        onPreview={() =>
-          openPreview('product')
-        }
-        onPersonalize={() => navigate('create')}
-      />
-    );
-  }
-
-  if (route === 'create') {
-    return (
-      <CreateLovePage
-        config={config}
-        onChange={setConfig}
-        onBack={() => navigate('product')}
-        onReset={resetDraft}
-        onCheckout={() => navigate('checkout')}
-      />
-    );
-  }
-
-  if (route === 'checkout') {
-    return (
-      <CheckoutPage
-        config={config}
-        onBack={() => navigate('create')}
-      />
-    );
-  }
+        <button
+          type="button"
+          onClick={() =>
+            navigate('/')
+          }
+          className="mt-6 rounded-[14px] bg-[#c9435d] px-5 py-3 text-sm font-bold text-white"
+        >
+          Về Dearly
+        </button>
+      </div>
+    </main>
+  );
 
   if (
-    route === 'adminOrders' &&
-    adminOrderId
+    location.kind ===
+    'legacy-template'
   ) {
-    return (
-      <AdminOrderDetailPage
-        giftId={adminOrderId}
-        onBack={() =>
-          navigate('adminOrders')
-        }
-        onBackHome={() =>
-          navigate('home')
-        }
-      />
-    );
-  }
-
-  if (
-    route === 'admin' ||
-    route === 'adminOrders' ||
-    route === 'adminTemplates' ||
-    route === 'adminCustomers' ||
-    route === 'adminDiscounts' ||
-    route === 'adminSettings'
-  ) {
-    return (
-      <AdminOrdersPage
-        onBackHome={() => navigate('home')}
-        onOpenOrder={
-          navigateToAdminOrder
-        }
-      />
-    );
-  }
-
-  if (!isTemplateRoute(route)) {
     return null;
   }
 
-  const experienceConfig =
-    isSharedGiftMode
-      ? config
-      : initialConfig;
+  if (
+    location.kind ===
+    'gift'
+  ) {
+    if (
+      isLoadingGift
+    ) {
+      return (
+        <main className="flex min-h-[100svh] flex-col items-center justify-center bg-[#fffaf8] px-5 text-center">
+          <motion.div
+            animate={{
+              scale: [
+                1,
+                1.12,
+                1,
+              ],
+            }}
+            transition={{
+              duration: 1.4,
+              repeat:
+                Infinity,
+            }}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-[#c9435d] text-white shadow-[0_14px_30px_rgba(201,67,93,0.18)]"
+          >
+            <Heart className="h-6 w-6 fill-current" />
+          </motion.div>
 
-  return (
-    <main className="relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-gradient-to-b from-pink-50 via-rose-50 to-pink-100 text-slate-800 selection:bg-pink-300 selection:text-pink-900">
-      <AudioPlayer
-        musicUrl={
-          experienceConfig.audio.backgroundMusicUrl
+          <p className="mt-5 text-sm font-bold text-black/55">
+            Đang mở món quà...
+          </p>
+        </main>
+      );
+    }
+
+    if (
+      giftError ||
+      !sharedGift
+    ) {
+      return renderMessage(
+        'Không tìm thấy món quà',
+        giftError ||
+          'Món quà không tồn tại.'
+      );
+    }
+
+    const template =
+      getTemplateModule(
+        sharedGift.templateId
+      );
+
+    if (!template) {
+      return renderMessage(
+        'Template chưa được hỗ trợ',
+        'Template của món quà này chưa có trong Dearly.'
+      );
+    }
+
+    const Experience =
+      template.Experience;
+
+    return (
+      <Experience
+        config={
+          sharedGift.config
         }
-        musicTitle={
-          experienceConfig.audio.backgroundMusicTitle
+        onCreateSimilar={() => {
+          persistDraft(
+            template,
+            sharedGift.config
+          );
+
+          navigate(
+            template.paths
+              .create
+          );
+        }}
+      />
+    );
+  }
+
+  if (
+    location.kind ===
+    'home'
+  ) {
+    const template =
+      getTemplateModule(
+        DEFAULT_TEMPLATE_ID
+      );
+
+    return (
+      <HomePage
+        onOpenLoveTemplate={() =>
+          navigate(
+            template
+              ?.paths.product ||
+              '/'
+          )
         }
       />
+    );
+  }
 
-      <div className="fixed left-4 top-4 z-40 flex items-center gap-2">
-        {!isSharedGiftMode && (
-          <>
-            <button
-              type="button"
-              onClick={exitPreview}
-              className="rounded-[12px] border border-black/10 bg-white/88 px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md transition hover:bg-white"
-            >
-              ← Thoát demo
-            </button>
-          </>
-        )}
+  if (
+    location.kind ===
+    'admin-order'
+  ) {
+    return (
+      <AdminOrderDetailPage
+        giftId={
+          location.giftId
+        }
+        onBack={() =>
+          navigate(
+            '/admin/orders'
+          )
+        }
+        onBackHome={() =>
+          navigate('/')
+        }
+      />
+    );
+  }
 
-        {isSharedGiftMode && (
-          <button
-            type="button"
-            onClick={handleCreateSimilar}
-            className="flex items-center gap-1.5 rounded-[12px] border border-slate-200 bg-white/90 px-3 py-2.5 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-md transition hover:bg-white"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-rose-500" />
+  if (
+    location.kind ===
+    'admin'
+  ) {
+    return (
+      <AdminOrdersPage
+        onBackHome={() =>
+          navigate('/')
+        }
+        onOpenOrder={(
+          giftId
+        ) =>
+          navigate(
+            `/admin/orders/${giftId}`
+          )
+        }
+      />
+    );
+  }
 
-            <span className="hidden sm:inline">
-              Tạo quà tương tự
-            </span>
-          </button>
-        )}
-      </div>
+  if (
+    location.kind ===
+      'template-product' ||
+    location.kind ===
+      'template-create' ||
+    location.kind ===
+      'template-checkout'
+  ) {
+    const template =
+      getTemplateModule(
+        location.templateId
+      );
 
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center p-2 sm:p-4">
-        <AnimatePresence mode="wait">
-          {route === 'proposal' && (
-            <ProposalScreen
-              key="proposal-stage"
-              config={experienceConfig}
-              onYesAccepted={() =>
-                navigate('gifts')
-              }
-            />
-          )}
+    if (!template) {
+      return renderMessage(
+        'Template chưa phát hành',
+        'Template này chưa có module trong hệ thống.'
+      );
+    }
 
-          {route === 'gifts' && (
-            <GiftSelector
-              key="gifts-stage"
-              config={experienceConfig}
-              onSelectGift={(
-                selectedStage
-              ) => {
-                if (
-                  selectedStage === 'gift1'
-                ) {
-                  navigate('gift1');
-                  return;
-                }
+    const config =
+      getDraft(
+        template
+      );
 
-                if (
-                  selectedStage === 'gift2'
-                ) {
-                  navigate('gift2');
-                  return;
-                }
+    if (
+      location.kind ===
+      'template-product'
+    ) {
+      const ProductPage =
+        template
+          .ProductPage;
 
-                if (
-                  selectedStage === 'gift3'
-                ) {
-                  navigate('gift3');
-                }
-              }}
-              onReset={handleTemplateReset}
-            />
-          )}
+      return (
+        <ProductPage
+          onBackHome={() =>
+            navigate('/')
+          }
+          onStartPersonalize={() =>
+            navigate(
+              template
+                .paths.create
+            )
+          }
+        />
+      );
+    }
 
-          {route === 'gift1' && (
-            <PolaroidGallery
-              key="gift1-stage"
-              photos={
-                experienceConfig.gifts.gift1.photos
-              }
-              onBack={() =>
-                navigate('gifts')
-              }
-            />
-          )}
+    if (
+      location.kind ===
+      'template-create'
+    ) {
+      const EditorPage =
+        template
+          .EditorPage;
 
-          {route === 'gift2' && (
-            <VinylMusicPlayer
-              key="gift2-stage"
-              playlist={
-                experienceConfig.gifts.gift2.playlist
-              }
-              onBack={() =>
-                navigate('gifts')
-              }
-            />
-          )}
+      return (
+        <EditorPage
+          config={config}
+          onChange={(
+            nextConfig
+          ) =>
+            persistDraft(
+              template,
+              nextConfig
+            )
+          }
+          onBack={() =>
+            navigate(
+              template
+                .paths.product
+            )
+          }
+          onReset={() =>
+            resetDraft(
+              template
+            )
+          }
+          onCheckout={() =>
+            navigate(
+              template
+                .paths.checkout
+            )
+          }
+        />
+      );
+    }
 
-          {route === 'gift3' && (
-            <LoveLetter
-              key="gift3-stage"
-              letterData={
-                experienceConfig.gifts.gift3.letter
-              }
-              senderName={
-                experienceConfig.couple.senderName
-              }
-              receiverName={
-                experienceConfig.couple.receiverName
-              }
-              onBack={() =>
-                navigate('gifts')
-              }
-            />
-          )}
-        </AnimatePresence>
-      </div>
+    const Checkout =
+      template
+        .CheckoutPage;
 
-      <footer className="relative z-10 py-4 text-center text-xs font-medium text-rose-800/60">
-        <p className="flex items-center justify-center gap-1">
-          <span>Made with</span>
+    return (
+      <Checkout
+        config={config}
+        onBack={() =>
+          navigate(
+            template
+              .paths.create
+          )
+        }
+      />
+    );
+  }
 
-          <Heart className="h-3.5 w-3.5 fill-rose-500 text-rose-500" />
-
-          <span>for someone special</span>
-        </p>
-      </footer>
-
-    </main>
+  return renderMessage(
+    'Trang không tồn tại',
+    'Đường dẫn này chưa có trong Dearly.'
   );
 }

@@ -1,6 +1,8 @@
 {
-  "name": "Romantic Love Surprise",
-  "description": "Interactive romantic web app with heart intro, cute cat proposal, Polaroid photo gallery, vinyl music player, and animated love letter.",
+  "name": "Dearly",
+  "description": "Digital gift platform for personalized interactive gift websites, private share links, photos, music, and letters.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
