@@ -20,6 +20,14 @@ import {
   AdminTemplateAssetEditor,
 } from './AdminTemplateAssetEditor';
 
+import {
+  AdminVisualTemplateEditor,
+} from './AdminVisualTemplateEditor';
+
+import {
+  DEFAULT_LOVE_VISUAL_EDITOR_CONFIG,
+} from '../../templates/visualEditor';
+
 interface Props {
   template:
     TemplateConfig;
@@ -35,6 +43,7 @@ interface Props {
 
 type TemplateSection =
   | 'selling'
+  | 'visual'
   | 'design'
   | 'assets';
 
@@ -119,7 +128,7 @@ React.FC<Props> = ({
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-1 rounded-[12px] bg-[#f4f1f1] p-1">
+        <div className="mt-5 grid grid-cols-2 gap-1 rounded-[12px] bg-[#f4f1f1] p-1 sm:grid-cols-4">
           <SectionButton
             active={
               section ===
@@ -129,6 +138,19 @@ React.FC<Props> = ({
             onClick={() =>
               setSection(
                 'selling'
+              )
+            }
+          />
+
+          <SectionButton
+            active={
+              section ===
+              'visual'
+            }
+            label="Bố cục"
+            onClick={() =>
+              setSection(
+                'visual'
               )
             }
           />
@@ -173,6 +195,24 @@ React.FC<Props> = ({
             }
             onChange={
               onChange
+            }
+          />
+        )}
+
+        {section ===
+          'visual' && (
+          <AdminVisualTemplateEditor
+            config={
+              template.visualEditor ||
+              DEFAULT_LOVE_VISUAL_EDITOR_CONFIG
+            }
+            onChange={(
+              visualEditor
+            ) =>
+              onChange({
+                ...template,
+                visualEditor,
+              })
             }
           />
         )}
@@ -235,7 +275,7 @@ React.FC<Props> = ({
 
               <p className="mt-1 text-[10px] leading-4 text-black/35">
                 {dirty
-                  ? 'Bấm Lưu để cập nhật giá, giao diện và lựa chọn GIF/ảnh cho khách.'
+                  ? 'Bấm Lưu để cập nhật giá, bố cục, giao diện và lựa chọn GIF/ảnh cho khách.'
                   : 'Template mới nhất đã được ghi vào Firestore.'}
               </p>
             </div>

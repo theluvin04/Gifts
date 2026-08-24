@@ -14,6 +14,11 @@ import type {
 } from '../templates/design';
 
 import {
+  AnimatedElement,
+  AnimatedGroup,
+} from '../engine';
+
+import {
   sfx,
 } from '../utils/soundEffects';
 
@@ -75,103 +80,87 @@ React.FC<
   ];
 
   return (
-    <motion.section
-      initial={{
-        opacity: 0,
-      }}
-      animate={{
-        opacity: 1,
-      }}
-      exit={{
-        opacity: 0,
-      }}
+    <section
       style={{
         color:
           design.colors.text,
         fontFamily:
           design.fonts.body,
       }}
-      className="flex min-h-[100svh] w-full flex-col items-center justify-center overflow-hidden px-4 py-10 text-center"
+      className="flex min-h-[100svh] w-full min-w-0 flex-col items-center justify-center overflow-hidden px-4 py-10 text-center"
     >
-      <motion.h1
-        initial={{
-          opacity: 0,
-          y: -10,
+      <AnimatedElement
+        animation={{
+          preset:
+            'fade-down',
+          durationMs: 420,
         }}
-        animate={{
-          opacity: 1,
-          y: 0,
-        }}
-        style={{
-          color:
-            design.gifts
-              .headingColor,
-          fontFamily:
-            design.fonts.heading,
-          fontSize:
-            `clamp(24px, 5vw, ${design.gifts.headingSize}px)`,
-        }}
-        className="mb-3 font-bold"
       >
-        {config.proposal
-          .successHeading ||
-          "I knew you'd say yes 💕"}
-      </motion.h1>
+        <h1
+          style={{
+            color:
+              design.gifts
+                .headingColor,
+            fontFamily:
+              design.fonts
+                .heading,
+            fontSize:
+              `clamp(24px, 5vw, ${design.gifts.headingSize}px)`,
+          }}
+          className="mb-3 font-bold"
+        >
+          {config.proposal
+            .successHeading ||
+            "I knew you'd say yes 💕"}
+        </h1>
+      </AnimatedElement>
 
-      <motion.img
-        src={
-          config
-            .resolvedAssets?.[
-              LOVE_ASSET_SLOT_IDS
-                .proposalSuccess
-            ] ||
-          config.proposal
-            .successGif ||
-          '/images/gifts/success.gif'
-        }
-        alt="Happy cat"
-        initial={{
-          opacity: 0,
-          scale: 0.85,
+      <AnimatedElement
+        animation={{
+          preset:
+            'zoom-in',
+          durationMs: 520,
+          delayMs: 80,
+          easing:
+            'backOut',
         }}
-        animate={{
-          opacity: 1,
-          scale: 1,
-        }}
-        transition={{
-          type: 'spring',
-          stiffness: 260,
-          damping: 20,
-        }}
-        className="mb-8 h-auto w-[140px] object-contain sm:w-[220px]"
-      />
+      >
+        <img
+          src={
+            config
+              .resolvedAssets?.[
+                LOVE_ASSET_SLOT_IDS
+                  .proposalSuccess
+              ] ||
+            config.proposal
+              .successGif ||
+            '/images/gifts/success.gif'
+          }
+          alt="Happy cat"
+          className="mb-8 h-auto w-[140px] object-contain sm:w-[220px]"
+        />
+      </AnimatedElement>
 
-      <div className="grid w-full max-w-[340px] grid-cols-3 gap-3 sm:max-w-[720px] sm:gap-8">
+      <AnimatedGroup
+        animation={{
+          preset:
+            'fade-up',
+          durationMs: 460,
+        }}
+        stagger={{
+          enabled: true,
+          startDelayMs: 160,
+          intervalMs: 120,
+        }}
+        className="grid w-full max-w-[340px] grid-cols-3 gap-3 sm:max-w-[720px] sm:gap-8"
+        itemClassName="min-w-0"
+      >
         {gifts.map(
-          (
-            gift,
-            index
-          ) => (
+          (gift) => (
             <motion.button
               key={
                 gift.stage
               }
-              initial={{
-                opacity: 0,
-                y: 25,
-                scale: 0.9,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                scale: 1,
-              }}
-              transition={{
-                delay:
-                  0.15 +
-                  index *
-                    0.12,
-              }}
               whileHover={{
                 y: -6,
                 scale: 1.05,
@@ -191,7 +180,7 @@ React.FC<
                   design.gifts
                     .cardBackground,
               }}
-              className="flex aspect-square min-w-0 flex-col items-center justify-center overflow-hidden rounded-2xl p-2 shadow-md sm:rounded-3xl sm:p-5"
+              className="flex aspect-square w-full min-w-0 flex-col items-center justify-center overflow-hidden rounded-2xl p-2 shadow-md sm:rounded-3xl sm:p-5"
             >
               <img
                 src={
@@ -203,7 +192,7 @@ React.FC<
             </motion.button>
           )
         )}
-      </div>
-    </motion.section>
+      </AnimatedGroup>
+    </section>
   );
 };

@@ -1,10 +1,4 @@
-import React, {
-  useState,
-} from 'react';
-
-import {
-  AnimatePresence,
-} from 'motion/react';
+import React from 'react';
 
 import {
   Sparkles,
@@ -39,6 +33,11 @@ import {
 } from '../../components/gifts/LoveLetter';
 
 import {
+  SceneTransition,
+  useSceneController,
+} from '../../engine';
+
+import {
   sfx,
 } from '../../utils/soundEffects';
 
@@ -50,17 +49,18 @@ import {
   LOVE_ASSET_SLOT_IDS,
 } from '../assets';
 
+import {
+  LOVE01_SCENE_TRANSITIONS,
+} from './sceneConfig';
+
+import type {
+  Love01SceneId,
+} from './sceneConfig';
+
 interface LoveStoryExperienceProps {
   config: LoveConfig;
   onCreateSimilar: () => void;
 }
-
-type ExperienceStage =
-  | 'proposal'
-  | 'gifts'
-  | 'memories'
-  | 'music'
-  | 'letter';
 
 export const LoveStoryExperience:
 React.FC<
@@ -69,8 +69,14 @@ React.FC<
   config,
   onCreateSimilar,
 }) => {
-  const [stage, setStage] =
-    useState<ExperienceStage>(
+  const {
+    scene: stage,
+    goToScene,
+    reset,
+  } =
+    useSceneController<
+      Love01SceneId
+    >(
       'proposal'
     );
 
@@ -86,14 +92,73 @@ React.FC<
       ] ||
     '/images/letter/envelope-cover.png';
 
-  const openGifts = () => {
-    sfx.playPop();
-    setStage('gifts');
+  const scrollTop = () => {
     window.scrollTo({
       top: 0,
       behavior: 'instant',
     });
   };
+
+  const openGifts = (
+    replace = false
+  ) => {
+    sfx.playPop();
+
+    goToScene(
+      'gifts',
+      {
+        replace,
+      }
+    );
+
+    scrollTop();
+  };
+
+  const openGiftScene = (
+    selected:
+      string
+  ) => {
+    if (
+      selected ===
+      'gift1'
+    ) {
+      goToScene(
+        'memories'
+      );
+      scrollTop();
+      return;
+    }
+
+    if (
+      selected ===
+      'gift2'
+    ) {
+      goToScene(
+        'music'
+      );
+      scrollTop();
+      return;
+    }
+
+    if (
+      selected ===
+      'gift3'
+    ) {
+      goToScene(
+        'letter'
+      );
+      scrollTop();
+    }
+  };
+
+  const resetExperience =
+    () => {
+      reset(
+        'proposal'
+      );
+
+      scrollTop();
+    };
 
   return (
     <main
@@ -159,6 +224,7 @@ React.FC<
           opacity: 0;
         }
       `}</style>
+
       <AudioPlayer
         musicUrl={
           config.audio
@@ -173,7 +239,9 @@ React.FC<
       <div className="fixed left-3 top-3 z-40 sm:left-4 sm:top-4">
         <button
           type="button"
-          onClick={onCreateSimilar}
+          onClick={
+            onCreateSimilar
+          }
           style={{
             color:
               design.colors.text,
@@ -196,16 +264,26 @@ React.FC<
         </button>
       </div>
 
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-2 pb-2 pt-[78px] sm:p-4">
-        <AnimatePresence mode="wait">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col items-center justify-center px-2 pb-2 pt-[78px] sm:p-4">
+        <SceneTransition
+          sceneKey={
+            stage
+          }
+          transition={
+            LOVE01_SCENE_TRANSITIONS[
+              stage
+            ]
+          }
+        >
           {stage ===
             'proposal' && (
             <ProposalScreen
-              key="proposal"
               config={config}
               design={design}
-              onYesAccepted={
-                openGifts
+              onYesAccepted={() =>
+                openGifts(
+                  false
+                )
               }
             />
           )}
@@ -213,45 +291,13 @@ React.FC<
           {stage ===
             'gifts' && (
             <GiftSelector
-              key="gifts"
               config={config}
               design={design}
-              onSelectGift={(
-                selected
-              ) => {
-                if (
-                  selected ===
-                  'gift1'
-                ) {
-                  setStage(
-                    'memories'
-                  );
-                  return;
-                }
-
-                if (
-                  selected ===
-                  'gift2'
-                ) {
-                  setStage(
-                    'music'
-                  );
-                  return;
-                }
-
-                if (
-                  selected ===
-                  'gift3'
-                ) {
-                  setStage(
-                    'letter'
-                  );
-                }
-              }}
-              onReset={() =>
-                setStage(
-                  'proposal'
-                )
+              onSelectGift={
+                openGiftScene
+              }
+              onReset={
+                resetExperience
               }
             />
           )}
@@ -259,7 +305,6 @@ React.FC<
           {stage ===
             'memories' && (
             <PolaroidGallery
-              key="memories"
               photos={
                 config.gifts
                   .gift1.photos
@@ -270,22 +315,27 @@ React.FC<
                   .gift1
                   .displayCaptions
               }
-              onBack={openGifts}
+              onBack={() =>
+                openGifts(
+                  true
+                )
+              }
             />
           )}
 
           {stage ===
             'music' && (
-            <div
-              key="music"
-              className="dearly-stage-music w-full"
-            >
+            <div className="dearly-stage-music w-full min-w-0">
               <VinylMusicPlayer
                 playlist={
                   config.gifts
                     .gift2.playlist
                 }
-                onBack={openGifts}
+                onBack={() =>
+                  openGifts(
+                    true
+                  )
+                }
               />
             </div>
           )}
@@ -293,12 +343,11 @@ React.FC<
           {stage ===
             'letter' && (
             <div
-              key="letter"
               style={{
                 '--dearly-envelope-image':
                   `url("${envelopeImage}")`,
               } as React.CSSProperties}
-              className="dearly-stage-letter w-full"
+              className="dearly-stage-letter w-full min-w-0"
             >
               <LoveLetter
                 letterData={
@@ -313,11 +362,15 @@ React.FC<
                   config.couple
                     .receiverName
                 }
-                onBack={openGifts}
+                onBack={() =>
+                  openGifts(
+                    true
+                  )
+                }
               />
             </div>
           )}
-        </AnimatePresence>
+        </SceneTransition>
       </div>
 
       <footer
