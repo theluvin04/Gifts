@@ -12,6 +12,9 @@ import {
   Gift,
   Loader2,
   LockKeyhole,
+  LogIn,
+  LogOut,
+  Mail,
   RefreshCw,
   Search,
   ShoppingBag,
@@ -21,8 +24,11 @@ import {
 
 import {
   AdminOrderRecord,
+  AdminSession,
   getAdminSession,
   listAdminOrders,
+  loginAdminWithGoogle,
+  logoutAdmin,
 } from '../../services/adminService';
 
 interface AdminOrdersPageProps {
@@ -38,6 +44,16 @@ type GiftFilter =
   | 'all'
   | 'draft'
   | 'published';
+
+const EMPTY_SESSION: AdminSession = {
+  uid: '',
+  email: '',
+  displayName: '',
+  photoURL: '',
+  isSignedIn: false,
+  isGoogleUser: false,
+  isAdmin: false,
+};
 
 const formatVnd = (
   amount: number
@@ -81,6 +97,48 @@ const isPaidOrder = (
   );
 };
 
+const getAuthErrorMessage = (
+  error: any
+) => {
+  const code =
+    error?.code || '';
+
+  if (
+    code ===
+    'auth/popup-closed-by-user'
+  ) {
+    return 'Bạn đã đóng cửa sổ đăng nhập Google.';
+  }
+
+  if (
+    code ===
+    'auth/operation-not-allowed'
+  ) {
+    return 'Google Sign-In chưa được bật trong Firebase Authentication.';
+  }
+
+  if (
+    code ===
+    'auth/unauthorized-domain'
+  ) {
+    return 'Domain hiện tại chưa được thêm vào Firebase Authentication → Settings → Authorized domains.';
+  }
+
+  if (
+    code ===
+    'permission-denied' ||
+    code ===
+    'firestore/permission-denied'
+  ) {
+    return 'Firestore đang chặn quyền. Hãy publish file firestore.rules mới vào đúng database.';
+  }
+
+  return (
+    error?.message ||
+    'Không thể đăng nhập Admin.'
+  );
+};
+
 export const AdminOrdersPage: React.FC<
   AdminOrdersPageProps
 > = ({
@@ -90,19 +148,21 @@ export const AdminOrdersPage: React.FC<
     AdminOrderRecord[]
   >([]);
 
-  const [uid, setUid] =
-    useState('');
-
-  const [isAdmin, setIsAdmin] =
-    useState(false);
+  const [session, setSession] =
+    useState<AdminSession>(
+      EMPTY_SESSION
+    );
 
   const [isLoading, setIsLoading] =
     useState(true);
 
+  const [isSigningIn, setIsSigningIn] =
+    useState(false);
+
   const [error, setError] =
     useState('');
 
-  const [copiedUid, setCopiedUid] =
+  const [copiedEmail, setCopiedEmail] =
     useState(false);
 
   const [search, setSearch] =
@@ -116,18 +176,17 @@ export const AdminOrdersPage: React.FC<
   const [giftFilter, setGiftFilter] =
     useState<GiftFilter>('all');
 
-  const loadOrders = async () => {
+  const loadAdmin = async () => {
     setIsLoading(true);
     setError('');
 
     try {
-      const session =
+      const nextSession =
         await getAdminSession();
 
-      setUid(session.uid);
-      setIsAdmin(session.isAdmin);
+      setSession(nextSession);
 
-      if (!session.isAdmin) {
+      if (!nextSession.isAdmin) {
         setOrders([]);
         return;
       }
@@ -140,17 +199,77 @@ export const AdminOrdersPage: React.FC<
       console.error(loadError);
 
       setError(
-        loadError?.message ||
-          'Không thể tải dữ liệu admin.'
+        getAuthErrorMessage(
+          loadError
+        )
       );
+
+      setOrders([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadOrders();
+    void loadAdmin();
   }, []);
+
+  const handleGoogleLogin =
+    async () => {
+      setIsSigningIn(true);
+      setError('');
+
+      try {
+        const nextSession =
+          await loginAdminWithGoogle();
+
+        setSession(nextSession);
+
+        if (
+          !nextSession.isAdmin
+        ) {
+          setOrders([]);
+          return;
+        }
+
+        const result =
+          await listAdminOrders();
+
+        setOrders(result);
+      } catch (loginError: any) {
+        console.error(loginError);
+
+        setError(
+          getAuthErrorMessage(
+            loginError
+          )
+        );
+      } finally {
+        setIsSigningIn(false);
+      }
+    };
+
+  const handleLogout = async () => {
+    setError('');
+
+    try {
+      await logoutAdmin();
+    } catch (logoutError) {
+      console.error(logoutError);
+    }
+
+    setSession(
+      EMPTY_SESSION
+    );
+    setOrders([]);
+  };
+
+  const handleSwitchAccount =
+    async () => {
+      await handleLogout();
+
+      await handleGoogleLogin();
+    };
 
   const filteredOrders =
     useMemo(() => {
@@ -235,24 +354,24 @@ export const AdminOrdersPage: React.FC<
         order.status === 'published'
     ).length;
 
-  const copyUid = async () => {
-    if (!uid) {
+  const copyEmail = async () => {
+    if (!session.email) {
       return;
     }
 
     try {
       await navigator.clipboard.writeText(
-        uid
+        session.email
       );
 
-      setCopiedUid(true);
+      setCopiedEmail(true);
 
       window.setTimeout(
-        () => setCopiedUid(false),
+        () => setCopiedEmail(false),
         2000
       );
     } catch {
-      // UID vẫn hiển thị để copy thủ công.
+      // Email vẫn hiển thị để copy thủ công.
     }
   };
 
@@ -270,7 +389,9 @@ export const AdminOrdersPage: React.FC<
     );
   }
 
-  if (!isAdmin) {
+  if (
+    !session.isGoogleUser
+  ) {
     return (
       <main className="min-h-[100svh] bg-[#f7f8fb] px-4 py-8 text-slate-800 sm:px-7">
         <div className="mx-auto max-w-2xl">
@@ -288,62 +409,133 @@ export const AdminOrdersPage: React.FC<
               <LockKeyhole className="h-5 w-5" />
             </span>
 
-            <h1 className="mt-5 text-2xl font-bold tracking-[-0.04em] text-slate-900">
-              Chưa được cấp quyền Admin
+            <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-rose-400">
+              Gifts Admin
+            </p>
+
+            <h1 className="mt-2 text-2xl font-bold tracking-[-0.04em] text-slate-900">
+              Đăng nhập Admin bằng Google
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Admin đang dùng chính Firebase
-              Anonymous Auth hiện có. Chỉ cần cấp
-              quyền cho UID này một lần trong
-              Firestore.
+              Khách tạo quà vẫn dùng Anonymous Auth.
+              Riêng khu vực Admin sẽ yêu cầu tài khoản
+              Google đã được cấp quyền trong Firestore.
             </p>
 
-            {uid && (
-              <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                  UID hiện tại
-                </p>
-
-                <div className="mt-2 flex items-center gap-2">
-                  <code className="min-w-0 flex-1 break-all text-xs font-semibold text-slate-700">
-                    {uid}
-                  </code>
-
-                  <button
-                    type="button"
-                    onClick={copyUid}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm"
-                  >
-                    {copiedUid ? (
-                      <>
-                        <Check className="h-3.5 w-3.5" />
-                        Đã chép
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5" />
-                        Copy
-                      </>
-                    )}
-                  </button>
-                </div>
+            {error && (
+              <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-semibold leading-5 text-red-600">
+                {error}
               </div>
             )}
 
+            <button
+              type="button"
+              disabled={isSigningIn}
+              onClick={() =>
+                void handleGoogleLogin()
+              }
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-rose-500 px-5 py-3.5 text-sm font-bold text-white shadow-md shadow-rose-100 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSigningIn ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Đang đăng nhập...
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-4 w-4" />
+                  Đăng nhập với Google
+                </>
+              )}
+            </button>
+
+            <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-xs leading-6 text-slate-500">
+              Nếu Firebase báo{' '}
+              <strong>unauthorized-domain</strong>,
+              thêm domain{' '}
+              <strong>
+                gifts-flame.vercel.app
+              </strong>{' '}
+              vào Authentication → Settings →
+              Authorized domains.
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!session.isAdmin) {
+    return (
+      <main className="min-h-[100svh] bg-[#f7f8fb] px-4 py-8 text-slate-800 sm:px-7">
+        <div className="mx-auto max-w-2xl">
+          <button
+            type="button"
+            onClick={onBackHome}
+            className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 transition hover:text-rose-500"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Về trang chủ
+          </button>
+
+          <div className="mt-6 rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+              <Mail className="h-5 w-5" />
+            </span>
+
+            <h1 className="mt-5 text-2xl font-bold tracking-[-0.04em] text-slate-900">
+              Gmail này chưa có quyền Admin
+            </h1>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Bạn đã đăng nhập Google thành công.
+              Bây giờ chỉ cần cấp quyền cho đúng Gmail
+              này trong Firestore.
+            </p>
+
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                Gmail đang đăng nhập
+              </p>
+
+              <div className="mt-2 flex items-center gap-2">
+                <code className="min-w-0 flex-1 break-all text-xs font-semibold text-slate-700">
+                  {session.email}
+                </code>
+
+                <button
+                  type="button"
+                  onClick={copyEmail}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm"
+                >
+                  {copiedEmail ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      Đã chép
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
             <div className="mt-6 rounded-2xl border border-rose-100 bg-rose-50/60 p-4">
               <p className="text-xs font-bold text-slate-800">
-                Cấp quyền một lần:
+                Cấp quyền:
               </p>
 
               <p className="mt-2 text-xs leading-6 text-slate-600">
-                Firebase Console → Firestore →
-                tạo collection{' '}
+                Firestore → collection{' '}
                 <code className="rounded bg-white px-1.5 py-0.5 font-bold text-rose-600">
                   admins
                 </code>
-                {' '}→ Document ID chính là UID
-                bên trên → thêm field{' '}
+                {' '}→ Document ID = chính Gmail ở
+                trên → field{' '}
                 <code className="rounded bg-white px-1.5 py-0.5 font-bold text-rose-600">
                   enabled
                 </code>
@@ -358,16 +550,29 @@ export const AdminOrdersPage: React.FC<
               </p>
             )}
 
-            <button
-              type="button"
-              onClick={() =>
-                void loadOrders()
-              }
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-rose-500 px-5 py-3 text-xs font-bold text-white shadow-md shadow-rose-100 transition hover:bg-rose-600"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Kiểm tra lại quyền
-            </button>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={() =>
+                  void loadAdmin()
+                }
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-rose-500 px-5 py-3 text-xs font-bold text-white shadow-md shadow-rose-100 transition hover:bg-rose-600"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Kiểm tra lại quyền
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  void handleSwitchAccount()
+                }
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:text-rose-500"
+              >
+                <LogIn className="h-3.5 w-3.5" />
+                Đổi Gmail
+              </button>
+            </div>
           </div>
         </div>
       </main>
@@ -389,7 +594,7 @@ export const AdminOrdersPage: React.FC<
             </span>
           </button>
 
-          <div>
+          <div className="text-center">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-400">
               Admin
             </p>
@@ -399,33 +604,64 @@ export const AdminOrdersPage: React.FC<
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              void loadOrders()
-            }
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:text-rose-500"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                void loadAdmin()
+              }
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-600 transition hover:border-rose-200 hover:text-rose-500"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">
+                Refresh
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                void handleLogout()
+              }
+              className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-white transition hover:bg-rose-500"
+              title={session.email}
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">
+                Đăng xuất
+              </span>
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-[1500px] px-4 py-7 sm:px-7">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-400">
-            Order management
-          </p>
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-400">
+              Order management
+            </p>
 
-          <h1 className="mt-2 text-3xl font-bold tracking-[-0.05em] text-slate-900">
-            Đơn hàng
-          </h1>
+            <h1 className="mt-2 text-3xl font-bold tracking-[-0.05em] text-slate-900">
+              Đơn hàng
+            </h1>
 
-          <p className="mt-2 text-sm text-slate-500">
-            Hiện tối đa 200 gift gần nhất từ
-            Firestore.
-          </p>
+            <p className="mt-2 text-sm text-slate-500">
+              Hiện tối đa 200 gift gần nhất từ
+              Firestore.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs shadow-sm">
+            <p className="font-bold text-slate-800">
+              {session.displayName ||
+                'Google Admin'}
+            </p>
+
+            <p className="mt-1 text-[10px] text-slate-400">
+              {session.email}
+            </p>
+          </div>
         </div>
 
         <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

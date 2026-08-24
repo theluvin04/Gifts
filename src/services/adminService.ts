@@ -8,9 +8,10 @@ import {
 } from 'firebase/firestore';
 
 import {
-  auth,
   db,
-  ensureAuth,
+  signInAdminWithGoogle,
+  signOutAdmin,
+  waitForAuthReady,
 } from '../config/firebase';
 
 import {
@@ -19,6 +20,11 @@ import {
 
 export interface AdminSession {
   uid: string;
+  email: string;
+  displayName: string;
+  photoURL: string;
+  isSignedIn: boolean;
+  isGoogleUser: boolean;
   isAdmin: boolean;
 }
 
@@ -65,22 +71,57 @@ const timestampToMillis = (
   return 0;
 };
 
+const buildEmptySession =
+  (): AdminSession => ({
+    uid: '',
+    email: '',
+    displayName: '',
+    photoURL: '',
+    isSignedIn: false,
+    isGoogleUser: false,
+    isAdmin: false,
+  });
+
 export const getAdminSession =
   async (): Promise<AdminSession> => {
-    await ensureAuth();
+    const user =
+      await waitForAuthReady();
 
-    const uid = auth.currentUser?.uid;
+    if (!user) {
+      return buildEmptySession();
+    }
 
-    if (!uid) {
-      throw new Error(
-        'Không thể xác thực phiên admin.'
+    const isGoogleUser =
+      user.providerData.some(
+        (provider) =>
+          provider.providerId ===
+          'google.com'
       );
+
+    const email =
+      user.email || '';
+
+    if (
+      !isGoogleUser ||
+      !email
+    ) {
+      return {
+        uid: user.uid,
+        email,
+        displayName:
+          user.displayName || '',
+        photoURL:
+          user.photoURL || '',
+        isSignedIn: true,
+        isGoogleUser: false,
+        isAdmin: false,
+      };
     }
 
     const adminRef = doc(
       db,
       'admins',
-      uid
+      email
     );
 
     const snapshot =
@@ -91,9 +132,28 @@ export const getAdminSession =
       snapshot.data()?.enabled === true;
 
     return {
-      uid,
+      uid: user.uid,
+      email,
+      displayName:
+        user.displayName || '',
+      photoURL:
+        user.photoURL || '',
+      isSignedIn: true,
+      isGoogleUser: true,
       isAdmin,
     };
+  };
+
+export const loginAdminWithGoogle =
+  async () => {
+    await signInAdminWithGoogle();
+
+    return getAdminSession();
+  };
+
+export const logoutAdmin =
+  async () => {
+    await signOutAdmin();
   };
 
 export const listAdminOrders =

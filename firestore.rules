@@ -2,22 +2,29 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAdmin() {
+    function isGoogleUser() {
       return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function isAdmin() {
+      return isGoogleUser()
         && exists(
-          /databases/$(database)/documents/admins/$(request.auth.uid)
+          /databases/$(database)/documents/admins/$(request.auth.token.email)
         )
         && get(
-          /databases/$(database)/documents/admins/$(request.auth.uid)
+          /databases/$(database)/documents/admins/$(request.auth.token.email)
         ).data.enabled == true;
     }
 
-    match /admins/{userId} {
-      // Cho user đọc đúng record admin của chính UID mình
-      // để UI biết đã được cấp quyền hay chưa.
-      allow get: if request.auth != null
-        && request.auth.uid == userId;
+    match /admins/{adminEmail} {
+      // Google user chỉ được đọc record mang đúng Gmail của mình.
+      allow get: if isGoogleUser()
+        && request.auth.token.email == adminEmail;
 
+      // Admin records chỉ tạo/sửa trực tiếp từ Firebase Console.
       allow list: if false;
       allow create, update, delete: if false;
     }
@@ -47,14 +54,14 @@ service cloud.firestore {
             );
       }
 
-      // Gift public: chỉ get từng gift đã publish.
-      // Owner: đọc được gift của mình.
-      // Admin: đọc được tất cả.
+      // Public chỉ get gift published.
+      // Creator đọc gift của mình.
+      // Google Admin đọc được tất cả.
       allow get: if isPublished()
         || isOwner()
         || isAdmin();
 
-      // Chỉ admin được query toàn bộ collection gifts.
+      // Chỉ Google Admin query toàn bộ collection gifts.
       allow list: if isAdmin();
 
       allow create: if validWrite();
