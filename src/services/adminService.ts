@@ -374,24 +374,38 @@ export const getAdminTemplateConfig =
   async (): Promise<TemplateConfig> => {
     await assertAdminAccess();
 
-    const templateRef = doc(
-      db,
-      'templates',
-      'love-01'
-    );
+    try {
+      const templateRef = doc(
+        db,
+        'templates',
+        'love-01'
+      );
 
-    const snapshot =
-      await getDoc(templateRef);
+      const snapshot =
+        await getDoc(templateRef);
 
-    if (!snapshot.exists()) {
+      if (!snapshot.exists()) {
+        return {
+          ...DEFAULT_LOVE_TEMPLATE_CONFIG,
+        };
+      }
+
+      return normalizeTemplateConfig(
+        snapshot.data()
+      );
+    } catch (error) {
+      // Template pricing is an optional Admin module.
+      // A missing / outdated template rule must never
+      // make Orders, Customers or Dashboard unusable.
+      console.warn(
+        'Admin template config fallback:',
+        error
+      );
+
       return {
         ...DEFAULT_LOVE_TEMPLATE_CONFIG,
       };
     }
-
-    return normalizeTemplateConfig(
-      snapshot.data()
-    );
   };
 
 export const saveAdminTemplateConfig =

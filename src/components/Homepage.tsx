@@ -278,8 +278,8 @@ export const HomePage: React.FC<
               }}
               className="mx-auto w-full max-w-[520px]"
             >
-              <div className="overflow-hidden border border-black/8 bg-white">
-                <div className="flex items-center justify-between border-b border-black/6 px-4 py-3">
+              <div className="overflow-hidden rounded-[30px] border border-black/[0.07] bg-white shadow-[0_18px_50px_rgba(23,23,23,0.06)]">
+                <div className="flex items-center justify-between border-b border-black/6 px-5 py-3.5">
                   <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-black/35">
                     Love Story 01
                   </span>
@@ -312,7 +312,7 @@ export const HomePage: React.FC<
                       ) => (
                         <div
                           key={src}
-                          className="aspect-square border border-black/5 bg-white/70 p-3 sm:p-4"
+                          className="aspect-square rounded-[18px] border border-black/5 bg-white/75 p-3 shadow-[0_8px_22px_rgba(23,23,23,0.035)] sm:p-4"
                         >
                           <img
                             src={src}
@@ -370,7 +370,7 @@ export const HomePage: React.FC<
               </p>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               <motion.button
                 type="button"
                 disabled={
@@ -384,12 +384,15 @@ export const HomePage: React.FC<
                 }}
                 onClick={onOpenLoveTemplate}
                 whileHover={{
-                  y: -3,
+                  y: -5,
                 }}
-                className="group overflow-hidden border border-black/8 bg-[#fff9fa] text-left transition hover:border-black/16"
+                transition={{
+                  duration: 0.2,
+                }}
+                className="group overflow-hidden rounded-[30px] border border-black/[0.07] bg-[#fffafb] p-2 text-left shadow-[0_12px_35px_rgba(23,23,23,0.04)] transition hover:border-black/[0.12] hover:shadow-[0_24px_55px_rgba(23,23,23,0.08)]"
               >
-                <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-[#fae8ec] p-8">
-                  <span className="absolute right-4 top-4 text-[9px] font-bold uppercase tracking-[0.18em] text-[#d94763]">
+                <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[24px] bg-[#fae8ec] p-8">
+                  <span className="absolute right-4 top-4 rounded-[10px] border border-white/70 bg-white/80 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#d94763] backdrop-blur-sm">
                     {template.status ===
                     'available'
                       ? 'Available'
@@ -399,28 +402,28 @@ export const HomePage: React.FC<
                   <img
                     src="/images/gifts/success.gif"
                     alt="Love template"
-                    className="h-[58%] w-[58%] object-contain transition duration-500 group-hover:scale-[1.03]"
+                    className="h-[66%] w-[66%] object-contain transition duration-500 group-hover:scale-[1.045]"
                   />
                 </div>
 
-                <div className="p-5 sm:p-6">
+                <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#d94763]">
                         Love
                       </p>
 
-                      <h3 className="mt-1.5 text-xl font-black tracking-[-0.03em] text-[#171717]">
+                      <h3 className="mt-1.5 text-xl font-black tracking-[-0.035em] text-[#171717]">
                         Love Story 01
                       </h3>
                     </div>
 
-                    <span className="text-lg font-medium text-black/40 transition group-hover:translate-x-1 group-hover:text-black">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-black/[0.08] bg-white text-base font-medium text-black/45 transition group-hover:border-[#d94763]/25 group-hover:bg-[#fff1f4] group-hover:text-[#d94763]">
                       →
                     </span>
                   </div>
 
-                  <div className="mt-4 flex items-baseline gap-2">
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
                     <span className="text-base font-black text-[#171717]">
                       {formatVnd(
                         effectivePrice
@@ -429,20 +432,20 @@ export const HomePage: React.FC<
 
                     {discount > 0 && (
                       <>
-                        <span className="text-xs text-black/30 line-through">
+                        <span className="text-xs text-black/28 line-through">
                           {formatVnd(
                             template.basePrice
                           )}
                         </span>
 
-                        <span className="text-[10px] font-bold text-[#d94763]">
+                        <span className="rounded-[8px] bg-[#fdecef] px-2 py-1 text-[9px] font-bold text-[#c93f59]">
                           -{discount}%
                         </span>
                       </>
                     )}
                   </div>
 
-                  <p className="mt-3 text-sm leading-6 text-black/48">
+                  <p className="mt-3 max-w-[31ch] text-sm leading-6 text-black/48">
                     YES/NO tương tác, album ảnh,
                     đĩa nhạc và một bức thư riêng
                     dành cho người ấy.
@@ -450,53 +453,53 @@ export const HomePage: React.FC<
                 </div>
               </motion.button>
 
-              <div className="overflow-hidden border border-black/6 bg-[#fafafa]">
-                <div className="flex aspect-[4/3] items-end justify-between bg-[#fff3dd] p-6">
-                  <span className="text-[72px] font-black leading-none tracking-[-0.08em] text-[#bf7c2d]/25">
+              <div className="overflow-hidden rounded-[30px] border border-black/[0.06] bg-[#fbfbfa] p-2 shadow-[0_12px_35px_rgba(23,23,23,0.025)]">
+                <div className="flex aspect-[4/3] items-end justify-between rounded-[24px] bg-[#fff3dd] p-6">
+                  <span className="text-[72px] font-black leading-none tracking-[-0.08em] text-[#bf7c2d]/22">
                     02
                   </span>
 
-                  <span className="pb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-black/30">
+                  <span className="pb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-black/28">
                     Coming soon
                   </span>
                 </div>
 
-                <div className="p-5 sm:p-6">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-black/30">
+                <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-black/28">
                     Birthday
                   </p>
 
-                  <h3 className="mt-1.5 text-xl font-black tracking-[-0.03em] text-black/60">
+                  <h3 className="mt-1.5 text-xl font-black tracking-[-0.035em] text-black/58">
                     Birthday Story
                   </h3>
 
-                  <p className="mt-3 text-sm text-black/35">
+                  <p className="mt-3 text-sm text-black/32">
                     Sắp ra mắt
                   </p>
                 </div>
               </div>
 
-              <div className="overflow-hidden border border-black/6 bg-[#fafafa]">
-                <div className="flex aspect-[4/3] items-end justify-between bg-[#f1edff] p-6">
-                  <span className="text-[72px] font-black leading-none tracking-[-0.08em] text-[#745cb9]/22">
+              <div className="overflow-hidden rounded-[30px] border border-black/[0.06] bg-[#fbfbfa] p-2 shadow-[0_12px_35px_rgba(23,23,23,0.025)]">
+                <div className="flex aspect-[4/3] items-end justify-between rounded-[24px] bg-[#f1edff] p-6">
+                  <span className="text-[72px] font-black leading-none tracking-[-0.08em] text-[#745cb9]/20">
                     03
                   </span>
 
-                  <span className="pb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-black/30">
+                  <span className="pb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-black/28">
                     Coming soon
                   </span>
                 </div>
 
-                <div className="p-5 sm:p-6">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-black/30">
+                <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-black/28">
                     Anniversary
                   </p>
 
-                  <h3 className="mt-1.5 text-xl font-black tracking-[-0.03em] text-black/60">
+                  <h3 className="mt-1.5 text-xl font-black tracking-[-0.035em] text-black/58">
                     Anniversary Story
                   </h3>
 
-                  <p className="mt-3 text-sm text-black/35">
+                  <p className="mt-3 text-sm text-black/32">
                     Sắp ra mắt
                   </p>
                 </div>

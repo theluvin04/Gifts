@@ -1,30 +1,26 @@
-DEARLY ADMIN + BRAND UPDATE
+DEARLY HOME + FIREBASE FIX
 
-THAY / THÊM ĐÚNG CẤU TRÚC:
+THAY 3 FILE:
+1. src/components/Homepage.tsx
+2. src/services/adminService.ts
+3. firestore.rules
 
-src/components/Homepage.tsx                  -> THAY
-src/components/CheckoutPage.tsx              -> THAY
-src/components/admin/AdminOrdersPage.tsx     -> THAY
-src/services/adminService.ts                  -> THAY
-src/services/giftService.ts                   -> THAY
-firestore.rules                               -> THAY + PUBLISH
+QUAN TRỌNG:
+Sau khi thay firestore.rules trong project, vào Firebase Console →
+Cloud Firestore → chọn đúng database app đang dùng →
+ai-studio-romanticlovesurp-1b89a4b9-dcb7-435b-ad96-d70becbbc72c →
+Security / Rules → paste file firestore.rules này → Publish.
 
-src/config/brand.ts                           -> THÊM FILE MỚI
-src/services/templateService.ts               -> THÊM FILE MỚI
-public/images/dearly-logo.png                 -> THÊM FILE MỚI
+Fix Firebase trong bundle:
+- Template config lỗi quyền sẽ fallback về giá mặc định thay vì làm toàn Admin chết.
+- /templates/love-01 được public GET cho storefront.
+- Chỉ Admin mới được sửa template.
+- Giữ quyền Orders/Gifts và Admin Gmail/UID.
 
-SAU KHI COPY:
-1. Publish firestore.rules vào đúng Firestore database app đang dùng.
-2. Vào /admin -> Templates hoặc Khuyến mãi -> Save 1 lần.
-   Việc này tạo templates/love-01 trong Firestore.
-3. Các checkout MỚI sẽ lấy giá từ templates/love-01.
-   Đơn đã tạo trước đó giữ nguyên giá cũ để không đổi tiền giữa chừng.
-4. Tab Khách hàng được tổng hợp trực tiếp từ thông tin customer trong các đơn gifts.
-
-ADMIN TÁCH FILE MỚI:
-src/components/admin/AdminDashboardTab.tsx
-src/components/admin/AdminOrdersTab.tsx
-src/components/admin/AdminTemplatesTab.tsx
-src/components/admin/AdminCustomersTab.tsx
-src/components/admin/AdminSettingsTab.tsx
-src/components/admin/adminUi.ts
+Homepage:
+- Bo card 30px.
+- Khối ảnh bên trong bo 24px.
+- Shadow nhẹ.
+- Ảnh Love Story lớn hơn.
+- Giá / giá gạch / giảm giá rõ hơn.
+- Coming soon đồng bộ bo góc.
