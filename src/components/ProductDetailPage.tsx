@@ -128,7 +128,7 @@ export const ProductDetailPage: React.FC<
 
                   <div className="flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-rose-400">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    Interactive preview
+                    Xem trước tương tác
                   </div>
                 </div>
 
@@ -177,15 +177,15 @@ export const ProductDetailPage: React.FC<
                 {[
                   {
                     image: '/images/gifts/gift-1.png',
-                    label: 'Memories',
+                    label: 'Kỷ niệm',
                   },
                   {
                     image: '/images/gifts/gift-2.png',
-                    label: 'Music',
+                    label: 'Âm nhạc',
                   },
                   {
                     image: '/images/gifts/gift-3.png',
-                    label: 'Letter',
+                    label: 'Bức thư',
                   },
                 ].map((item) => (
                   <div
@@ -224,11 +224,11 @@ export const ProductDetailPage: React.FC<
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-rose-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-rose-500">
-                  Love
+                  Tình yêu
                 </span>
 
                 <span className="rounded-full border border-rose-100 bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                  Interactive website gift
+                  Món quà website tương tác
                 </span>
               </div>
 
@@ -243,9 +243,9 @@ export const ProductDetailPage: React.FC<
               <div className="mt-7 flex flex-wrap gap-2">
                 {[
                   'YES / NO',
-                  'Photo memories',
-                  'Playlist',
-                  'Love letter',
+                  'Album kỷ niệm',
+                  'Playlist nhạc',
+                  'Bức thư tình',
                 ].map((tag) => (
                   <span
                     key={tag}
@@ -312,7 +312,7 @@ export const ProductDetailPage: React.FC<
           <div className="mx-auto max-w-7xl px-5 sm:px-8">
             <div className="mx-auto max-w-2xl text-center">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-rose-400">
-                What's inside
+                Bên trong có gì
               </p>
 
               <h2 className="mt-3 text-3xl font-bold tracking-[-0.045em] text-slate-900 sm:text-4xl">
@@ -374,7 +374,7 @@ export const ProductDetailPage: React.FC<
           <div className="mx-auto grid max-w-7xl gap-10 px-5 sm:px-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-center lg:gap-16">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-rose-400">
-                Experience flow
+                Hành trình trải nghiệm
               </p>
 
               <h2 className="mt-3 text-3xl font-bold tracking-[-0.045em] text-slate-900 sm:text-4xl">
@@ -498,7 +498,7 @@ export const ProductDetailPage: React.FC<
           </button>
 
           <span>
-            Love Story 01 · Interactive digital gift
+            Love Story 01 · Món quà website tương tác
           </span>
         </div>
       </footer>

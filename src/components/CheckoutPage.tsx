@@ -394,7 +394,7 @@ export const CheckoutPage: React.FC<
               </div>
 
               <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">
-                Payment confirmed
+                Thanh toán thành công
               </p>
 
               <h1 className="mt-2 text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
@@ -498,7 +498,7 @@ export const CheckoutPage: React.FC<
 
             <div className="text-center">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-400">
-                Bank transfer
+                Chuyển khoản ngân hàng
               </p>
 
               <p className="text-sm font-bold text-slate-900">
@@ -512,7 +512,7 @@ export const CheckoutPage: React.FC<
               className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-bold text-white"
             >
               <Eye className="h-3.5 w-3.5" />
-              Preview
+              Xem trước
             </button>
           </div>
         </header>

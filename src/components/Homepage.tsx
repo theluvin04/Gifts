@@ -68,7 +68,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               href="#templates"
               className="transition hover:text-rose-500"
             >
-              Templates
+              Mẫu quà
             </a>
 
             <a
@@ -84,7 +84,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             onClick={onOpenLoveTemplate}
             className="rounded-full bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-rose-500 sm:px-5 sm:text-sm"
           >
-            Xem template
+            Xem mẫu quà
           </button>
         </div>
       </header>
@@ -111,7 +111,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 <Sparkles className="h-3.5 w-3.5" />
 
                 <span>
-                  Digital gifts, made personal
+                  Món quà kỷ niệm mang đậm dấu ấn riêng
                 </span>
               </motion.div>
 
@@ -325,7 +325,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div className="mb-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-rose-400">
-                  Templates
+                  Mẫu quà tặng
                 </p>
 
                 <h2 className="text-3xl font-bold tracking-[-0.04em] text-slate-900 sm:text-4xl">
@@ -352,7 +352,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               >
                 <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-[#fdebf2] p-8">
                   <div className="absolute right-4 top-4 z-10 rounded-full bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-rose-500 shadow-sm">
-                    Available
+                    Có sẵn
                   </div>
 
                   <img
@@ -366,7 +366,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-rose-400">
-                        Love
+                        Tình yêu
                       </p>
 
                       <h3 className="mt-1.5 text-xl font-bold tracking-[-0.03em] text-slate-900">
@@ -397,7 +397,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
                 <div className="p-5 opacity-60 sm:p-6">
                   <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-slate-400">
-                    Birthday
+                    Sinh nhật
                   </p>
 
                   <h3 className="mt-1.5 text-xl font-bold tracking-[-0.03em] text-slate-700">
@@ -420,7 +420,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
                 <div className="p-5 opacity-60 sm:p-6">
                   <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-slate-400">
-                    Anniversary
+                    Kỷ niệm
                   </p>
 
                   <h3 className="mt-1.5 text-xl font-bold tracking-[-0.03em] text-slate-700">
@@ -444,7 +444,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div className="mx-auto max-w-7xl px-5 sm:px-8">
             <div className="mx-auto max-w-2xl text-center">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-rose-400">
-                How it works
+                Cách hoạt động
               </p>
 
               <h2 className="mt-3 text-3xl font-bold tracking-[-0.045em] text-slate-900 sm:text-4xl">
@@ -498,7 +498,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-rose-300">
-                  More than a card
+                  Hơn cả một tấm thiệp
                 </p>
 
                 <h2 className="mt-3 max-w-md text-3xl font-bold tracking-[-0.045em] sm:text-4xl">

@@ -491,7 +491,7 @@ React.FC<
 
           <div className="min-w-0 text-center">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-400">
-              Order detail
+              Chi tiết đơn hàng
             </p>
 
             <p className="truncate font-mono text-xs font-bold text-slate-800 sm:text-sm">
@@ -508,7 +508,7 @@ React.FC<
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">
-              Refresh
+              Làm mới
             </span>
           </button>
         </div>
@@ -641,7 +641,7 @@ React.FC<
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-400">
-                Admin actions
+                Thao tác quản trị
               </p>
 
               <h2 className="mt-1 text-xl font-bold text-slate-900">
