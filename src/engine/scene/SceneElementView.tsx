@@ -628,13 +628,7 @@ React.FC<
       : element.animation;
 
   return (
-    <AnimatedElement
-      replayKey={
-        `${element.id}-${animationVersion}`
-      }
-      animation={
-        outerAnimation
-      }
+    <div
       style={
         wrapperStyle
       }
@@ -645,46 +639,63 @@ React.FC<
           '',
       ].join(' ')}
     >
-      <div
-        role={
-          clickable
-            ? 'button'
-            : undefined
+      <AnimatedElement
+        replayKey={
+          `${element.id}-${animationVersion}`
         }
-        tabIndex={
-          clickable
-            ? 0
-            : undefined
+        animation={
+          outerAnimation
         }
-        aria-label={
-          element.ariaLabel
-        }
-        onClick={
-          clickable
-            ? onClick
-            : undefined
-        }
-        onKeyDown={
-          clickable
-            ? (
-                event
-              ) => {
-                if (
-                  event.key ===
-                    'Enter' ||
-                  event.key ===
-                    ' '
-                ) {
-                  event.preventDefault();
-                  onClick();
-                }
-              }
-            : undefined
-        }
-        className="h-full w-full"
+        style={{
+          width:
+            '100%',
+          height:
+            '100%',
+          transformOrigin:
+            'center center',
+        }}
       >
-        {renderContent()}
-      </div>
-    </AnimatedElement>
+        <div
+          role={
+            clickable
+              ? 'button'
+              : undefined
+          }
+          tabIndex={
+            clickable
+              ? 0
+              : undefined
+          }
+          aria-label={
+            element.ariaLabel
+          }
+          onClick={
+            clickable
+              ? onClick
+              : undefined
+          }
+          onKeyDown={
+            clickable
+              ? (
+                  event
+                ) => {
+                  if (
+                    event.key ===
+                      'Enter' ||
+                    event.key ===
+                      ' '
+                  ) {
+                    event.preventDefault();
+                    onClick();
+                  }
+                }
+              : undefined
+          }
+          className="h-full w-full"
+        >
+          {renderContent()}
+        </div>
+      </AnimatedElement>
+    </div>
   );
 };

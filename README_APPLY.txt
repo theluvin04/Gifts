@@ -1,40 +1,57 @@
-V7 STEP 3 — FIX HIỆU ỨNG KHÔNG CHẠY TRONG CANVAS
+V7 STEP 6 — LÀM RÕ LOGIC TEMPLATE + CHỌN TEMPLATE ỔN ĐỊNH
 
-CHỈ SỬA 1 FILE:
-src/components/admin/visual-editor/EditorCanvas.tsx
+CHỈ SỬA 2 FILE.
 
-LINE COUNT:
-1898 -> 1911 (+13)
+LOGIC SAU KHI SỬA
 
-NGUYÊN NHÂN
-Canvas editor trước đây chỉ tự xử lý:
-- Xoay thuận liên tục
-- Xoay ngược liên tục
+1. FIRESTORE = DANH SÁCH TEMPLATE ADMIN
+Admin dropdown đọc collection:
+templates/{templateId}
 
-Các hiệu ứng khác như:
-- Quét từ dưới lên
-- Quét từ trái sang
-- Zic-zac
-- Nảy vào
-- Lật vào
-- Mờ → rõ
-- Rung
-- Nhịp thở
-không hề đi qua AnimatedElement nên chọn xong không nhìn thấy gì.
+Ví dụ:
+templates/love-01
+templates/birthday-01
+templates/anniversary-01
 
-FIX
-- EditorCanvas dùng cùng AnimatedElement với runtime Preview.
-- Khi đổi preset / duration / delay / easing, key đổi -> animation replay ngay.
-- Typewriter / hiện từng từ / từng dòng vẫn dùng AnimatedTextContent riêng, tránh chạy animation 2 lần.
-- Bỏ CSS spin riêng của editor, tất cả dùng chung một animation engine.
+Nếu Firestore chỉ có love-01:
+dropdown chỉ có 1 lựa chọn.
+Không có template bí mật nào khác để chọn.
 
-TEST
-1. Chọn ảnh.
-2. Hiệu ứng -> Quét từ dưới lên.
-3. Đổi dropdown -> phải thấy animation chạy ngay trên canvas.
-4. Đổi Thời lượng 520 -> 1500 -> phải replay chậm hơn.
-5. Thử Zic-zac từ trái.
-6. Thử Nảy vào.
-7. Với chữ thử Đánh chữ từng ký tự.
+2. URL = TEMPLATE ĐANG CHỈNH
+Ví dụ:
+ /admin/templates?template=love-01
+ /admin/templates?template=birthday-01
 
-Không sửa layer/template/preview ở step này.
+Khi:
+- chọn dropdown
+- tạo template
+- xóa template
+URL tự cập nhật.
+
+Refresh trang vẫn quay lại đúng template.
+Back/Forward cũng đổi template.
+
+3. VISUAL EDITOR REMOUNT THEO TEMPLATE ID
+AdminVisualTemplateEditor có:
+key={template.id}
+
+Khi đổi love-01 -> birthday-01:
+editor cũ bị unmount hoàn toàn.
+Editor mới mount với scene/config của birthday-01.
+Không giữ selection/scene state của template trước.
+
+4. UI NÓI RÕ ĐANG CHỈNH CÁI GÌ
+Trên Bố cục sẽ hiện:
+Đang chỉnh
+[Tên template] [template-id] [Chưa lưu / Đã đồng bộ]
+
+5. NẾU CHỈ CÓ 1 TEMPLATE
+UI hiện:
+“Firestore hiện chỉ có 1 template. Bấm + Sản phẩm để tạo template thứ 2...”
+
+LƯU Ý QUAN TRỌNG
+src/templates/registry.ts hiện chỉ đăng ký module public love-01.
+Đây là hệ PUBLIC RUNTIME, khác với danh sách template Admin trong Firestore.
+
+Bước này chỉ sửa logic CHỌN / NHẬN DIỆN template trong Admin.
+Chưa generic hóa public runtime cho template mới.

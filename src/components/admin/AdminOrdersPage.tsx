@@ -71,6 +71,59 @@ const getInitialTab =
       : 'orders';
   };
 
+const getTemplateIdFromUrl =
+  () => {
+    if (
+      window.location
+        .pathname !==
+      '/admin/templates'
+    ) {
+      return '';
+    }
+
+    return new URLSearchParams(
+      window.location
+        .search
+    ).get(
+      'template'
+    ) || '';
+  };
+
+const replaceTemplateUrl =
+  (
+    templateId:
+      string
+  ) => {
+    const url =
+      new URL(
+        window.location
+          .href
+      );
+
+    url.pathname =
+      '/admin/templates';
+
+    if (
+      templateId
+    ) {
+      url.searchParams.set(
+        'template',
+        templateId
+      );
+    } else {
+      url.searchParams.delete(
+        'template'
+      );
+    }
+
+    window.history
+      .replaceState(
+        {},
+        '',
+        `${url.pathname}${url.search}`
+      );
+  };
+
 const getAuthErrorMessage = (
   error: any
 ) => {
@@ -283,7 +336,19 @@ React.FC<Props> = ({
           normalizedTemplates
         );
 
+        const requestedTemplateId =
+          getTemplateIdFromUrl();
+
         const preferred =
+          (
+            requestedTemplateId
+              ? normalizedTemplates.find(
+                  (item) =>
+                    item.id ===
+                    requestedTemplateId
+                )
+              : null
+          ) ||
           normalizedTemplates.find(
             (item) =>
               item.id ===
@@ -299,6 +364,16 @@ React.FC<Props> = ({
         setTemplateDraft(
           preferred
         );
+
+        if (
+          window.location
+            .pathname ===
+          '/admin/templates'
+        ) {
+          replaceTemplateUrl(
+            preferred.id
+          );
+        }
 
         setIsTemplateDirty(
           false
@@ -355,10 +430,47 @@ React.FC<Props> = ({
 
   useEffect(() => {
     const onPopState =
-      () =>
+      () => {
+        const nextTab =
+          getInitialTab();
+
         setTab(
-          getInitialTab()
+          nextTab
         );
+
+        if (
+          nextTab !==
+          'templates'
+        ) {
+          return;
+        }
+
+        const requestedId =
+          getTemplateIdFromUrl();
+
+        const nextTemplate =
+          templateCatalog.find(
+            (item) =>
+              item.id ===
+              requestedId
+          );
+
+        if (
+          nextTemplate
+        ) {
+          setTemplateDraft(
+            nextTemplate
+          );
+
+          setIsTemplateDirty(
+            false
+          );
+
+          setTemplateSaved(
+            false
+          );
+        }
+      };
 
     window.addEventListener(
       'popstate',
@@ -370,7 +482,9 @@ React.FC<Props> = ({
         'popstate',
         onPopState
       );
-  }, []);
+  }, [
+    templateCatalog,
+  ]);
 
   useEffect(() => {
     const handleBeforeUnload = (
@@ -426,12 +540,17 @@ React.FC<Props> = ({
     const path =
       next ===
       'templates'
-        ? '/admin/templates'
+        ? `/admin/templates?template=${encodeURIComponent(
+            templateDraft.id
+          )}`
         : '/admin/orders';
 
+    const currentPath =
+      `${window.location.pathname}${window.location.search}`;
+
     if (
-      window.location
-        .pathname !== path
+      currentPath !==
+      path
     ) {
       window.history
         .pushState(
@@ -655,6 +774,27 @@ React.FC<Props> = ({
         false
       );
 
+      const url =
+        new URL(
+          window.location
+            .href
+        );
+
+      url.pathname =
+        '/admin/templates';
+
+      url.searchParams.set(
+        'template',
+        next.id
+      );
+
+      window.history
+        .pushState(
+          {},
+          '',
+          `${url.pathname}${url.search}`
+        );
+
       window.scrollTo({
         top: 0,
         behavior:
@@ -717,6 +857,10 @@ React.FC<Props> = ({
 
         setTemplateDraft(
           created
+        );
+
+        replaceTemplateUrl(
+          created.id
         );
 
         setIsTemplateDirty(
@@ -797,6 +941,10 @@ React.FC<Props> = ({
 
         setTemplateDraft(
           next
+        );
+
+        replaceTemplateUrl(
+          next.id
         );
 
         setIsTemplateDirty(

@@ -422,18 +422,21 @@ React.FC<{
         />
 
         <NumberInput
-          label="Chuyển cảnh"
+          label="Thời gian chuyển cảnh"
           value={
-            scene.transition
-              ?.durationMs ||
-            420
+            (
+              scene.transition
+                ?.durationMs ||
+              420
+            ) /
+            1000
           }
           min={0}
-          max={5000}
-          step={20}
-          suffix="ms"
+          max={5}
+          step={0.1}
+          suffix="giây"
           onChange={(
-            durationMs
+            durationSeconds
           ) =>
             onChange({
               transition: {
@@ -442,7 +445,11 @@ React.FC<{
                   scene.transition
                     ?.preset ||
                   'fade',
-                durationMs,
+                durationMs:
+                  Math.round(
+                    durationSeconds *
+                    1000
+                  ),
                 easing:
                   scene.transition
                     ?.easing ||
@@ -1379,17 +1386,20 @@ React.FC<{
           <NumberInput
             label="Độ trễ"
             value={
-              element
-                .animation
-                ?.delayMs ||
-              0
+              (
+                element
+                  .animation
+                  ?.delayMs ||
+                0
+              ) /
+              1000
             }
             min={0}
-            max={10000}
-            step={50}
-            suffix="ms"
+            max={10}
+            step={0.1}
+            suffix="giây"
             onChange={(
-              delayMs
+              delaySeconds
             ) =>
               onChange(
                 (current) => ({
@@ -1402,7 +1412,11 @@ React.FC<{
                         .animation
                         ?.preset ||
                       'fade',
-                    delayMs,
+                    delayMs:
+                      Math.round(
+                        delaySeconds *
+                        1000
+                      ),
                   },
                 } as
                   SceneElement)
@@ -1433,30 +1447,33 @@ React.FC<{
                     : 'Thời lượng'
             }
             value={
-              element
-                .animation
-                ?.durationMs ||
               (
-                element.animation
-                  ?.preset ===
-                  'spin' ||
-                element.animation
-                  ?.preset ===
-                  'spin-reverse'
-                  ? 4000
-                  : element.animation
-                        ?.preset ===
-                        'typewriter'
-                    ? 1800
+                element
+                  .animation
+                  ?.durationMs ||
+                (
+                  element.animation
+                    ?.preset ===
+                    'spin' ||
+                  element.animation
+                    ?.preset ===
+                    'spin-reverse'
+                    ? 4000
                     : element.animation
                           ?.preset ===
-                          'word-reveal' ||
-                      element.animation
-                          ?.preset ===
-                          'line-reveal'
-                      ? 1000
-                      : 500
-              )
+                          'typewriter'
+                      ? 1800
+                      : element.animation
+                            ?.preset ===
+                            'word-reveal' ||
+                        element.animation
+                            ?.preset ===
+                            'line-reveal'
+                        ? 1000
+                        : 500
+                )
+              ) /
+              1000
             }
             min={
               element.animation
@@ -1465,14 +1482,14 @@ React.FC<{
               element.animation
                 ?.preset ===
                 'spin-reverse'
-                ? 300
+                ? 0.3
                 : 0
             }
-            max={20000}
-            step={50}
-            suffix="ms"
+            max={20}
+            step={0.1}
+            suffix="giây"
             onChange={(
-              durationMs
+              durationSeconds
             ) =>
               onChange(
                 (current) => ({
@@ -1485,7 +1502,11 @@ React.FC<{
                         .animation
                         ?.preset ||
                       'fade',
-                    durationMs,
+                    durationMs:
+                      Math.round(
+                        durationSeconds *
+                        1000
+                      ),
                   },
                 } as
                   SceneElement)

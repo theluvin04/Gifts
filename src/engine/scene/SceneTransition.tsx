@@ -214,7 +214,7 @@ React.FC<
   return (
     <AnimatePresence
       mode={mode}
-      initial={false}
+      initial={true}
     >
       <motion.div
         key={sceneKey}

@@ -400,9 +400,16 @@ React.FC<Props> = ({
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1">
-              <p className="mb-1 text-[9px] font-black uppercase tracking-[0.12em] text-black/28">
-                Sản phẩm
-              </p>
+              <div className="mb-1 flex items-center justify-between gap-2 sm:max-w-[360px]">
+                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-black/28">
+                  Template đang chỉnh
+                </p>
+
+                <span className="text-[8px] font-bold text-black/25">
+                  {sortedTemplates.length}{' '}
+                  template
+                </span>
+              </div>
 
               <select
                 value={
@@ -441,6 +448,13 @@ React.FC<Props> = ({
                   )
                 )}
               </select>
+
+              {sortedTemplates.length <=
+                1 && (
+                <p className="mt-1.5 max-w-[360px] text-[8px] leading-4 text-amber-600">
+                  Firestore hiện chỉ có 1 template. Bấm “+ Sản phẩm” để tạo template thứ 2 rồi mới có thể chuyển qua lại.
+                </p>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5 sm:self-end">
@@ -598,7 +612,30 @@ React.FC<Props> = ({
       {section ===
         'visual' ? (
         <div className="mt-3 min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-2 rounded-[10px] border border-[#cf5068]/12 bg-[#fff8fa] px-3 py-2">
+            <span className="text-[8px] font-black uppercase tracking-[0.1em] text-black/30">
+              Đang chỉnh
+            </span>
+
+            <span className="text-[10px] font-black text-[#a73551]">
+              {template.name}
+            </span>
+
+            <code className="rounded bg-white px-1.5 py-1 text-[8px] font-bold text-black/35">
+              {template.id}
+            </code>
+
+            <span className="ml-auto text-[8px] font-bold text-black/30">
+              {dirty
+                ? '● Chưa lưu'
+                : '✓ Đã đồng bộ'}
+            </span>
+          </div>
+
           <AdminVisualTemplateEditor
+            key={
+              template.id
+            }
             config={
               template.visualEditor ||
               DEFAULT_LOVE_VISUAL_EDITOR_CONFIG
