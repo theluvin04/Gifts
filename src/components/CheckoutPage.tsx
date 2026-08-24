@@ -25,18 +25,25 @@ import { LoveConfig } from '../types';
 
 import {
   CheckoutCustomer,
-  LOVE_01_PRICE,
-  createCheckoutIdentity,
   fetchCheckoutGiftState,
-  getCurrentCheckoutPricing,
-  submitBankTransferCheckout,
 } from '../services/giftService';
+
+import {
+  createBankTransferOrder,
+  getCachedCheckoutPricing,
+  refreshCheckoutPricing,
+} from '../services/checkoutService';
+
+import {
+  upsertPublicOrderLookup,
+} from '../services/orderLookupService';
 
 import {
   BANK_TRANSFER_CONFIG,
   buildGiftLinkQrUrl,
   buildPaymentReference,
   buildVietQrImageUrl,
+  VietQrTemplate,
 } from '../config/payment';
 
 interface CheckoutPageProps {
@@ -103,9 +110,13 @@ export const CheckoutPage: React.FC<
     useState('');
 
   const [checkoutPrice, setCheckoutPrice] =
-    useState(LOVE_01_PRICE);
+    useState(
+      () =>
+        getCachedCheckoutPricing()
+          .price
+    );
 
-  const [isPreparing, setIsPreparing] =
+  const [isRefreshingPrice, setIsRefreshingPrice] =
     useState(true);
 
   const [isCreatingPayment, setIsCreatingPayment] =
@@ -119,6 +130,14 @@ export const CheckoutPage: React.FC<
 
   const [error, setError] =
     useState('');
+
+  const [qrTemplate, setQrTemplate] =
+    useState<VietQrTemplate>(
+      'compact2'
+    );
+
+  const [qrImageFailed, setQrImageFailed] =
+    useState(false);
 
   const [copiedField, setCopiedField] =
     useState<
@@ -137,7 +156,6 @@ export const CheckoutPage: React.FC<
 
     const prepareCheckout =
       async () => {
-        setIsPreparing(true);
         setError('');
 
         try {
@@ -210,24 +228,42 @@ export const CheckoutPage: React.FC<
                 );
               }
 
+              setIsRefreshingPrice(
+                false
+              );
               return;
             }
 
-            // Draft cũ được tạo trước khi khách nhập thông tin.
-            // Không dùng lại làm mã đơn.
             window.sessionStorage.removeItem(
               CHECKOUT_GIFT_ID_KEY
             );
           }
 
-          // Chỉ đọc giá hiện tại.
-          // Chưa tạo document / mã đơn ở bước này.
-          const pricing =
-            await getCurrentCheckoutPricing();
-
-          setCheckoutPrice(
-            pricing.price
+          setIsRefreshingPrice(
+            true
           );
+
+          refreshCheckoutPricing()
+            .then(
+              (pricing) => {
+                setCheckoutPrice(
+                  pricing.price
+                );
+              }
+            )
+            .catch(
+              (priceError) => {
+                console.warn(
+                  'Checkout price refresh:',
+                  priceError
+                );
+              }
+            )
+            .finally(() => {
+              setIsRefreshingPrice(
+                false
+              );
+            });
         } catch (prepareError: any) {
           console.error(
             prepareError
@@ -237,8 +273,10 @@ export const CheckoutPage: React.FC<
             prepareError?.message ||
               'Không thể tải thông tin thanh toán.'
           );
-        } finally {
-          setIsPreparing(false);
+
+          setIsRefreshingPrice(
+            false
+          );
         }
       };
 
@@ -364,16 +402,16 @@ export const CheckoutPage: React.FC<
       setError('');
 
       try {
-        // Chỉ lúc khách bấm tạo QR:
-        // 1) claim mã đơn Dearly####,
-        // 2) sinh token gift random độc lập.
-        const identity =
-          await createCheckoutIdentity();
+        setQrTemplate(
+          'compact2'
+        );
+        setQrImageFailed(
+          false
+        );
 
         const result =
-          await submitBankTransferCheckout(
+          await createBankTransferOrder(
             config,
-            identity,
             {
               fullName:
                 customer.fullName.trim(),
@@ -384,27 +422,53 @@ export const CheckoutPage: React.FC<
             }
           );
 
-        setGiftId(result.id);
+        setGiftId(
+          result.giftId
+        );
         setOrderNumber(
-          identity.orderNumber
+          result.orderNumber
         );
         setOrderCode(
-          identity.orderCode
+          result.orderCode
+        );
+        setCheckoutPrice(
+          result.price
         );
 
         window.sessionStorage.setItem(
           CHECKOUT_GIFT_ID_KEY,
-          result.id
+          result.giftId
         );
 
-        const refreshedState =
-          await fetchCheckoutGiftState(
-            result.id
-          );
-
-        if (refreshedState) {
-          setCheckoutPrice(
-            refreshedState.price
+        try {
+          await upsertPublicOrderLookup({
+            orderCode:
+              result.orderCode,
+            phone:
+              customer.phone.trim(),
+            templateId:
+              'love-01',
+            templateName:
+              'Love Story 01',
+            paymentStatus:
+              'waiting_bank_transfer',
+            status:
+              'draft',
+            price:
+              result.price,
+            currency:
+              result.currency,
+            createdAtMs:
+              Date.now(),
+            updatedAtMs:
+              Date.now(),
+          });
+        } catch (
+          lookupError
+        ) {
+          console.warn(
+            'Public order lookup sync:',
+            lookupError
           );
         }
 
@@ -470,7 +534,7 @@ export const CheckoutPage: React.FC<
       );
 
     return (
-      <div className="min-h-[100svh] bg-[#fffaf8] px-4 py-8 text-[#1d1d1d] sm:py-14">
+      <div className="min-h-[100svh] w-full overflow-x-hidden bg-[#fffaf8] px-3 py-6 text-[#1d1d1d] sm:px-4 sm:py-14">
         <main className="mx-auto w-full max-w-4xl">
           <section className="overflow-hidden rounded-[32px] border border-black/[0.06] bg-white shadow-[0_28px_80px_rgba(60,25,35,0.08)]">
             <div className="border-b border-black/[0.06] px-6 py-8 text-center sm:px-10 sm:py-10">
@@ -604,13 +668,14 @@ export const CheckoutPage: React.FC<
     const qrImageUrl =
       buildVietQrImageUrl(
         orderNumber,
-        checkoutPrice
+        checkoutPrice,
+        qrTemplate
       );
 
     return (
-      <div className="min-h-[100svh] bg-[#fff9fb] text-slate-800">
+      <div className="min-h-[100svh] w-full overflow-x-hidden bg-[#fff9fb] text-slate-800">
         <header className="border-b border-rose-100 bg-white/90 backdrop-blur-xl">
-          <div className="mx-auto flex min-h-[68px] max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-7">
+          <div className="mx-auto grid min-h-[64px] w-full max-w-5xl grid-cols-[44px_minmax(0,1fr)_44px] items-center px-3 py-2 sm:min-h-[68px] sm:grid-cols-[96px_minmax(0,1fr)_96px] sm:px-7 sm:py-3">
             <button
               type="button"
               onClick={onBack}
@@ -632,12 +697,12 @@ export const CheckoutPage: React.FC<
               </p>
             </div>
 
-            <div className="w-16 sm:w-24" />
+            <div />
           </div>
         </header>
 
-        <main className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-7 lg:grid-cols-[390px_1fr]">
-          <section className="rounded-[30px] border border-rose-100 bg-white p-5 shadow-[0_24px_70px_rgba(190,70,110,0.1)]">
+        <main className="mx-auto grid w-full max-w-[900px] gap-5 px-3 py-5 sm:gap-6 sm:px-6 sm:py-8 lg:grid-cols-[370px_minmax(0,1fr)]">
+          <section className="min-w-0 rounded-[24px] border border-rose-100 bg-white p-4 shadow-[0_24px_70px_rgba(190,70,110,0.1)] sm:rounded-[30px] sm:p-5">
             <div className="text-center">
               <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
                 <QrCode className="h-5 w-5" />
@@ -653,11 +718,50 @@ export const CheckoutPage: React.FC<
             </div>
 
             <div className="mt-5 overflow-hidden rounded-[22px] border border-slate-100 bg-white p-2">
-              <img
-                src={qrImageUrl}
-                alt="VietQR Techcombank"
-                className="mx-auto w-full max-w-[320px]"
-              />
+              {!qrImageFailed ? (
+                <img
+                  key={qrImageUrl}
+                  src={qrImageUrl}
+                  alt="VietQR Techcombank"
+                  className="mx-auto w-full max-w-[320px]"
+                  onError={() => {
+                    if (
+                      qrTemplate ===
+                      'compact2'
+                    ) {
+                      setQrTemplate(
+                        'qr_only'
+                      );
+                      return;
+                    }
+
+                    setQrImageFailed(
+                      true
+                    );
+                  }}
+                />
+              ) : (
+                <div className="mx-auto flex min-h-[260px] max-w-[320px] flex-col items-center justify-center rounded-[18px] bg-rose-50 px-5 text-center">
+                  <QrCode className="h-8 w-8 text-rose-400" />
+
+                  <p className="mt-3 text-sm font-bold text-slate-700">
+                    Không tải được ảnh VietQR
+                  </p>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Thông tin chuyển khoản bên phải vẫn chính xác.
+                  </p>
+
+                  <a
+                    href={qrImageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 text-xs font-bold text-rose-500 underline"
+                  >
+                    Mở QR trực tiếp
+                  </a>
+                </div>
+              )}
             </div>
 
             <p className="mt-4 text-center text-3xl font-black tracking-[-0.04em] text-rose-500">
@@ -667,7 +771,7 @@ export const CheckoutPage: React.FC<
             </p>
           </section>
 
-          <section className="space-y-5">
+          <section className="min-w-0 space-y-5">
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
               <div className="flex items-start gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white">
@@ -783,9 +887,9 @@ export const CheckoutPage: React.FC<
   }
 
   return (
-    <div className="min-h-[100svh] bg-[#fff9fb] text-slate-800">
+    <div className="min-h-[100svh] w-full overflow-x-hidden bg-[#fff9fb] text-slate-800">
       <header className="sticky top-0 z-50 border-b border-rose-100 bg-[#fff9fb]/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-4 sm:px-7">
+        <div className="mx-auto grid h-[64px] w-full max-w-7xl grid-cols-[44px_minmax(0,1fr)_44px] items-center px-3 sm:h-[68px] sm:grid-cols-[96px_minmax(0,1fr)_96px] sm:px-7">
           <button
             type="button"
             onClick={onBack}
@@ -807,13 +911,13 @@ export const CheckoutPage: React.FC<
             </p>
           </div>
 
-          <div className="w-16 sm:w-24" />
+          <div />
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-7 sm:px-7 sm:py-10 lg:grid-cols-[1fr_410px] lg:gap-8">
-        <section>
-          <div className="rounded-[28px] border border-rose-100 bg-white p-5 shadow-sm sm:p-7">
+      <main className="mx-auto grid w-full max-w-[1160px] gap-5 px-3 py-5 sm:px-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_390px] lg:gap-8">
+        <section className="min-w-0">
+          <div className="rounded-[24px] border border-rose-100 bg-white p-4 shadow-sm sm:rounded-[28px] sm:p-7">
             <div className="flex items-start gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
                 <UserRound className="h-5 w-5" />
@@ -873,7 +977,7 @@ export const CheckoutPage: React.FC<
             </div>
           </div>
 
-          <div className="mt-5 rounded-[28px] border border-rose-100 bg-white p-5 shadow-sm sm:p-7">
+          <div className="mt-4 rounded-[24px] border border-rose-100 bg-white p-4 shadow-sm sm:mt-5 sm:rounded-[28px] sm:p-7">
             <div className="flex items-start gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white">
                 <CreditCard className="h-5 w-5" />
@@ -885,19 +989,19 @@ export const CheckoutPage: React.FC<
                 </h2>
 
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Hệ thống sẽ tạo VietQR riêng theo mã
-                  gift để đối soát từng đơn.
+                  Hệ thống sẽ tạo VietQR theo mã đơn
+                  Dearly#### để đối soát.
                 </p>
               </div>
             </div>
 
             <div className="mt-5 rounded-[22px] border-2 border-rose-200 bg-rose-50/60 p-4">
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500 text-white">
                   <Landmark className="h-4 w-4" />
                 </span>
 
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-slate-900">
                     {BANK_TRANSFER_CONFIG.bankName}
                   </p>
@@ -920,7 +1024,6 @@ export const CheckoutPage: React.FC<
             <button
               type="button"
               disabled={
-                isPreparing ||
                 isCreatingPayment
               }
               onClick={() =>
@@ -928,15 +1031,10 @@ export const CheckoutPage: React.FC<
               }
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-rose-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-rose-200 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isPreparing ? (
+              {isCreatingPayment ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Đang tải giá...
-                </>
-              ) : isCreatingPayment ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Đang tạo QR...
+                  Đang tạo đơn...
                 </>
               ) : (
                 <>
@@ -959,8 +1057,8 @@ export const CheckoutPage: React.FC<
           </div>
         </section>
 
-        <aside>
-          <div className="sticky top-[92px] overflow-hidden rounded-[28px] border border-rose-100 bg-white shadow-[0_24px_70px_rgba(190,70,110,0.1)]">
+        <aside className="min-w-0">
+          <div className="overflow-hidden rounded-[24px] border border-rose-100 bg-white shadow-[0_24px_70px_rgba(190,70,110,0.1)] sm:rounded-[28px] lg:sticky lg:top-[92px]">
             <div className="bg-[#fff4f8] p-5">
               <div className="flex items-center gap-3">
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-rose-500 shadow-sm">
@@ -1015,6 +1113,12 @@ export const CheckoutPage: React.FC<
                   )}
                 </span>
               </div>
+
+              {isRefreshingPrice && (
+                <p className="mt-1 text-right text-[10px] text-slate-400">
+                  Đang cập nhật giá mới nhất...
+                </p>
+              )}
 
               <div className="mt-5 rounded-2xl bg-slate-50 p-4">
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">

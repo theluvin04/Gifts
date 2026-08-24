@@ -23,9 +23,16 @@ export const buildPaymentReference = (
   return `Dearly${digits}`;
 };
 
+export type VietQrTemplate =
+  | 'compact2'
+  | 'qr_only';
+
 export const buildVietQrImageUrl = (
   orderNumber: string,
-  amount: number
+  amount: number,
+  template:
+    VietQrTemplate =
+      BANK_TRANSFER_CONFIG.template
 ) => {
   const reference =
     buildPaymentReference(
@@ -34,14 +41,15 @@ export const buildVietQrImageUrl = (
 
   const params =
     new URLSearchParams({
-      amount: String(amount),
+      amount: String(
+        Math.round(amount)
+      ),
       addInfo: reference,
     });
 
   const {
     bankId,
     accountNo,
-    template,
   } = BANK_TRANSFER_CONFIG;
 
   return `https://img.vietqr.io/image/${bankId}-${accountNo}-${template}.png?${params.toString()}`;

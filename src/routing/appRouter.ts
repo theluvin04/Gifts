@@ -26,6 +26,12 @@ export type AppLocation =
       templateId: string;
     }
   | {
+      kind: 'cart';
+    }
+  | {
+      kind: 'track-order';
+    }
+  | {
       kind: 'gift';
       giftId: string;
     }
@@ -95,6 +101,22 @@ export const resolveAppLocation = (
   if (path === '/') {
     return {
       kind: 'home',
+    };
+  }
+
+  if (path === '/cart') {
+    return {
+      kind: 'cart',
+    };
+  }
+
+  if (
+    path ===
+    '/track-order'
+  ) {
+    return {
+      kind:
+        'track-order',
     };
   }
 

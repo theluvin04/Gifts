@@ -93,6 +93,58 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    match /orderLookupRecords/{lookupId} {
+      function validPublicLookup() {
+        return request.resource.data.keys().hasOnly([
+            'orderCode',
+            'orderCodeLower',
+            'phoneHash',
+            'templateId',
+            'templateName',
+            'paymentStatus',
+            'status',
+            'price',
+            'currency',
+            'createdAtMs',
+            'updatedAtMs'
+          ])
+          && request.resource.data.orderCode is string
+          && request.resource.data.orderCode.matches('^Dearly[0-9]{4}$')
+          && request.resource.data.orderCodeLower
+            == request.resource.data.orderCode.lower()
+          && request.resource.data.phoneHash is string
+          && request.resource.data.phoneHash.matches('^[a-f0-9]{64}$')
+          && request.resource.data.templateId is string
+          && request.resource.data.templateName is string
+          && request.resource.data.paymentStatus is string
+          && request.resource.data.status is string
+          && request.resource.data.price is number
+          && request.resource.data.price >= 0
+          && request.resource.data.currency == 'VND'
+          && request.resource.data.createdAtMs is number
+          && request.resource.data.updatedAtMs is number;
+      }
+
+      // Public lookup data contains no name, email,
+      // phone number or private gift URL.
+      allow get, list: if true;
+
+      // Customer browser can only create the initial
+      // waiting-payment lookup record.
+      allow create: if isAdmin()
+        || (
+          request.auth != null
+          && validPublicLookup()
+          && request.resource.data.paymentStatus
+            == 'waiting_bank_transfer'
+          && request.resource.data.status == 'draft'
+        );
+
+      // Status changes / deletion are Admin-only.
+      allow update, delete: if isAdmin()
+        && validPublicLookup();
+    }
+
     match /gifts/{giftId} {
       function isOwner() {
         return request.auth != null

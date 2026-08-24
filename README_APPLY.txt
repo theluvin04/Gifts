@@ -1,70 +1,48 @@
-DEARLY — BRAND + NO DEMO + TEMPLATE ARCHITECTURE
+DEARLY — 8 UNIQUE MEMORY PHOTOS
 
-MỤC TIÊU:
-1. Xóa hoàn toàn live demo khỏi Product Detail.
-2. Không còn logo "Gifts" cũ ở Product Detail.
-3. /templates/love-01 và các link demo cũ tự chuyển về /products/love-01.
-4. App.tsx không còn chứa toàn bộ logic riêng của Love Story 01.
-5. Chuẩn bị cấu trúc để thêm template mới mà không phình App.tsx.
+BUNDLE CUMULATIVE MỚI.
 
-THAY FILE:
-- src/App.tsx
-- src/components/ProductDetailPage.tsx
-- src/services/templateService.ts
-- index.html
-- metadata.json
+BỐ CỤC:
 
-THÊM FILE MỚI:
-- src/components/BrandLogo.tsx
-- src/routing/appRouter.ts
-- src/templates/types.ts
-- src/templates/registry.ts
-- src/templates/love-01/index.tsx
-- src/templates/love-01/LoveStoryExperience.tsx
+4 ẢNH CHÍNH
+- Ảnh 1: trái trên
+- Ảnh 2: trái dưới
+- Ảnh 3: phải trên
+- Ảnh 4: phải dưới
 
-CẤU TRÚC MỚI:
+4 ảnh chính có caption khách tự sửa.
 
-src/
-├── App.tsx
-├── hooks/
-│   ├── useAppNavigation.ts
-│   ├── useSharedGift.ts
-│   └── useTemplateDrafts.ts
-├── routing/
-│   └── appRouter.ts
-└── templates/
-    ├── types.ts
-    ├── registry.ts
-    └── love-01/
-        ├── index.tsx
-        └── LoveStoryExperience.tsx
+4 ẢNH COLLAGE RIÊNG
+- Ảnh 5: strip trái / trên
+- Ảnh 6: strip trái / dưới
+- Ảnh 7: strip phải / trên
+- Ảnh 8: strip phải / dưới
 
-CÁCH THÊM TEMPLATE MỚI SAU NÀY:
+Ảnh 5-8 không caption.
 
-src/templates/birthday-01/
-├── index.tsx
-├── BirthdayProductPage.tsx
-├── BirthdayEditorPage.tsx
-├── BirthdayCheckoutPage.tsx
-└── BirthdayExperience.tsx
+FIX TRÙNG ẢNH:
+Code cũ dùng:
+  safePhotos[i % safePhotos.length]
 
-Sau đó chỉ đăng ký module trong:
-src/templates/registry.ts
+nên bắt buộc lặp ảnh.
 
-App.tsx KHÔNG cần nhét thêm proposal/gift/music/letter route của template mới.
+Code mới:
+- chỉ lấy index 4,5,6,7 cho collage
+- không modulo
+- không quay vòng
+- thiếu ảnh thì placeholder ♡
+- tuyệt đối không lấy ảnh 1-4 chèn lại vào giữa
 
-LƯU Ý:
-- Không sửa Firebase config.
-- Không sửa Firestore rules.
-- Không sửa payment/order code.
-- Không sửa Admin auth.
-- Gift đã thanh toán vẫn mở bằng /gift/<random-token>.
-- Không còn public live demo từ Product Detail.
+FORM KHÁCH:
+Ảnh kỷ niệm chia thành:
+1. 4 ảnh chính
+2. 4 ảnh phụ cho collage giữa
 
-THÊM FILE MỚI:
-- src/hooks/useAppNavigation.ts
-- src/hooks/useSharedGift.ts
-- src/hooks/useTemplateDrafts.ts
+Draft cũ có 5 ảnh vẫn mở đủ 8 slot.
+Khi upload ảnh 6/7/8 config tự mở rộng lên 8.
 
-App.tsx giờ chỉ làm nhiệm vụ điều phối page/module.
-Routing, draft local và load gift đã được tách ra hook riêng.
+CHỈ THAY:
+- src/components/CreateLovePage.tsx
+- src/components/gifts/PolaroidGallery.tsx
+
+Không cần sửa Firebase / Admin / Checkout.

@@ -23,6 +23,11 @@ import {
 } from './giftService';
 
 import {
+  deletePublicOrderLookupFromGift,
+  syncPublicOrderLookupFromGift,
+} from './orderLookupService';
+
+import {
   DEFAULT_LOVE_TEMPLATE_CONFIG,
   TemplateConfig,
   normalizeTemplateConfig,
@@ -205,6 +210,59 @@ const normalizeOrder = (
   };
 };
 
+const safeSyncPublicLookup =
+  async (
+    order:
+      AdminOrderRecord
+  ) => {
+    try {
+      await syncPublicOrderLookupFromGift(
+        order
+      );
+    } catch (error) {
+      console.warn(
+        'Public order lookup sync failed:',
+        order.id,
+        error
+      );
+    }
+  };
+
+const syncPublicLookupByGiftId =
+  async (
+    giftId: string
+  ) => {
+    try {
+      const snapshot =
+        await getDoc(
+          doc(
+            db,
+            'gifts',
+            giftId
+          )
+        );
+
+      if (
+        !snapshot.exists()
+      ) {
+        return;
+      }
+
+      await safeSyncPublicLookup(
+        normalizeOrder(
+          snapshot.id,
+          snapshot.data() as SavedGiftDocument
+        )
+      );
+    } catch (error) {
+      console.warn(
+        'Public order lookup refresh failed:',
+        giftId,
+        error
+      );
+    }
+  };
+
 const assertAdminAccess =
   async () => {
     const session =
@@ -242,11 +300,22 @@ export const listAdminOrders =
           )
       );
 
-    return orders.sort(
-      (left, right) =>
-        right.createdAtMs -
-        left.createdAtMs
+    const sorted =
+      orders.sort(
+        (left, right) =>
+          right.createdAtMs -
+          left.createdAtMs
+      );
+
+    // Backfill lookup cho đơn cũ.
+    // Không chặn giao diện Admin.
+    void Promise.allSettled(
+      sorted.map(
+        safeSyncPublicLookup
+      )
     );
+
+    return sorted;
   };
 
 export const getAdminOrderById =
@@ -270,10 +339,17 @@ export const getAdminOrderById =
       return null;
     }
 
-    return normalizeOrder(
-      snapshot.id,
-      snapshot.data() as SavedGiftDocument
+    const order =
+      normalizeOrder(
+        snapshot.id,
+        snapshot.data() as SavedGiftDocument
+      );
+
+    void safeSyncPublicLookup(
+      order
     );
+
+    return order;
   };
 
 export const markAdminOrderPaid =
@@ -295,6 +371,10 @@ export const markAdminOrderPaid =
         paidAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       }
+    );
+
+    await syncPublicLookupByGiftId(
+      giftId
     );
   };
 
@@ -324,6 +404,10 @@ export const confirmAdminBankPayment =
         updatedAt: now,
       }
     );
+
+    await syncPublicLookupByGiftId(
+      giftId
+    );
   };
 
 export const setAdminGiftPublished =
@@ -352,6 +436,10 @@ export const setAdminGiftPublished =
         updatedAt: serverTimestamp(),
       }
     );
+
+    await syncPublicLookupByGiftId(
+      giftId
+    );
   };
 
 export const deleteAdminOrder =
@@ -360,12 +448,36 @@ export const deleteAdminOrder =
   ) => {
     await assertAdminAccess();
 
-    await deleteDoc(
+    const giftRef =
       doc(
         db,
         'gifts',
         giftId
-      )
+      );
+
+    const snapshot =
+      await getDoc(
+        giftRef
+      );
+
+    if (
+      snapshot.exists()
+    ) {
+      try {
+        await deletePublicOrderLookupFromGift(
+          snapshot.data() as SavedGiftDocument
+        );
+      } catch (error) {
+        console.warn(
+          'Public order lookup delete failed:',
+          giftId,
+          error
+        );
+      }
+    }
+
+    await deleteDoc(
+      giftRef
     );
   };
 

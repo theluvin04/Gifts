@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/cart",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/track-order",
+      "destination": "/index.html"
+    },
+    {
       "source": "/templates/:path*",
       "destination": "/index.html"
     },

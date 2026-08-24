@@ -1,3 +1,7 @@
+import type {
+  TemplateDesignConfig,
+} from '../templates/design';
+
 export interface PhotoMemory {
   id: string;
   url: string;
@@ -5,6 +9,13 @@ export interface PhotoMemory {
   date?: string;
   rotation?: number;
   location?: string;
+}
+
+export interface MemoryDisplayCaptions {
+  leftTop: string;
+  leftBottom: string;
+  rightTop: string;
+  rightBottom: string;
 }
 
 export interface SongTrack {
@@ -18,17 +29,42 @@ export interface SongTrack {
 }
 
 export interface LoveConfig {
+  /**
+   * Snapshot style của template tại thời điểm checkout.
+   * Khách không chỉnh field này.
+   */
+  design?: TemplateDesignConfig;
+
+  /**
+   * ID asset khách đã chọn trong các slot Admin cho phép.
+   */
+  assetSelections?: Record<
+    string,
+    string
+  >;
+
+  /**
+   * URL asset đã được snapshot ở checkout.
+   * Gift đã bán không phụ thuộc template gốc sau này.
+   */
+  resolvedAssets?: Record<
+    string,
+    string
+  >;
+
   couple: {
     senderName: string;
     receiverName: string;
     anniversaryDate?: string;
     nickname?: string;
   };
+
   intro: {
     title: string;
     subtitle: string;
     heartLabel: string;
   };
+
   proposal: {
     question: string;
     yesBtnText: string;
@@ -43,17 +79,30 @@ export interface LoveConfig {
     successSubheading: string;
     continueBtnText: string;
   };
+
   gifts: {
     headerTitle: string;
     headerSubtitle: string;
+
     gift1: {
       id: string;
       title: string;
       tag: string;
       desc: string;
       icon: string;
+
+      /**
+       * 4 dòng chữ thật sự hiển thị
+       * dưới 4 Polaroid lớn bên ngoài.
+       * Admin đặt mặc định/style,
+       * khách được sửa nội dung.
+       */
+      displayCaptions?:
+        MemoryDisplayCaptions;
+
       photos: PhotoMemory[];
     };
+
     gift2: {
       id: string;
       title: string;
@@ -62,6 +111,7 @@ export interface LoveConfig {
       icon: string;
       playlist: SongTrack[];
     };
+
     gift3: {
       id: string;
       title: string;
@@ -77,6 +127,7 @@ export interface LoveConfig {
       };
     };
   };
+
   audio: {
     backgroundMusicUrl: string;
     backgroundMusicTitle: string;

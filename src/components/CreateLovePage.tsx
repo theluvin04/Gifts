@@ -1,4 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowLeft,
@@ -8,7 +12,9 @@ import {
   Music2,
   Plus,
   RotateCcw,
+  ShoppingBag,
   Sparkles,
+  WandSparkles,
   Trash2,
   Upload,
   UserRound,
@@ -20,11 +26,33 @@ import {
   getYouTubeVideoId,
 } from '../utils/youtube';
 
+import {
+  DEFAULT_LOVE_TEMPLATE_ASSETS,
+  TemplateAssetLibrary,
+  getCustomerSelectableSlots,
+  getEnabledAssetChoices,
+  getSelectedAssetChoiceId,
+} from '../templates/assets';
+
+import {
+  DEFAULT_LOVE_TEMPLATE_DESIGN,
+} from '../templates/design';
+
+import type {
+  MemoryDisplayCaptions,
+} from '../types';
+
+import {
+  getCachedTemplateConfigById,
+  getPublicTemplateConfigById,
+} from '../services/templateService';
+
 interface CreateLovePageProps {
   config: LoveConfig;
   onChange: (config: LoveConfig) => void;
   onBack: () => void;
   onReset: () => void;
+  onAddToCart: () => void;
   onCheckout: () => void;
 }
 
@@ -32,7 +60,49 @@ type TabId =
   | 'basic'
   | 'memories'
   | 'music'
-  | 'letter';
+  | 'letter'
+  | 'assets';
+
+type MemoryPhoto =
+  LoveConfig[
+    'gifts'
+  ][
+    'gift1'
+  ][
+    'photos'
+  ][number];
+
+const TOTAL_MEMORY_PHOTOS =
+  8;
+
+const makeEmptyMemoryPhoto = (
+  index: number
+): MemoryPhoto => ({
+  id:
+    `memory-slot-${index + 1}`,
+  url: '',
+  caption: '',
+});
+
+const ensureEightMemoryPhotos = (
+  photos:
+    MemoryPhoto[]
+) => {
+  return Array.from(
+    {
+      length:
+        TOTAL_MEMORY_PHOTOS,
+    },
+    (
+      _,
+      index
+    ) =>
+      photos[index] ||
+      makeEmptyMemoryPhoto(
+        index
+      )
+  );
+};
 
 const compressImage = (
   file: File,
@@ -97,6 +167,7 @@ export const CreateLovePage: React.FC<
   onChange,
   onBack,
   onReset,
+  onAddToCart,
   onCheckout,
 }) => {
   const [activeTab, setActiveTab] =
@@ -104,6 +175,82 @@ export const CreateLovePage: React.FC<
 
   const [imageError, setImageError] =
     useState('');
+
+  const [
+    assetLibrary,
+    setAssetLibrary,
+  ] =
+    useState<TemplateAssetLibrary>(
+      () =>
+        getCachedTemplateConfigById(
+          'love-01'
+        )?.assets ||
+        DEFAULT_LOVE_TEMPLATE_ASSETS
+    );
+
+  const [
+    memoryCaptionDefaults,
+    setMemoryCaptionDefaults,
+  ] =
+    useState<MemoryDisplayCaptions>(
+      () =>
+        getCachedTemplateConfigById(
+          'love-01'
+        )?.design
+          .memories
+          .captions ||
+        DEFAULT_LOVE_TEMPLATE_DESIGN
+          .memories
+          .captions
+    );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAssets =
+      async () => {
+        try {
+          const template =
+            await getPublicTemplateConfigById(
+              'love-01'
+            );
+
+          if (!cancelled) {
+            setAssetLibrary(
+              template.assets
+            );
+
+            setMemoryCaptionDefaults(
+              template.design
+                .memories
+                .captions
+            );
+          }
+        } catch (
+          error
+        ) {
+          console.warn(
+            'Template assets fallback:',
+            error
+          );
+        }
+      };
+
+    void loadAssets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectableAssetSlots =
+    useMemo(
+      () =>
+        getCustomerSelectableSlots(
+          assetLibrary
+        ),
+      [assetLibrary]
+    );
 
   const tabs = useMemo(
     () => [
@@ -127,9 +274,58 @@ export const CreateLovePage: React.FC<
         label: 'Bức thư',
         icon: Mail,
       },
+      {
+        id: 'assets' as const,
+        label: 'GIF & hình',
+        icon: WandSparkles,
+      },
     ],
     []
   );
+
+  const updateAssetSelection = (
+    slotId: string,
+    assetId: string
+  ) => {
+    onChange({
+      ...config,
+      assetSelections: {
+        ...(
+          config.assetSelections ||
+          {}
+        ),
+        [slotId]:
+          assetId,
+      },
+    });
+  };
+
+  const updateMemoryCaption = (
+    key:
+      keyof MemoryDisplayCaptions,
+    value: string
+  ) => {
+    onChange({
+      ...config,
+      gifts: {
+        ...config.gifts,
+        gift1: {
+          ...config.gifts.gift1,
+          displayCaptions: {
+            ...memoryCaptionDefaults,
+            ...(
+              config.gifts
+                .gift1
+                .displayCaptions ||
+              {}
+            ),
+            [key]:
+              value,
+          },
+        },
+      },
+    });
+  };
 
   const updateCouple = (
     patch: Partial<LoveConfig['couple']>
@@ -161,15 +357,23 @@ export const CreateLovePage: React.FC<
       LoveConfig['gifts']['gift1']['photos'][number]
     >
   ) => {
-    const photos = config.gifts.gift1.photos.map(
-      (photo, photoIndex) =>
-        photoIndex === index
-          ? {
-              ...photo,
-              ...patch,
-            }
-          : photo
-    );
+    const photos =
+      ensureEightMemoryPhotos(
+        config.gifts
+          .gift1.photos
+      ).map(
+        (
+          photo,
+          photoIndex
+        ) =>
+          photoIndex ===
+          index
+            ? {
+                ...photo,
+                ...patch,
+              }
+            : photo
+      );
 
     onChange({
       ...config,
@@ -349,18 +553,31 @@ export const CreateLovePage: React.FC<
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onCheckout}
-            className="inline-flex items-center gap-1.5 rounded-full bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-rose-200 transition hover:bg-rose-600"
-          >
-            <CreditCard className="h-3.5 w-3.5" />
-            Thanh toán
-          </button>
+          <div className="hidden items-center gap-2 sm:flex">
+            <button
+              type="button"
+              onClick={onAddToCart}
+              className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-white px-4 py-2.5 text-xs font-bold text-rose-500 transition hover:bg-rose-50"
+            >
+              <ShoppingBag className="h-3.5 w-3.5" />
+              Thêm vào giỏ
+            </button>
+
+            <button
+              type="button"
+              onClick={onCheckout}
+              className="inline-flex items-center gap-1.5 rounded-full bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-rose-200 transition hover:bg-rose-600"
+            >
+              <CreditCard className="h-3.5 w-3.5" />
+              Thanh toán
+            </button>
+          </div>
+
+          <div className="w-8 sm:hidden" />
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-7 sm:py-8">
+      <main className="mx-auto max-w-[1440px] px-3 pb-24 pt-5 sm:px-7 sm:py-8">
         <div className="mb-6 rounded-[24px] border border-rose-100 bg-white px-5 py-4 shadow-sm">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-500">
@@ -441,7 +658,13 @@ export const CreateLovePage: React.FC<
               {activeTab === 'memories' && (
                 <MemoriesSection
                   config={config}
+                  captionDefaults={
+                    memoryCaptionDefaults
+                  }
                   updatePhoto={updatePhoto}
+                  updateMemoryCaption={
+                    updateMemoryCaption
+                  }
                   uploadPhoto={uploadPhoto}
                 />
               )}
@@ -461,6 +684,18 @@ export const CreateLovePage: React.FC<
                   updateParagraph={updateParagraph}
                   addParagraph={addParagraph}
                   removeParagraph={removeParagraph}
+                />
+              )}
+
+              {activeTab === 'assets' && (
+                <AssetSelectionSection
+                  config={config}
+                  slots={
+                    selectableAssetSlots
+                  }
+                  onSelect={
+                    updateAssetSelection
+                  }
                 />
               )}
             </motion.div>
@@ -494,9 +729,168 @@ export const CreateLovePage: React.FC<
 
         </div>
       </main>
+
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-rose-100 bg-white/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl sm:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onAddToCart}
+            className="inline-flex items-center justify-center gap-1.5 rounded-[14px] border border-rose-200 bg-white px-3 py-3 text-xs font-bold text-rose-500"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            Thêm vào giỏ
+          </button>
+
+          <button
+            type="button"
+            onClick={onCheckout}
+            className="inline-flex items-center justify-center gap-1.5 rounded-[14px] bg-rose-500 px-3 py-3 text-xs font-bold text-white shadow-lg shadow-rose-100"
+          >
+            <CreditCard className="h-4 w-4" />
+            Thanh toán
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
+
+interface AssetSelectionSectionProps {
+  config: LoveConfig;
+  slots: ReturnType<
+    typeof getCustomerSelectableSlots
+  >;
+  onSelect: (
+    slotId: string,
+    assetId: string
+  ) => void;
+}
+
+const AssetSelectionSection:
+React.FC<
+  AssetSelectionSectionProps
+> = ({
+  config,
+  slots,
+  onSelect,
+}) => (
+  <div>
+    <SectionHeader
+      title="Chọn GIF & hình"
+      description="Chỉ những lựa chọn được Dearly mở trong mẫu gốc mới xuất hiện ở đây."
+    />
+
+    {slots.length === 0 ? (
+      <div className="mt-7 rounded-[20px] border border-dashed border-rose-200 bg-rose-50/50 px-5 py-9 text-center">
+        <WandSparkles className="mx-auto h-5 w-5 text-rose-300" />
+
+        <p className="mt-3 text-sm font-bold text-slate-700">
+          Mẫu này chưa mở lựa chọn asset
+        </p>
+
+        <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-slate-400">
+          Các GIF và hình mặc định vẫn được dùng bình thường.
+        </p>
+      </div>
+    ) : (
+      <div className="mt-7 grid gap-7">
+        {slots.map(
+          (slot) => {
+            const choices =
+              getEnabledAssetChoices(
+                slot
+              );
+
+            const selectedId =
+              getSelectedAssetChoiceId(
+                slot,
+                config.assetSelections
+              );
+
+            return (
+              <section
+                key={
+                  slot.id
+                }
+              >
+                <div className="mb-3">
+                  <h3 className="text-sm font-bold text-slate-900">
+                    {
+                      slot.label
+                    }
+                  </h3>
+
+                  <p className="mt-1 text-[11px] leading-5 text-slate-400">
+                    {
+                      slot.description
+                    }
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {choices.map(
+                    (
+                      choice
+                    ) => {
+                      const selected =
+                        selectedId ===
+                        choice.id;
+
+                      return (
+                        <button
+                          key={
+                            choice.id
+                          }
+                          type="button"
+                          onClick={() =>
+                            onSelect(
+                              slot.id,
+                              choice.id
+                            )
+                          }
+                          className={[
+                            'overflow-hidden rounded-[18px] border bg-white p-2 text-left transition',
+                            selected
+                              ? 'border-rose-400 shadow-[0_0_0_2px_rgba(251,113,133,0.16)]'
+                              : 'border-slate-100 hover:border-rose-200',
+                          ].join(' ')}
+                        >
+                          <div className="aspect-square overflow-hidden rounded-[13px] bg-rose-50">
+                            <img
+                              src={
+                                choice.url
+                              }
+                              alt={
+                                choice.label
+                              }
+                              className="h-full w-full object-contain"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 px-1 pb-1 pt-2">
+                            <span className="truncate text-[11px] font-bold text-slate-600">
+                              {
+                                choice.label
+                              }
+                            </span>
+
+                            {selected && (
+                              <span className="h-2 w-2 shrink-0 rounded-full bg-rose-500" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+              </section>
+            );
+          }
+        )}
+      </div>
+    )}
+  </div>
+);
 
 interface BasicSectionProps {
   config: LoveConfig;
@@ -599,12 +993,23 @@ const BasicSection: React.FC<
 
 interface MemoriesSectionProps {
   config: LoveConfig;
+
+  captionDefaults:
+    MemoryDisplayCaptions;
+
   updatePhoto: (
     index: number,
     patch: Partial<
       LoveConfig['gifts']['gift1']['photos'][number]
     >
   ) => void;
+
+  updateMemoryCaption: (
+    key:
+      keyof MemoryDisplayCaptions,
+    value: string
+  ) => void;
+
   uploadPhoto: (
     index: number,
     file?: File
@@ -615,63 +1020,299 @@ const MemoriesSection: React.FC<
   MemoriesSectionProps
 > = ({
   config,
+  captionDefaults,
   updatePhoto,
+  updateMemoryCaption,
   uploadPhoto,
-}) => (
-  <div>
-    <SectionHeader
-      title="Ảnh kỷ niệm"
-      description="Thay từng ảnh xuất hiện trong Polaroid Gallery."
-    />
+}) => {
+  const captionKeys:
+    Array<
+      keyof
+        MemoryDisplayCaptions
+    > = [
+      'leftTop',
+      'leftBottom',
+      'rightTop',
+      'rightBottom',
+    ];
 
-    <div className="mt-7 space-y-5">
-      {config.gifts.gift1.photos.map(
-        (photo, index) => (
-          <div
-            key={photo.id}
-            className="grid gap-4 rounded-[22px] border border-slate-100 bg-slate-50/60 p-4 sm:grid-cols-[150px_1fr]"
-          >
-            <div>
-              <div className="aspect-square overflow-hidden rounded-2xl bg-white">
-                <img
-                  src={photo.url}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              </div>
+  const captionLabels = [
+    'Chữ dưới ảnh trái trên',
+    'Chữ dưới ảnh trái dưới',
+    'Chữ dưới ảnh phải trên',
+    'Chữ dưới ảnh phải dưới',
+  ];
 
-              <label className="mt-2 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-[11px] font-bold text-rose-500 shadow-sm">
-                <Upload className="h-3.5 w-3.5" />
-                Chọn ảnh
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={(event) =>
-                    uploadPhoto(
+  const displayCaptions = {
+    ...captionDefaults,
+    ...(
+      config.gifts
+        .gift1
+        .displayCaptions ||
+      {}
+    ),
+  };
+
+  const photos =
+    ensureEightMemoryPhotos(
+      config.gifts
+        .gift1.photos
+    );
+
+  return (
+    <div>
+      <SectionHeader
+        title="Ảnh kỷ niệm"
+        description="4 ảnh chính nằm ngoài và 4 ảnh phụ chỉ dùng cho collage giữa. Một ảnh chỉ xuất hiện đúng một vị trí."
+      />
+
+      <div className="mt-7">
+        <MemoryPhotoGroupTitle
+          title="4 ảnh chính"
+          description="Hiển thị thành 4 Polaroid lớn bên ngoài. Bạn có thể sửa cả ảnh và dòng chữ bên dưới."
+        />
+
+        <div className="mt-4 space-y-4">
+          {photos
+            .slice(
+              0,
+              4
+            )
+            .map(
+              (
+                photo,
+                index
+              ) => (
+                <MemoryPhotoEditor
+                  key={
+                    photo.id
+                  }
+                  photo={
+                    photo
+                  }
+                  index={
+                    index
+                  }
+                  label={
+                    `Ảnh chính ${index + 1}`
+                  }
+                  onUpload={
+                    uploadPhoto
+                  }
+                  onUrlChange={(
+                    value
+                  ) =>
+                    updatePhoto(
                       index,
-                      event.target.files?.[0]
+                      {
+                        url:
+                          value,
+                      }
                     )
                   }
-                />
-              </label>
-            </div>
+                >
+                  <InputField
+                    label={
+                      captionLabels[
+                        index
+                      ]
+                    }
+                    value={
+                      displayCaptions[
+                        captionKeys[
+                          index
+                        ]
+                      ]
+                    }
+                    onChange={(
+                      value
+                    ) =>
+                      updateMemoryCaption(
+                        captionKeys[
+                          index
+                        ],
+                        value
+                      )
+                    }
+                    placeholder="Nhập chữ hiển thị dưới ảnh"
+                  />
+                </MemoryPhotoEditor>
+              )
+            )}
+        </div>
 
-            <div className="grid gap-3">
-              <InputField
-                label={`Ảnh ${index + 1} · URL`}
-                value={photo.url}
-                onChange={(value) =>
-                  updatePhoto(index, {
-                    url: value,
-                  })
-                }
-              />
+        <div className="my-8 h-px bg-slate-100" />
 
-            </div>
+        <MemoryPhotoGroupTitle
+          title="4 ảnh phụ cho collage giữa"
+          description="Bốn ảnh này chỉ xuất hiện trong 2 dãy ảnh chéo ở giữa. Không có caption và không bị lấy lại từ 4 ảnh chính."
+        />
+
+        <div className="mt-4 space-y-4">
+          {photos
+            .slice(
+              4,
+              8
+            )
+            .map(
+              (
+                photo,
+                localIndex
+              ) => {
+                const index =
+                  localIndex +
+                  4;
+
+                return (
+                  <MemoryPhotoEditor
+                    key={
+                      photo.id
+                    }
+                    photo={
+                      photo
+                    }
+                    index={
+                      index
+                    }
+                    label={
+                      `Ảnh collage ${localIndex + 1}`
+                    }
+                    onUpload={
+                      uploadPhoto
+                    }
+                    onUrlChange={(
+                      value
+                    ) =>
+                      updatePhoto(
+                        index,
+                        {
+                          url:
+                            value,
+                        }
+                      )
+                    }
+                  >
+                    <p className="rounded-xl bg-white px-3 py-2.5 text-[10px] leading-5 text-slate-400">
+                      Chỉ dùng cho dãy ảnh giữa · không có chữ bên dưới.
+                    </p>
+                  </MemoryPhotoEditor>
+                );
+              }
+            )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MemoryPhotoGroupTitle:
+React.FC<{
+  title: string;
+  description: string;
+}> = ({
+  title,
+  description,
+}) => (
+  <div>
+    <p className="text-sm font-bold text-slate-900">
+      {title}
+    </p>
+
+    <p className="mt-1 text-[11px] leading-5 text-slate-400">
+      {description}
+    </p>
+  </div>
+);
+
+const MemoryPhotoEditor:
+React.FC<{
+  photo:
+    MemoryPhoto;
+  index: number;
+  label: string;
+  onUpload: (
+    index: number,
+    file?: File
+  ) => void;
+  onUrlChange: (
+    value: string
+  ) => void;
+  children:
+    React.ReactNode;
+}> = ({
+  photo,
+  index,
+  label,
+  onUpload,
+  onUrlChange,
+  children,
+}) => (
+  <div className="grid gap-4 rounded-[22px] border border-slate-100 bg-slate-50/60 p-4 sm:grid-cols-[150px_minmax(0,1fr)]">
+    <div>
+      <div className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-white">
+        {photo.url ? (
+          <img
+            src={
+              photo.url
+            }
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center bg-rose-50/50 px-3 text-center">
+            <ImageIcon className="h-5 w-5 text-rose-200" />
+
+            <span className="mt-2 text-[10px] font-bold text-rose-300">
+              Chưa chọn ảnh
+            </span>
           </div>
-        )
-      )}
+        )}
+      </div>
+
+      <label className="mt-2 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-[11px] font-bold text-rose-500 shadow-sm">
+        <Upload className="h-3.5 w-3.5" />
+        Chọn ảnh
+
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(
+            event
+          ) =>
+            onUpload(
+              index,
+              event.target
+                .files?.[0]
+            )
+          }
+        />
+      </label>
+    </div>
+
+    <div className="grid content-start gap-3">
+      <div>
+        <p className="text-xs font-bold text-slate-700">
+          {label}
+        </p>
+
+        <p className="mt-1 text-[10px] text-slate-400">
+          Vị trí cố định trong gallery
+        </p>
+      </div>
+
+      <InputField
+        label="URL ảnh"
+        value={
+          photo.url
+        }
+        onChange={
+          onUrlChange
+        }
+        placeholder="Dán URL hoặc chọn ảnh ở bên trái"
+      />
+
+      {children}
     </div>
   </div>
 );

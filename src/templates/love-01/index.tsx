@@ -97,6 +97,7 @@ TemplateModule<LoveConfig> = {
     onChange,
     onBack,
     onReset,
+    onAddToCart,
     onCheckout,
   }) => (
     <CreateLovePage
@@ -104,6 +105,9 @@ TemplateModule<LoveConfig> = {
       onChange={onChange}
       onBack={onBack}
       onReset={onReset}
+      onAddToCart={
+        onAddToCart
+      }
       onCheckout={
         onCheckout
       }

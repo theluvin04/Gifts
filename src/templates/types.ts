@@ -14,6 +14,7 @@ export interface TemplateEditorPageProps<
   onChange: (config: TConfig) => void;
   onBack: () => void;
   onReset: () => void;
+  onAddToCart: () => void;
   onCheckout: () => void;
 }
 

@@ -13,6 +13,7 @@ import {
 
 interface HomePageProps {
   onOpenLoveTemplate: () => void;
+  onTrackOrder: () => void;
 }
 
 const features = [
@@ -58,6 +59,7 @@ export const HomePage: React.FC<
   HomePageProps
 > = ({
   onOpenLoveTemplate,
+  onTrackOrder,
 }) => {
   const [template, setTemplate] =
     useState<TemplateConfig>(
@@ -173,15 +175,37 @@ export const HomePage: React.FC<
             >
               Cách hoạt động
             </button>
+
+            <button
+              type="button"
+              onClick={
+                onTrackOrder
+              }
+              className="transition hover:text-black"
+            >
+              Tra cứu đơn
+            </button>
           </nav>
 
-          <button
-            type="button"
-            onClick={onOpenLoveTemplate}
-            className="rounded-[12px] bg-[#171717] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#e64a67] sm:px-5 sm:text-sm"
-          >
-            Xem template
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={
+                onTrackOrder
+              }
+              className="rounded-[12px] px-2.5 py-2.5 text-[11px] font-bold text-black/48 transition hover:bg-black/[0.04] hover:text-black sm:px-3 sm:text-xs"
+            >
+              Tra cứu
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenLoveTemplate}
+              className="rounded-[12px] bg-[#171717] px-3 py-2.5 text-[11px] font-bold text-white transition hover:bg-[#e64a67] sm:px-5 sm:text-sm"
+            >
+              Xem template
+            </button>
+          </div>
         </div>
       </header>
 

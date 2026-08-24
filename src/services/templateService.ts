@@ -5,6 +5,20 @@ import {
 
 import { db } from '../config/firebase';
 
+import {
+  DEFAULT_LOVE_TEMPLATE_DESIGN,
+  TemplateDesignConfig,
+  cloneTemplateDesign,
+  normalizeTemplateDesign,
+} from '../templates/design';
+
+import {
+  DEFAULT_LOVE_TEMPLATE_ASSETS,
+  TemplateAssetLibrary,
+  cloneTemplateAssets,
+  normalizeTemplateAssets,
+} from '../templates/assets';
+
 export type TemplateStatus =
   | 'available'
   | 'coming_soon'
@@ -20,7 +34,40 @@ export interface TemplateConfig {
   currency: string;
   status: TemplateStatus;
   visible: boolean;
+  design: TemplateDesignConfig;
+  assets: TemplateAssetLibrary;
 }
+
+const TEMPLATE_CACHE_PREFIX =
+  'dearly:template-config:';
+
+const getTemplateCacheKey = (
+  templateId: string
+) => {
+  return (
+    TEMPLATE_CACHE_PREFIX +
+    templateId
+  );
+};
+
+const writeTemplateCache = (
+  template: TemplateConfig
+) => {
+  try {
+    window.localStorage.setItem(
+      getTemplateCacheKey(
+        template.id
+      ),
+      JSON.stringify({
+        template,
+        cachedAt:
+          Date.now(),
+      })
+    );
+  } catch {
+    // Cache chỉ để tăng tốc UI.
+  }
+};
 
 export const DEFAULT_LOVE_TEMPLATE_CONFIG:
 TemplateConfig = {
@@ -33,6 +80,14 @@ TemplateConfig = {
   currency: 'VND',
   status: 'available',
   visible: true,
+  design:
+    cloneTemplateDesign(
+      DEFAULT_LOVE_TEMPLATE_DESIGN
+    ),
+  assets:
+    cloneTemplateAssets(
+      DEFAULT_LOVE_TEMPLATE_ASSETS
+    ),
 };
 
 const toSafeNumber = (
@@ -101,6 +156,16 @@ export const normalizeTemplateConfig = (
       typeof data.visible === 'boolean'
         ? data.visible
         : fallback.visible,
+    design:
+      normalizeTemplateDesign(
+        data.design,
+        fallback.design
+      ),
+    assets:
+      normalizeTemplateAssets(
+        data.assets,
+        fallback.assets
+      ),
   };
 };
 
@@ -159,8 +224,55 @@ const getFallbackForTemplate = (
     currency: 'VND',
     status: 'coming_soon',
     visible: false,
+    design:
+      cloneTemplateDesign(
+        DEFAULT_LOVE_TEMPLATE_DESIGN
+      ),
+    assets:
+      cloneTemplateAssets(
+        DEFAULT_LOVE_TEMPLATE_ASSETS
+      ),
   };
 };
+
+export const getCachedTemplateConfigById =
+  (
+    templateId: string
+  ): TemplateConfig | null => {
+    try {
+      const raw =
+        window.localStorage.getItem(
+          getTemplateCacheKey(
+            templateId
+          )
+        );
+
+      if (!raw) {
+        return null;
+      }
+
+      const parsed =
+        JSON.parse(raw);
+
+      if (
+        !parsed ||
+        typeof parsed !==
+          'object' ||
+        !parsed.template
+      ) {
+        return null;
+      }
+
+      return normalizeTemplateConfig(
+        parsed.template,
+        getFallbackForTemplate(
+          templateId
+        )
+      );
+    } catch {
+      return null;
+    }
+  };
 
 export const getPublicTemplateConfigById =
   async (
@@ -185,17 +297,29 @@ export const getPublicTemplateConfigById =
         return fallback;
       }
 
-      return normalizeTemplateConfig(
-        snapshot.data(),
-        fallback
+      const normalized =
+        normalizeTemplateConfig(
+          snapshot.data(),
+          fallback
+        );
+
+      writeTemplateCache(
+        normalized
       );
+
+      return normalized;
     } catch (error) {
       console.warn(
         'Template config fallback:',
         error
       );
 
-      return fallback;
+      return (
+        getCachedTemplateConfigById(
+          templateId
+        ) ||
+        fallback
+      );
     }
   };
 
@@ -221,10 +345,17 @@ export const getRequiredPublicTemplateConfigById =
       return fallback;
     }
 
-    return normalizeTemplateConfig(
-      snapshot.data(),
-      fallback
+    const normalized =
+      normalizeTemplateConfig(
+        snapshot.data(),
+        fallback
+      );
+
+    writeTemplateCache(
+      normalized
     );
+
+    return normalized;
   };
 
 export const getPublicTemplateConfig =

@@ -15,6 +15,14 @@ import {
 } from './components/Homepage';
 
 import {
+  CartPage,
+} from './components/CartPage';
+
+import {
+  TrackOrderPage,
+} from './components/TrackOrderPage';
+
+import {
   AdminOrdersPage,
 } from './components/admin/AdminOrdersPage';
 
@@ -37,6 +45,10 @@ import {
 import {
   useSharedGift,
 } from './hooks/useSharedGift';
+
+import {
+  useCart,
+} from './hooks/useCart';
 
 import {
   DEFAULT_TEMPLATE_ID,
@@ -62,6 +74,13 @@ export default function App() {
   } = useSharedGift(
     location
   );
+
+  const {
+    items: cartItems,
+    addItem: addCartItem,
+    removeItem: removeCartItem,
+    clearCart,
+  } = useCart();
 
   useEffect(() => {
     if (
@@ -227,6 +246,74 @@ export default function App() {
               '/'
           )
         }
+        onTrackOrder={() =>
+          navigate(
+            '/track-order'
+          )
+        }
+      />
+    );
+  }
+
+  if (
+    location.kind ===
+    'track-order'
+  ) {
+    return (
+      <TrackOrderPage
+        onBackHome={() =>
+          navigate('/')
+        }
+      />
+    );
+  }
+
+  if (
+    location.kind ===
+    'cart'
+  ) {
+    return (
+      <CartPage
+        items={cartItems}
+        onBackHome={() =>
+          navigate('/')
+        }
+        onRemove={
+          removeCartItem
+        }
+        onClear={
+          clearCart
+        }
+        onEdit={(item) => {
+          const template =
+            getTemplateModule(
+              item.templateId
+            );
+
+          if (!template) {
+            return;
+          }
+
+          navigate(
+            template.paths
+              .create
+          );
+        }}
+        onCheckout={(item) => {
+          const template =
+            getTemplateModule(
+              item.templateId
+            );
+
+          if (!template) {
+            return;
+          }
+
+          navigate(
+            template.paths
+              .checkout
+          );
+        }}
       />
     );
   }
@@ -350,6 +437,26 @@ export default function App() {
               template
             )
           }
+          onAddToCart={() => {
+            try {
+              addCartItem(
+                template.id,
+                template.name
+              );
+
+              navigate(
+                '/cart'
+              );
+            } catch (error) {
+              console.error(
+                error
+              );
+
+              window.alert(
+                'Không thể thêm vào giỏ hàng trên trình duyệt này.'
+              );
+            }
+          }}
           onCheckout={() =>
             navigate(
               template

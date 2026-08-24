@@ -3,6 +3,14 @@ import { motion } from 'motion/react';
 import { ChevronLeft } from 'lucide-react';
 import { sfx } from '../../utils/soundEffects';
 
+import type {
+  TemplateDesignConfig,
+} from '../../templates/design';
+
+import type {
+  MemoryDisplayCaptions,
+} from '../../types';
+
 interface PhotoItem {
   id: string;
   url: string;
@@ -14,6 +22,20 @@ interface PhotoItem {
 
 interface PolaroidGalleryProps {
   photos: PhotoItem[];
+
+  design:
+    TemplateDesignConfig;
+
+  /**
+   * Nội dung khách được sửa.
+   * Nếu chưa có thì dùng caption
+   * mặc định trong mẫu gốc Admin.
+   */
+  captions?:
+    Partial<
+      MemoryDisplayCaptions
+    >;
+
   onBack: () => void;
 }
 
@@ -31,6 +53,7 @@ const Sparkle: React.FC<{
   left?: string;
   right?: string;
   delay: number;
+  design: TemplateDesignConfig;
 }> = ({ top, left, right, delay }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.6 }}
@@ -68,6 +91,7 @@ const PolaroidCard: React.FC<{
   caption,
   animationFrom,
   delay,
+  design,
 }) => (
   <motion.div
     initial={{
@@ -94,7 +118,14 @@ const PolaroidCard: React.FC<{
     }}
     className={rotateClass}
   >
-    <div className="bg-white p-3 shadow-xl">
+    <div
+      style={{
+        background:
+          design.memories
+            .polaroidBackground,
+      }}
+      className="p-3 shadow-xl"
+    >
       <div className="aspect-square w-full overflow-hidden bg-pink-50">
         <img
           src={photo.url}
@@ -104,7 +135,19 @@ const PolaroidCard: React.FC<{
       </div>
 
       <div className="pt-3 text-center">
-        <p className="text-[11px] italic text-rose-700 sm:text-xs">
+        <p
+          style={{
+            color:
+              design.memories
+                .captionColor,
+            fontFamily:
+              design.memories
+                .captionFont,
+            fontSize:
+              `${design.memories.captionSize}px`,
+          }}
+          className="italic"
+        >
           {caption || photo.caption || 'memory'}
         </p>
       </div>
@@ -112,15 +155,23 @@ const PolaroidCard: React.FC<{
   </motion.div>
 );
 
+type FilmPhoto =
+  PhotoItem |
+  null;
+
 const FilmStrip: React.FC<{
-  photos: PhotoItem[];
+  photos: FilmPhoto[];
   delay: number;
   rotation: number;
+  compact?: boolean;
+  design: TemplateDesignConfig;
   className?: string;
 }> = ({
   photos,
   delay,
   rotation,
+  compact = false,
+  design,
   className = '',
 }) => (
   <motion.div
@@ -146,51 +197,104 @@ const FilmStrip: React.FC<{
     style={{
       transformOrigin:
         '50% 0%',
+      background:
+        design.memories
+          .polaroidBackground,
+      borderColor:
+        design.memories
+          .filmBorder,
     }}
     className={[
-      'absolute top-0 w-[150px] overflow-hidden border border-pink-200 bg-white shadow-[0_14px_30px_rgba(120,70,90,0.11)]',
+      'absolute top-0 overflow-hidden border border-pink-200 bg-white shadow-[0_14px_30px_rgba(120,70,90,0.11)]',
+      compact
+        ? 'w-[96px]'
+        : 'w-[150px]',
       className,
     ].join(' ')}
   >
-    {photos.map((photo, idx) => (
-      <div
-        key={`${photo.id}-${idx}`}
-        className="border-b border-pink-200/70 bg-white p-2 last:border-b-0"
-      >
-        <div className="aspect-square overflow-hidden bg-pink-50">
-          <img
-            src={photo.url}
-            alt={photo.caption || 'memory'}
-            className="h-full w-full object-cover"
-          />
+    {photos.map(
+      (
+        photo,
+        idx
+      ) => (
+        <div
+          key={
+            photo
+              ? `${photo.id}-${idx}`
+              : `empty-film-${idx}`
+          }
+          style={{
+            background:
+              design.memories
+                .polaroidBackground,
+            borderColor:
+              design.memories
+                .filmBorder,
+          }}
+          className={[
+            'border-b last:border-b-0',
+            compact
+              ? 'p-1.5'
+              : 'p-2',
+          ].join(' ')}
+        >
+          <div
+            style={{
+              background:
+                design.colors
+                  .surfaceSoft,
+            }}
+            className="aspect-square overflow-hidden"
+          >
+            {photo?.url ? (
+              <img
+                src={
+                  photo.url
+                }
+                alt={
+                  photo.caption ||
+                  'memory'
+                }
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-lg text-rose-200">
+                ♡
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    ))}
+      )
+    )}
   </motion.div>
 );
 
 const CrossedFilmStrips: React.FC<{
-  leftPhotos: PhotoItem[];
-  rightPhotos: PhotoItem[];
+  leftPhotos: FilmPhoto[];
+  rightPhotos: FilmPhoto[];
   compact?: boolean;
+  design: TemplateDesignConfig;
 }> = ({
   leftPhotos,
   rightPhotos,
   compact = false,
+  design,
 }) => (
   <div
     className={
       compact
-        ? 'relative mx-auto h-[430px] w-[306px]'
-        : 'relative left-1/2 h-[590px] w-[364px] -translate-x-1/2'
+        ? 'relative mx-auto h-[220px] w-[218px]'
+        : 'relative left-1/2 h-[330px] w-[364px] -translate-x-1/2'
     }
   >
     <FilmStrip
       photos={leftPhotos}
       delay={0.1}
       rotation={
-        compact ? -2.4 : -3.6
+        compact ? -2 : -3.6
       }
+      compact={compact}
+      design={design}
       className={
         compact
           ? 'left-0'
@@ -202,8 +306,10 @@ const CrossedFilmStrips: React.FC<{
       photos={rightPhotos}
       delay={0.22}
       rotation={
-        compact ? 2.4 : 3.6
+        compact ? 2 : 3.6
       }
+      compact={compact}
+      design={design}
       className={
         compact
           ? 'right-0'
@@ -215,24 +321,64 @@ const CrossedFilmStrips: React.FC<{
 
 export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
   photos,
+  design,
+  captions,
   onBack,
 }) => {
-  const safePhotos = photos.length ? photos : [];
+  const safePhotos =
+    photos.length
+      ? photos
+      : [];
+
+  const visibleCaptions:
+    MemoryDisplayCaptions = {
+      ...design.memories
+        .captions,
+      ...(captions || {}),
+    };
 
   const leftTop = safePhotos[0];
   const leftBottom = safePhotos[1] || safePhotos[0];
   const rightTop = safePhotos[2] || safePhotos[0];
   const rightBottom = safePhotos[3] || safePhotos[0];
 
-  const stripLeft = Array.from(
-    { length: 4 },
-    (_, i) => safePhotos[i % safePhotos.length]
-  );
+  /**
+   * Ảnh 1-4 chỉ dùng cho
+   * 4 Polaroid lớn bên ngoài.
+   *
+   * Ảnh 5-8 chỉ dùng cho
+   * 2 dãy collage ở giữa.
+   *
+   * Không modulo / không quay vòng,
+   * nên không lấy lại ảnh ngoài.
+   */
+  const centerPhotos:
+    FilmPhoto[] =
+    Array.from(
+      {
+        length: 4,
+      },
+      (
+        _,
+        index
+      ) =>
+        safePhotos[
+          index + 4
+        ] ||
+        null
+    );
 
-  const stripRight = Array.from(
-    { length: 4 },
-    (_, i) => safePhotos[(i + 2) % safePhotos.length]
-  );
+  const stripLeft =
+    centerPhotos.slice(
+      0,
+      2
+    );
+
+  const stripRight =
+    centerPhotos.slice(
+      2,
+      4
+    );
 
   if (!safePhotos.length) return null;
 
@@ -245,7 +391,14 @@ export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
     >
       {/* DESKTOP */}
       <div className="mx-auto hidden max-w-6xl sm:block">
-        <div className="relative overflow-hidden rounded-[28px] bg-pink-50 px-10 py-10">
+        <div
+          style={{
+            background:
+              design.memories
+                .background,
+          }}
+          className="relative overflow-hidden rounded-[28px] px-10 py-10"
+        >
           {sparklePositions.map((item, index) => (
             <Sparkle key={index} {...item} />
           ))}
@@ -255,7 +408,7 @@ export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
               <div className="w-[220px]">
                 <PolaroidCard
                   photo={leftTop}
-                  caption="memories with you"
+                  caption={visibleCaptions.leftTop}
                   rotateClass="-rotate-6"
                   animationFrom={{
                     x: -90,
@@ -264,13 +417,14 @@ export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
                     scale: 0.92,
                   }}
                   delay={0.45}
+                  design={design}
                 />
               </div>
 
               <div className="ml-5 w-[210px]">
                 <PolaroidCard
                   photo={leftBottom}
-                  caption="our little moments"
+                  caption={visibleCaptions.leftBottom}
                   rotateClass="rotate-2"
                   animationFrom={{
                     x: -70,
@@ -279,6 +433,7 @@ export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
                     scale: 0.92,
                   }}
                   delay={0.62}
+                  design={design}
                 />
               </div>
             </div>
@@ -287,6 +442,7 @@ export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
               <CrossedFilmStrips
                 leftPhotos={stripLeft}
                 rightPhotos={stripRight}
+                design={design}
               />
             </div>
 
@@ -294,7 +450,7 @@ export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
               <div className="w-[220px]">
                 <PolaroidCard
                   photo={rightTop}
-                  caption="you make me smile"
+                  caption={visibleCaptions.rightTop}
                   rotateClass="rotate-6"
                   animationFrom={{
                     x: 90,
@@ -303,13 +459,14 @@ export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
                     scale: 0.92,
                   }}
                   delay={0.54}
+                  design={design}
                 />
               </div>
 
               <div className="mr-4 w-[210px]">
                 <PolaroidCard
                   photo={rightBottom}
-                  caption="us, in frames"
+                  caption={visibleCaptions.rightBottom}
                   rotateClass="-rotate-2"
                   animationFrom={{
                     x: 70,
@@ -318,6 +475,7 @@ export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
                     scale: 0.92,
                   }}
                   delay={0.7}
+                  design={design}
                 />
               </div>
             </div>
@@ -327,59 +485,98 @@ export const PolaroidGallery: React.FC<PolaroidGalleryProps> = ({
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.82 }}
-            className="relative z-10 mt-8 text-center text-[34px] font-semibold italic text-rose-700"
+            style={{
+              color:
+                design.memories
+                  .titleColor,
+              fontFamily:
+                design.memories
+                  .titleFont,
+              fontSize:
+                `${design.memories.titleSize}px`,
+            }}
+            className="relative z-10 mt-8 text-center font-semibold italic"
           >
-            Captured memories
+            {design.memories.title}
           </motion.p>
         </div>
       </div>
 
       {/* MOBILE */}
-      <div className="mx-auto max-w-[390px] sm:hidden">
-        <div className="relative overflow-hidden rounded-[26px] bg-pink-50 px-4 py-6">
-          <p className="mb-5 text-center text-2xl font-semibold italic text-rose-700">
-            Captured memories
+      <div className="mx-auto w-full max-w-[390px] sm:hidden">
+        <div
+          style={{
+            background:
+              design.memories
+                .background,
+          }}
+          className="relative overflow-hidden rounded-[26px] px-3 py-5"
+        >
+          <p
+            style={{
+              color:
+                design.memories
+                  .titleColor,
+              fontFamily:
+                design.memories
+                  .titleFont,
+              fontSize:
+                `${Math.max(
+                  22,
+                  Math.round(
+                    design.memories.titleSize * 0.72
+                  )
+                )}px`,
+            }}
+            className="mb-5 text-center font-semibold italic"
+          >
+            {design.memories.title}
           </p>
 
-          <div className="mb-5 flex justify-center">
+          <div className="mb-6 min-h-[220px]">
             <CrossedFilmStrips
               leftPhotos={stripLeft}
               rightPhotos={stripRight}
               compact
+              design={design}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <PolaroidCard
               photo={leftTop}
-              caption="memories with you"
+              caption={visibleCaptions.leftTop}
               rotateClass="-rotate-3"
               animationFrom={{ x: -40, scale: 0.94 }}
               delay={0.42}
+              design={design}
             />
 
             <PolaroidCard
               photo={rightTop}
-              caption="you make me smile"
+              caption={visibleCaptions.rightTop}
               rotateClass="rotate-3"
               animationFrom={{ x: 40, scale: 0.94 }}
               delay={0.52}
+              design={design}
             />
 
             <PolaroidCard
               photo={leftBottom}
-              caption="our little moments"
+              caption={visibleCaptions.leftBottom}
               rotateClass="rotate-2"
               animationFrom={{ x: -35, scale: 0.94 }}
               delay={0.62}
+              design={design}
             />
 
             <PolaroidCard
               photo={rightBottom}
-              caption="us, in frames"
+              caption={visibleCaptions.rightBottom}
               rotateClass="-rotate-2"
               animationFrom={{ x: 35, scale: 0.94 }}
               delay={0.72}
+              design={design}
             />
           </div>
         </div>
