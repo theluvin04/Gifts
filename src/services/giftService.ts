@@ -17,18 +17,34 @@ export type GiftStatus =
   | 'draft'
   | 'published';
 
+export type PaymentStatus =
+  | 'unpaid'
+  | 'paid_test';
+
+export interface CheckoutCustomer {
+  fullName: string;
+  email: string;
+  phone: string;
+}
+
 export interface SavedGiftDocument {
   id: string;
   config: LoveConfig;
   createdAt: unknown;
   updatedAt: unknown;
   publishedAt?: unknown;
+  paidAt?: unknown;
   creatorId: string;
   senderName: string;
   receiverName: string;
   viewCount: number;
   status: GiftStatus;
   isPublished: boolean;
+  templateId?: string;
+  price?: number;
+  currency?: string;
+  paymentStatus?: PaymentStatus;
+  customer?: CheckoutCustomer;
 }
 
 interface SaveGiftResult {
@@ -40,17 +56,26 @@ interface SaveGiftResult {
 const SAVED_KEYS_STORAGE =
   'gifts:created_ids';
 
+export const LOVE_01_PRICE = 99000;
+export const LOVE_01_CURRENCY = 'VND';
+
 const generateGiftId = (
-  length = 8
+  length = 10
 ): string => {
   const chars =
     'abcdefghjkmnpqrstuvwxyz23456789';
 
   let result = '';
 
-  for (let index = 0; index < length; index++) {
+  for (
+    let index = 0;
+    index < length;
+    index++
+  ) {
     result += chars.charAt(
-      Math.floor(Math.random() * chars.length)
+      Math.floor(
+        Math.random() * chars.length
+      )
     );
   }
 
@@ -79,35 +104,13 @@ const getAuthenticatedCreatorId =
     return creatorId;
   };
 
-const getAvailableGiftId =
-  async (): Promise<string> => {
-    for (
-      let attempt = 0;
-      attempt < 8;
-      attempt++
-    ) {
-      const candidate = generateGiftId();
-
-      const snapshot = await getDoc(
-        doc(db, 'gifts', candidate)
-      );
-
-      if (!snapshot.exists()) {
-        return candidate;
-      }
-    }
-
-    throw new Error(
-      'Không thể tạo mã quà tặng. Hãy thử lại.'
-    );
-  };
-
 export const getMySavedGiftIds =
   (): string[] => {
     try {
-      const raw = localStorage.getItem(
-        SAVED_KEYS_STORAGE
-      );
+      const raw =
+        localStorage.getItem(
+          SAVED_KEYS_STORAGE
+        );
 
       return raw
         ? JSON.parse(raw)
@@ -135,21 +138,22 @@ export const recordMySavedGiftId = (
       );
     }
   } catch {
-    // Không chặn publish nếu localStorage lỗi.
+    // Không chặn checkout nếu localStorage lỗi.
   }
 };
 
 const saveGift = async (
   config: LoveConfig,
   status: GiftStatus,
-  customId?: string
+  customId?: string,
+  extraData: Record<string, unknown> = {}
 ): Promise<SaveGiftResult> => {
   const creatorId =
     await getAuthenticatedCreatorId();
 
   const giftId =
     customId ||
-    (await getAvailableGiftId());
+    generateGiftId();
 
   const giftRef = doc(
     db,
@@ -157,16 +161,26 @@ const saveGift = async (
     giftId
   );
 
-  const existing =
-    await getDoc(giftRef);
+  let existingData:
+    | Record<string, any>
+    | null = null;
 
-  if (
-    existing.exists() &&
-    existing.data().creatorId !== creatorId
-  ) {
-    throw new Error(
-      'Bạn không có quyền sửa món quà này.'
-    );
+  if (customId) {
+    const existing =
+      await getDoc(giftRef);
+
+    if (existing.exists()) {
+      existingData = existing.data();
+
+      if (
+        existingData.creatorId !==
+        creatorId
+      ) {
+        throw new Error(
+          'Bạn không có quyền sửa món quà này.'
+        );
+      }
+    }
   }
 
   const now = serverTimestamp();
@@ -188,9 +202,10 @@ const saveGift = async (
     isPublished:
       status === 'published',
     updatedAt: now,
+    ...extraData,
   };
 
-  if (!existing.exists()) {
+  if (!existingData) {
     docData.createdAt = now;
     docData.viewCount = 0;
   }
@@ -224,10 +239,21 @@ export const saveGiftDraftToFirestore =
     return saveGift(
       config,
       'draft',
-      customId
+      customId,
+      {
+        templateId: 'love-01',
+        price: LOVE_01_PRICE,
+        currency:
+          LOVE_01_CURRENCY,
+        paymentStatus: 'unpaid',
+      }
     );
   };
 
+/**
+ * Giữ lại hàm publish trực tiếp để tương thích code cũ.
+ * UI mới không gọi hàm này trước checkout.
+ */
 export const publishGiftToFirestore =
   async (
     config: LoveConfig,
@@ -236,13 +262,54 @@ export const publishGiftToFirestore =
     return saveGift(
       config,
       'published',
-      customId
+      customId,
+      {
+        templateId: 'love-01',
+        price: LOVE_01_PRICE,
+        currency:
+          LOVE_01_CURRENCY,
+      }
     );
   };
 
 /**
- * Alias để code cũ vẫn chạy nếu còn nơi nào import tên cũ.
- * Từ giờ thao tác "Chia sẻ" được hiểu là publish.
+ * Checkout test:
+ * - cập nhật thông tin người mua
+ * - đánh dấu đã thanh toán test
+ * - chuyển draft -> published
+ */
+export const publishGiftAfterTestPayment =
+  async (
+    config: LoveConfig,
+    giftId: string,
+    customer: CheckoutCustomer
+  ) => {
+    if (!giftId) {
+      throw new Error(
+        'Chưa có mã đơn nháp.'
+      );
+    }
+
+    return saveGift(
+      config,
+      'published',
+      giftId,
+      {
+        templateId: 'love-01',
+        price: LOVE_01_PRICE,
+        currency:
+          LOVE_01_CURRENCY,
+        paymentStatus:
+          'paid_test',
+        customer,
+        paidAt:
+          serverTimestamp(),
+      }
+    );
+  };
+
+/**
+ * Alias để code cũ không vỡ nếu vẫn còn import tên này.
  */
 export const saveGiftToFirestore =
   publishGiftToFirestore;
@@ -269,7 +336,8 @@ export const fetchGiftFromFirestore =
         snapshot.data() as SavedGiftDocument;
 
       const isPublished =
-        data.status === 'published' ||
+        data.status ===
+          'published' ||
         data.isPublished === true;
 
       if (!isPublished) {

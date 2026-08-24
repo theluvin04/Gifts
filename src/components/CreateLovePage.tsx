@@ -3,14 +3,13 @@ import { motion } from 'motion/react';
 import {
   ArrowLeft,
   CheckCircle2,
+  CreditCard,
   Eye,
   Image as ImageIcon,
   Mail,
   Music2,
   Plus,
   RotateCcw,
-  Save,
-  Share2,
   Sparkles,
   Trash2,
   Upload,
@@ -18,7 +17,6 @@ import {
 } from 'lucide-react';
 
 import { LoveConfig } from '../types';
-import { ShareGiftModal } from './ShareGiftModal';
 
 interface CreateLovePageProps {
   config: LoveConfig;
@@ -26,6 +24,7 @@ interface CreateLovePageProps {
   onBack: () => void;
   onPreview: () => void;
   onReset: () => void;
+  onCheckout: () => void;
 }
 
 type TabId =
@@ -98,15 +97,13 @@ export const CreateLovePage: React.FC<
   onBack,
   onPreview,
   onReset,
+  onCheckout,
 }) => {
   const [activeTab, setActiveTab] =
     useState<TabId>('basic');
 
   const [imageError, setImageError] =
     useState('');
-
-  const [isShareModalOpen, setIsShareModalOpen] =
-    useState(false);
 
   const tabs = useMemo(
     () => [
@@ -355,11 +352,11 @@ export const CreateLovePage: React.FC<
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setIsShareModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-rose-200 transition hover:bg-rose-600"
+              onClick={onCheckout}
+              className="hidden items-center gap-1.5 rounded-full bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-rose-200 transition hover:bg-rose-600 sm:inline-flex"
             >
-              <Share2 className="h-3.5 w-3.5" />
-              <span>Tạo link gửi người ấy</span>
+              <CreditCard className="h-3.5 w-3.5" />
+              Thanh toán
             </button>
 
             <button
@@ -387,9 +384,9 @@ export const CreateLovePage: React.FC<
               </h1>
 
               <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
-                Thay nội dung bên dưới rồi bấm Preview.
+                Thay nội dung bên dưới rồi xem Preview.
                 Bản nháp được tự lưu trên trình duyệt này.
-                Link riêng cho từng khách sẽ làm ở bước tiếp theo.
+                Khi hoàn tất, tiếp tục sang bước thanh toán để tạo link riêng.
               </p>
             </div>
           </div>
@@ -479,7 +476,7 @@ export const CreateLovePage: React.FC<
               )}
             </motion.div>
 
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
                 onClick={onReset}
@@ -501,11 +498,11 @@ export const CreateLovePage: React.FC<
 
                 <button
                   type="button"
-                  onClick={() => setIsShareModalOpen(true)}
+                  onClick={onCheckout}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-rose-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-rose-200 transition hover:-translate-y-0.5 hover:bg-rose-600"
                 >
-                  <Share2 className="h-4 w-4" />
-                  Lưu & Tạo link gửi người ấy ✨
+                  <CreditCard className="h-4 w-4" />
+                  Tiếp tục thanh toán
                 </button>
               </div>
             </div>
@@ -516,18 +513,12 @@ export const CreateLovePage: React.FC<
               <PreviewCard
                 config={config}
                 onPreview={onPreview}
-                onShare={() => setIsShareModalOpen(true)}
+                onCheckout={onCheckout}
               />
             </div>
           </aside>
         </div>
       </main>
-
-      <ShareGiftModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        config={config}
-      />
     </div>
   );
 };
@@ -991,7 +982,7 @@ const LetterSection: React.FC<
 interface PreviewCardProps {
   config: LoveConfig;
   onPreview: () => void;
-  onShare?: () => void;
+  onCheckout: () => void;
 }
 
 const PreviewCard: React.FC<
@@ -999,7 +990,7 @@ const PreviewCard: React.FC<
 > = ({
   config,
   onPreview,
-  onShare,
+  onCheckout,
 }) => (
   <div className="overflow-hidden rounded-[28px] border border-rose-100 bg-white shadow-[0_24px_70px_rgba(190,70,110,0.12)]">
     <div className="border-b border-rose-100 px-5 py-4">
@@ -1057,7 +1048,7 @@ const PreviewCard: React.FC<
       </div>
     </div>
 
-    <div className="p-5 space-y-3">
+    <div className="p-5">
       <div className="space-y-2 text-xs text-slate-500">
         <p className="flex items-center gap-2">
           <CheckCircle2 className="h-3.5 w-3.5 text-rose-500" />
@@ -1075,25 +1066,25 @@ const PreviewCard: React.FC<
         </p>
       </div>
 
-      {onShare && (
+      <div className="mt-5 space-y-2">
         <button
           type="button"
-          onClick={onShare}
+          onClick={onCheckout}
           className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-rose-500 px-5 py-3 text-xs font-bold text-white shadow-md shadow-rose-100 transition hover:bg-rose-600"
         >
-          <Share2 className="h-3.5 w-3.5" />
-          Tạo link gửi người ấy
+          <CreditCard className="h-3.5 w-3.5" />
+          Tiếp tục thanh toán
         </button>
-      )}
 
-      <button
-        type="button"
-        onClick={onPreview}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-xs font-bold text-white transition hover:bg-rose-500"
-      >
-        <Eye className="h-3.5 w-3.5" />
-        Xem bản thật
-      </button>
+        <button
+          type="button"
+          onClick={onPreview}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-xs font-bold text-white transition hover:bg-rose-500"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          Xem bản thật
+        </button>
+      </div>
     </div>
   </div>
 );

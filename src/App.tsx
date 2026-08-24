@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  CreditCard,
   Heart,
   Settings,
-  Share2,
   Sparkles,
 } from 'lucide-react';
 
@@ -14,7 +14,7 @@ import { HomePage } from './components/Homepage';
 import { ProductDetailPage } from './components/ProductDetailPage';
 import { CreateLovePage } from './components/CreateLovePage';
 import { QuickConfigModal } from './components/QuickConfigModal';
-import { ShareGiftModal } from './components/ShareGiftModal';
+import { CheckoutPage } from './components/CheckoutPage';
 
 import { ProposalScreen } from './components/ProposalScreen';
 import { GiftSelector } from './components/GiftSelector';
@@ -32,6 +32,7 @@ const ROUTES = {
   home: '/',
   product: '/products/love-01',
   create: '/create/love-01',
+  checkout: '/checkout/love-01',
   proposal: TEMPLATE_BASE,
   gifts: `${TEMPLATE_BASE}/gifts`,
   gift1: `${TEMPLATE_BASE}/gifts/memories`,
@@ -135,9 +136,6 @@ export default function App() {
     useState<LoveConfig>(loadDraftConfig);
 
   const [isConfigOpen, setIsConfigOpen] =
-    useState(false);
-
-  const [isShareModalOpen, setIsShareModalOpen] =
     useState(false);
 
   const [
@@ -521,6 +519,17 @@ export default function App() {
         onBack={() => navigate('product')}
         onPreview={() => navigate('proposal')}
         onReset={resetDraft}
+        onCheckout={() => navigate('checkout')}
+      />
+    );
+  }
+
+  if (route === 'checkout') {
+    return (
+      <CheckoutPage
+        config={config}
+        onBack={() => navigate('create')}
+        onPreview={() => navigate('proposal')}
       />
     );
   }
@@ -561,15 +570,15 @@ export default function App() {
             <button
               type="button"
               onClick={() =>
-                setIsShareModalOpen(true)
+                navigate('checkout')
               }
               className="flex items-center gap-1.5 rounded-full bg-rose-500 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 transition hover:bg-rose-600"
-              title="Xuất bản và lấy link món quà"
+              title="Tiếp tục sang bước thanh toán"
             >
-              <Share2 className="h-3.5 w-3.5" />
+              <CreditCard className="h-3.5 w-3.5" />
 
               <span className="hidden sm:inline">
-                Chia sẻ món quà
+                Tiếp tục thanh toán
               </span>
             </button>
           </>
@@ -699,13 +708,6 @@ export default function App() {
             onReset={resetDraft}
           />
 
-          <ShareGiftModal
-            isOpen={isShareModalOpen}
-            onClose={() =>
-              setIsShareModalOpen(false)
-            }
-            config={config}
-          />
         </>
       )}
     </main>
