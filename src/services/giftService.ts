@@ -54,6 +54,7 @@ export interface SavedGiftDocument {
   paymentStatus?: PaymentStatus;
   paymentMethod?: 'bank_transfer';
   paymentReference?: string;
+  orderNumber?: string;
   orderCode?: string;
   customer?: CheckoutCustomer;
 }
@@ -71,6 +72,8 @@ export interface CheckoutGiftState {
   paymentStatus: PaymentStatus;
   price: number;
   currency: string;
+  orderNumber: string;
+  orderCode: string;
 }
 
 const SAVED_KEYS_STORAGE =
@@ -111,7 +114,34 @@ export const getCurrentCheckoutPricing =
     return getCurrentLoveTemplatePrice();
   };
 
-export const generateGiftId = () => {
+const SECURE_GIFT_ALPHABET =
+  'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+
+export interface CheckoutIdentity {
+  giftId: string;
+  orderNumber: string;
+  orderCode: string;
+}
+
+export const generateSecureGiftId = (
+  length = 24
+) => {
+  const bytes =
+    new Uint8Array(length);
+
+  crypto.getRandomValues(bytes);
+
+  return Array.from(
+    bytes,
+    (byte) =>
+      SECURE_GIFT_ALPHABET[
+        byte %
+        SECURE_GIFT_ALPHABET.length
+      ]
+  ).join('');
+};
+
+const generateOrderNumber = () => {
   return String(
     1000 +
       Math.floor(
@@ -120,27 +150,64 @@ export const generateGiftId = () => {
   );
 };
 
-export const generateUniqueGiftId =
-  async (): Promise<string> => {
+export const createCheckoutIdentity =
+  async (): Promise<CheckoutIdentity> => {
+    const creatorId =
+      await getAuthenticatedCreatorId();
+
+    const giftId =
+      generateSecureGiftId();
+
     for (
       let attempt = 0;
-      attempt < 40;
+      attempt < 50;
       attempt++
     ) {
-      const candidate =
-        generateGiftId();
+      const orderNumber =
+        generateOrderNumber();
 
-      const existing =
-        await getDoc(
+      const orderCode =
+        `Dearly${orderNumber}`;
+
+      try {
+        // /orderCodes/{4 số} chỉ cho phép CREATE.
+        // Nếu mã đã tồn tại, Firestore sẽ từ chối update
+        // và vòng lặp sẽ thử mã khác.
+        await setDoc(
           doc(
             db,
-            'gifts',
-            candidate
-          )
+            'orderCodes',
+            orderNumber
+          ),
+          {
+            orderNumber,
+            orderCode,
+            giftId,
+            creatorId,
+            createdAt:
+              serverTimestamp(),
+          }
         );
 
-      if (!existing.exists()) {
-        return candidate;
+        return {
+          giftId,
+          orderNumber,
+          orderCode,
+        };
+      } catch (error: any) {
+        const code =
+          error?.code || '';
+
+        if (
+          code ===
+            'permission-denied' ||
+          code ===
+            'firestore/permission-denied'
+        ) {
+          continue;
+        }
+
+        throw error;
       }
     }
 
@@ -220,7 +287,7 @@ const saveGift = async (
 
   const giftId =
     customId ||
-    generateGiftId();
+    generateSecureGiftId();
 
   const giftRef = doc(
     db,
@@ -354,6 +421,10 @@ export const saveGiftDraftToFirestore =
               existingData.paymentMethod,
             paymentReference:
               existingData.paymentReference,
+            orderNumber:
+              existingData.orderNumber,
+            orderCode:
+              existingData.orderCode,
             customer:
               existingData.customer,
           }
@@ -406,13 +477,17 @@ export const publishGiftToFirestore =
 export const submitBankTransferCheckout =
   async (
     config: LoveConfig,
-    giftId: string,
-    customer: CheckoutCustomer,
-    paymentReference: string
+    identity: CheckoutIdentity,
+    customer: CheckoutCustomer
   ) => {
-    if (!giftId) {
+    if (
+      !identity.giftId ||
+      !/^\d{4}$/.test(
+        identity.orderNumber
+      )
+    ) {
       throw new Error(
-        'Chưa có mã đơn.'
+        'Thông tin đơn hàng không hợp lệ.'
       );
     }
 
@@ -422,7 +497,7 @@ export const submitBankTransferCheckout =
     return saveGift(
       config,
       'draft',
-      giftId,
+      identity.giftId,
       {
         templateId: 'love-01',
         price:
@@ -433,9 +508,12 @@ export const submitBankTransferCheckout =
           'waiting_bank_transfer',
         paymentMethod:
           'bank_transfer',
-        paymentReference,
+        paymentReference:
+          identity.orderCode,
+        orderNumber:
+          identity.orderNumber,
         orderCode:
-          paymentReference,
+          identity.orderCode,
         customer,
       }
     );
@@ -499,6 +577,12 @@ export const fetchCheckoutGiftState =
         'unpaid',
       price,
       currency,
+      orderNumber:
+        data.orderNumber || '',
+      orderCode:
+        data.orderCode ||
+        data.paymentReference ||
+        '',
     };
   };
 

@@ -125,7 +125,11 @@ React.FC<
     );
 
   const cover =
-    getTrackCover(currentTrack);
+    currentTrack
+      ? getTrackCover(
+          currentTrack
+        )
+      : '';
 
   useEffect(() => {
     if (!audioRef.current) {
@@ -330,8 +334,8 @@ React.FC<
           <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-[22px] bg-[#f8a9c4] px-5 py-8 sm:min-h-[380px] lg:min-h-[430px]">
             <motion.div
               animate={
-                isPlaying &&
-                !usesYouTube
+                usesYouTube ||
+                isPlaying
                   ? {
                       rotate: 360,
                     }
@@ -340,15 +344,15 @@ React.FC<
                     }
               }
               transition={
-                isPlaying &&
-                !usesYouTube
+                usesYouTube ||
+                isPlaying
                   ? {
-                      duration: 8,
+                      duration: 9,
                       repeat: Infinity,
                       ease: 'linear',
                     }
                   : {
-                      duration: 0.4,
+                      duration: 0.35,
                     }
               }
               className="relative flex aspect-square w-[210px] items-center justify-center rounded-full bg-black shadow-[0_18px_35px_rgba(0,0,0,0.24)] sm:w-[280px] lg:w-[300px]"
@@ -360,16 +364,18 @@ React.FC<
               <div className="absolute inset-[8%] rounded-full border border-white/5" />
               <div className="absolute inset-[21%] rounded-full border border-white/5" />
 
-              <div className="relative flex h-[76px] w-[76px] items-center justify-center overflow-hidden rounded-full border-2 border-pink-200 sm:h-[94px] sm:w-[94px]">
+              <div className="relative h-[82px] w-[82px] overflow-hidden rounded-full border-2 border-pink-200 bg-[#2a171d] shadow-inner sm:h-[102px] sm:w-[102px]">
                 <img
                   src={cover}
                   alt={
                     currentTrack.title
                   }
-                  className="h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full scale-[1.32] object-cover object-center"
                 />
 
-                <div className="absolute h-3 w-3 rounded-full bg-white shadow" />
+                <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-inset ring-white/20" />
+
+                <div className="absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/10 bg-white shadow" />
               </div>
             </motion.div>
 

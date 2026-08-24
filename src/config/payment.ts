@@ -6,10 +6,10 @@ export const BANK_TRANSFER_CONFIG = {
 } as const;
 
 export const buildPaymentReference = (
-  giftId: string
+  orderNumber: string
 ) => {
   const digits =
-    giftId.replace(
+    orderNumber.replace(
       /\D/g,
       ''
     );
@@ -24,11 +24,13 @@ export const buildPaymentReference = (
 };
 
 export const buildVietQrImageUrl = (
-  giftId: string,
+  orderNumber: string,
   amount: number
 ) => {
   const reference =
-    buildPaymentReference(giftId);
+    buildPaymentReference(
+      orderNumber
+    );
 
   const params =
     new URLSearchParams({
@@ -43,4 +45,21 @@ export const buildVietQrImageUrl = (
   } = BANK_TRANSFER_CONFIG;
 
   return `https://img.vietqr.io/image/${bankId}-${accountNo}-${template}.png?${params.toString()}`;
+};
+
+
+export const buildGiftLinkQrUrl = (
+  giftUrl: string
+) => {
+  const params =
+    new URLSearchParams({
+      size: '260x260',
+      data: giftUrl,
+      margin: '8',
+    });
+
+  return (
+    'https://api.qrserver.com/v1/create-qr-code/?' +
+    params.toString()
+  );
 };

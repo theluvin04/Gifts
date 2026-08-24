@@ -1,30 +1,35 @@
-DEARLY — 4 DIGIT ORDER CODE
+DEARLY — SECURE GIFT LINK + SUCCESS UI + VINYL FIX
 
 THAY 5 FILE:
 1. src/components/CheckoutPage.tsx
 2. src/services/giftService.ts
 3. src/config/payment.ts
-4. src/components/admin/AdminOrdersPage.tsx
-5. src/components/admin/AdminOrdersTab.tsx
+4. src/components/gifts/VinylMusicPlayer.tsx
+5. firestore.rules
 
-QUY TẮC MỚI:
-- giftId nội bộ: đúng 4 số, ví dụ 8888.
-- Mã đơn: Dearly8888.
-- Nội dung chuyển khoản: Dearly8888.
-- Admin hiển thị: Dearly8888.
-- Admin tìm được Dearly8888 hoặc 8888.
+QUAN TRỌNG:
+Sau khi thay firestore.rules phải Publish rules vào đúng Firestore database.
 
-FLOW:
-- Vào checkout: KHÔNG sinh mã.
-- Điền đủ tên/email/SĐT.
-- Bấm Tạo QR.
-- Lúc đó mới tạo một mã 4 số chưa tồn tại trên Firestore.
-- Sau đó mới tạo order và QR.
+MÃ ĐƠN VS LINK:
+- Mã đơn thanh toán: Dearly8888
+- orderNumber: 8888
+- Public gift token: random 24 ký tự, ví dụ J7kP2m...
+- Link: /gift/J7kP2m...
+- Không thể suy ra gift link từ Dearly8888.
 
-SESSION CŨ:
-- ID cũ dạng CZW47J3UVJ bị loại khỏi session.
-- Không tái sử dụng làm mã đơn mới.
+CHỐNG TRÙNG MÃ ĐƠN:
+- Tạo /orderCodes/{8888} bằng create-only Firestore rule.
+- Nếu 8888 đã tồn tại, write bị từ chối và client tự thử mã 4 số khác.
+- Public user không được list/read orderCodes.
 
-DỮ LIỆU CŨ:
-- Không xóa đơn cũ khỏi Firestore.
-- Chỉ đơn mới sau bản này dùng Dearly + 4 số.
+SUCCESS SCREEN:
+- UI mới tối giản hơn.
+- Có QR riêng để mở gift.
+- Có Copy link.
+- Có nút Mở món quà.
+- Hiển thị mã đơn Dearly#### riêng biệt với URL.
+
+VINYL:
+- YouTube track: đĩa vinyl xoay rõ ràng.
+- Audio track: xoay khi audio đang play.
+- Ảnh giữa đĩa scale/crop kín hình tròn.

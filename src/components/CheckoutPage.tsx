@@ -26,14 +26,15 @@ import { LoveConfig } from '../types';
 import {
   CheckoutCustomer,
   LOVE_01_PRICE,
+  createCheckoutIdentity,
   fetchCheckoutGiftState,
-  generateUniqueGiftId,
   getCurrentCheckoutPricing,
   submitBankTransferCheckout,
 } from '../services/giftService';
 
 import {
   BANK_TRANSFER_CONFIG,
+  buildGiftLinkQrUrl,
   buildPaymentReference,
   buildVietQrImageUrl,
 } from '../config/payment';
@@ -95,6 +96,12 @@ export const CheckoutPage: React.FC<
   const [giftId, setGiftId] =
     useState('');
 
+  const [orderNumber, setOrderNumber] =
+    useState('');
+
+  const [orderCode, setOrderCode] =
+    useState('');
+
   const [checkoutPrice, setCheckoutPrice] =
     useState(LOVE_01_PRICE);
 
@@ -141,7 +148,7 @@ export const CheckoutPage: React.FC<
 
           const existingId =
             storedId &&
-            /^\d{4}$/.test(
+            /^[A-Za-z0-9_-]{16,64}$/.test(
               storedId
             )
               ? storedId
@@ -170,6 +177,12 @@ export const CheckoutPage: React.FC<
               setGiftId(existingId);
               setCheckoutPrice(
                 existingState.price
+              );
+              setOrderNumber(
+                existingState.orderNumber
+              );
+              setOrderCode(
+                existingState.orderCode
               );
 
               if (
@@ -351,20 +364,16 @@ export const CheckoutPage: React.FC<
       setError('');
 
       try {
-        // Mã đơn chỉ được sinh sau khi form hợp lệ
-        // và khách chủ động bấm tạo QR.
-        const nextGiftId =
-          await generateUniqueGiftId();
-
-        const paymentReference =
-          buildPaymentReference(
-            nextGiftId
-          );
+        // Chỉ lúc khách bấm tạo QR:
+        // 1) claim mã đơn Dearly####,
+        // 2) sinh token gift random độc lập.
+        const identity =
+          await createCheckoutIdentity();
 
         const result =
           await submitBankTransferCheckout(
             config,
-            nextGiftId,
+            identity,
             {
               fullName:
                 customer.fullName.trim(),
@@ -372,11 +381,16 @@ export const CheckoutPage: React.FC<
                 customer.email.trim(),
               phone:
                 customer.phone.trim(),
-            },
-            paymentReference
+            }
           );
 
         setGiftId(result.id);
+        setOrderNumber(
+          identity.orderNumber
+        );
+        setOrderCode(
+          identity.orderCode
+        );
 
         window.sessionStorage.setItem(
           CHECKOUT_GIFT_ID_KEY,
@@ -437,103 +451,159 @@ export const CheckoutPage: React.FC<
       ? `${window.location.origin}/gift/${giftId}`
       : '';
 
+  const giftQrUrl =
+    giftUrl
+      ? buildGiftLinkQrUrl(
+          giftUrl
+        )
+      : '';
+
   if (isPaidAndPublished) {
+    const finalOrderCode =
+      orderCode ||
+      (
+        orderNumber
+          ? buildPaymentReference(
+              orderNumber
+            )
+          : ''
+      );
+
     return (
-      <div className="min-h-[100svh] bg-[#fff9fb] px-4 py-10 text-slate-800 sm:py-16">
-        <div className="mx-auto max-w-2xl">
-          <div className="overflow-hidden rounded-[32px] border border-rose-100 bg-white shadow-[0_30px_90px_rgba(190,70,110,0.14)]">
-            <div className="bg-gradient-to-br from-rose-500 to-pink-500 px-6 py-10 text-center text-white sm:px-10">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white/20 backdrop-blur">
-                <CheckCircle2 className="h-8 w-8" />
+      <div className="min-h-[100svh] bg-[#fffaf8] px-4 py-8 text-[#1d1d1d] sm:py-14">
+        <main className="mx-auto w-full max-w-4xl">
+          <section className="overflow-hidden rounded-[32px] border border-black/[0.06] bg-white shadow-[0_28px_80px_rgba(60,25,35,0.08)]">
+            <div className="border-b border-black/[0.06] px-6 py-8 text-center sm:px-10 sm:py-10">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#f8e9ed] text-[#c9435d]">
+                <Check className="h-5 w-5 stroke-[2.2]" />
               </div>
 
-              <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">
+              <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#c9435d]">
                 Payment confirmed
               </p>
 
-              <h1 className="mt-2 text-3xl font-bold tracking-[-0.04em] sm:text-4xl">
-                Món quà đã sẵn sàng 💕
+              <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] sm:text-4xl">
+                Món quà đã sẵn sàng.
               </h1>
 
-              <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-white/80">
-                Thanh toán đã được xác nhận và gift
-                đã được publish.
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-black/45">
+                Link bên dưới là đường dẫn riêng của người nhận.
+                Mã đơn và link món quà là hai thông tin hoàn toàn khác nhau.
               </p>
             </div>
 
-            <div className="p-6 sm:p-8">
-              <div className="rounded-[22px] border border-rose-100 bg-[#fff9fb] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-400">
-                  Link món quà
+            <div className="grid gap-0 lg:grid-cols-[300px_1fr]">
+              <div className="border-b border-black/[0.06] bg-[#fff5f6] p-6 lg:border-b-0 lg:border-r lg:p-8">
+                <div className="mx-auto max-w-[230px] rounded-[24px] bg-white p-4 shadow-[0_12px_35px_rgba(30,20,22,0.06)]">
+                  <img
+                    src={giftQrUrl}
+                    alt="QR mở món quà"
+                    className="aspect-square w-full rounded-[14px] object-contain"
+                  />
+                </div>
+
+                <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-[0.15em] text-black/35">
+                  QR mở món quà
                 </p>
 
-                <div className="mt-2 flex items-center gap-2">
-                  <input
-                    readOnly
-                    value={giftUrl}
-                    className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-700 outline-none sm:text-sm"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void copyText(
-                        'gift',
-                        giftUrl
-                      )
-                    }
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-rose-500 px-3.5 py-2 text-xs font-bold text-white"
-                  >
-                    {copiedField ===
-                    'gift' ? (
-                      <>
-                        <Check className="h-3.5 w-3.5" />
-                        Đã chép
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5" />
-                        Sao chép
-                      </>
-                    )}
-                  </button>
-                </div>
+                <p className="mt-1 text-center text-xs text-black/45">
+                  Quét bằng camera điện thoại
+                </p>
               </div>
 
-              <a
-                href={giftUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-rose-500"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Mở món quà
-              </a>
+              <div className="p-6 sm:p-8">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[18px] bg-[#f7f7f4] px-4 py-4">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-black/35">
+                      Mã đơn
+                    </p>
 
-              <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-xs leading-5 text-slate-500">
-                <span className="font-bold text-slate-700">
-                  Mã đơn:
-                </span>{' '}
-                {buildPaymentReference(
-                  giftId
-                )}
+                    <p className="mt-1 font-mono text-base font-black text-[#c9435d]">
+                      {finalOrderCode || '—'}
+                    </p>
+                  </div>
+
+                  <div className="rounded-[18px] bg-[#f7f7f4] px-4 py-4">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-black/35">
+                      Trạng thái
+                    </p>
+
+                    <p className="mt-1 text-sm font-bold text-emerald-700">
+                      Đã thanh toán
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-[20px] border border-black/[0.07] p-4">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-black/35">
+                    Link riêng của món quà
+                  </p>
+
+                  <p className="mt-2 break-all text-xs font-semibold leading-5 text-black/65">
+                    {giftUrl}
+                  </p>
+
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void copyText(
+                          'gift',
+                          giftUrl
+                        )
+                      }
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-[14px] border border-black/[0.08] bg-white px-4 py-3 text-xs font-bold text-black/65 transition hover:border-[#c9435d]/25 hover:text-[#c9435d]"
+                    >
+                      {copiedField ===
+                      'gift' ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+
+                      {copiedField ===
+                      'gift'
+                        ? 'Đã sao chép'
+                        : 'Sao chép link'}
+                    </button>
+
+                    <a
+                      href={giftUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-[14px] bg-[#1d1d1d] px-4 py-3 text-xs font-bold text-white transition hover:bg-[#c9435d]"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Mở món quà
+                    </a>
+                  </div>
+                </div>
+
+                <p className="mt-4 text-[10px] leading-5 text-black/35">
+                  Không dùng mã đơn để suy ra link. Link gift được tạo bằng token random riêng cho từng khách.
+                </p>
               </div>
             </div>
-          </div>
-        </div>
+          </section>
+        </main>
       </div>
     );
   }
 
-  if (isPaymentReady && giftId) {
+  if (
+    isPaymentReady &&
+    giftId &&
+    orderNumber
+  ) {
     const paymentReference =
+      orderCode ||
       buildPaymentReference(
-        giftId
+        orderNumber
       );
 
     const qrImageUrl =
       buildVietQrImageUrl(
-        giftId,
+        orderNumber,
         checkoutPrice
       );
 
@@ -696,9 +766,7 @@ export const CheckoutPage: React.FC<
                 <span className="font-bold text-slate-700">
                   Mã đơn:
                 </span>{' '}
-                {buildPaymentReference(
-                  giftId
-                )}
+                {paymentReference}
               </p>
 
               <p>

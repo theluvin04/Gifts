@@ -78,6 +78,21 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+
+    match /orderCodes/{orderNumber} {
+      // Anonymous checkout may only CLAIM a brand-new 4-digit code.
+      // Existing documents cannot be overwritten, so collisions retry.
+      allow create: if request.auth != null
+        && orderNumber.matches('^[0-9]{4}$')
+        && request.resource.data.creatorId == request.auth.uid
+        && request.resource.data.orderNumber == orderNumber
+        && request.resource.data.orderCode == 'Dearly' + orderNumber
+        && request.resource.data.giftId is string;
+
+      allow get, list: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
     match /gifts/{giftId} {
       function isOwner() {
         return request.auth != null
