@@ -1,15 +1,71 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && exists(
+          /databases/$(database)/documents/admins/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/admins/$(request.auth.uid)
+        ).data.enabled == true;
+    }
+
+    match /admins/{userId} {
+      // Cho user đọc đúng record admin của chính UID mình
+      // để UI biết đã được cấp quyền hay chưa.
+      allow get: if request.auth != null
+        && request.auth.uid == userId;
+
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
     match /gifts/{giftId} {
-      // Anyone with the link can view the personalized gift
-      allow read: if true;
-      // Anyone can create or save their love gift configuration
-      allow create: if request.resource.data.config != null;
-      // Allow updates to the gift or view counts
-      allow update: if true;
-      // Allow deletion only if creator or authenticated
-      allow delete: if request.auth != null;
+      function isOwner() {
+        return request.auth != null
+          && resource.data.creatorId == request.auth.uid;
+      }
+
+      function isPublished() {
+        return resource.data.status == 'published'
+          || resource.data.isPublished == true;
+      }
+
+      function validWrite() {
+        return request.auth != null
+          && request.resource.data.config != null
+          && request.resource.data.creatorId == request.auth.uid
+          && (
+            request.resource.data.status == 'draft'
+            || request.resource.data.status == 'published'
+          )
+          && request.resource.data.isPublished
+            == (
+              request.resource.data.status == 'published'
+            );
+      }
+
+      // Gift public: chỉ get từng gift đã publish.
+      // Owner: đọc được gift của mình.
+      // Admin: đọc được tất cả.
+      allow get: if isPublished()
+        || isOwner()
+        || isAdmin();
+
+      // Chỉ admin được query toàn bộ collection gifts.
+      allow list: if isAdmin();
+
+      allow create: if validWrite();
+
+      allow update: if isOwner()
+        && request.resource.data.creatorId
+          == resource.data.creatorId
+        && validWrite();
+
+      allow delete: if isOwner()
+        || isAdmin();
     }
   }
 }

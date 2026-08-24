@@ -15,6 +15,7 @@ import { ProductDetailPage } from './components/ProductDetailPage';
 import { CreateLovePage } from './components/CreateLovePage';
 import { QuickConfigModal } from './components/QuickConfigModal';
 import { CheckoutPage } from './components/CheckoutPage';
+import { AdminOrdersPage } from './components/admin/AdminOrdersPage';
 
 import { ProposalScreen } from './components/ProposalScreen';
 import { GiftSelector } from './components/GiftSelector';
@@ -33,6 +34,8 @@ const ROUTES = {
   product: '/products/love-01',
   create: '/create/love-01',
   checkout: '/checkout/love-01',
+  admin: '/admin',
+  adminOrders: '/admin/orders',
   proposal: TEMPLATE_BASE,
   gifts: `${TEMPLATE_BASE}/gifts`,
   gift1: `${TEMPLATE_BASE}/gifts/memories`,
@@ -530,6 +533,17 @@ export default function App() {
         config={config}
         onBack={() => navigate('create')}
         onPreview={() => navigate('proposal')}
+      />
+    );
+  }
+
+  if (
+    route === 'admin' ||
+    route === 'adminOrders'
+  ) {
+    return (
+      <AdminOrdersPage
+        onBackHome={() => navigate('home')}
       />
     );
   }
