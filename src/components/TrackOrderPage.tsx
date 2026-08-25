@@ -10,7 +10,6 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 
-import { CustomerSiteHeader } from './CustomerSiteHeader';
 
 import {
   PublicOrderLookupRecord,
@@ -62,7 +61,7 @@ const getStatusInfo = (
       label:
         'Món quà đã hoàn tất',
       description:
-        'Thanh toán đã được xác nhận và món quà đã được xuất bản.',
+        'Món quà đã sẵn sàng.',
       className:
         'bg-emerald-50 text-emerald-700',
       icon:
@@ -80,7 +79,7 @@ const getStatusInfo = (
       label:
         'Đã thanh toán',
       description:
-        'Dearly đã nhận thanh toán và đang hoàn tất món quà.',
+        'Thanh toán đã được xác nhận.',
       className:
         'bg-blue-50 text-blue-700',
       icon:
@@ -96,7 +95,7 @@ const getStatusInfo = (
       label:
         'Chờ xác nhận chuyển khoản',
       description:
-        'Đơn đã được tạo và đang chờ Dearly xác nhận thanh toán.',
+        'Đang chờ xác nhận thanh toán.',
       className:
         'bg-amber-50 text-amber-700',
       icon:
@@ -108,7 +107,7 @@ const getStatusInfo = (
     label:
       'Chưa thanh toán',
     description:
-      'Đơn chưa có xác nhận thanh toán.',
+      'Chưa có xác nhận thanh toán.',
     className:
       'bg-slate-100 text-slate-600',
     icon:
@@ -122,9 +121,7 @@ const inputClass =
 export const TrackOrderPage:
 React.FC<
   TrackOrderPageProps
-> = ({
-  onBackHome,
-}) => {
+> = () => {
   const [
     orderCode,
     setOrderCode,
@@ -192,30 +189,10 @@ React.FC<
 
   return (
     <div className="min-h-[100svh] w-full overflow-x-hidden bg-[#fffaf8] text-[#1d1d1d]">
-      <CustomerSiteHeader
-        onHome={onBackHome}
-        onTemplates={() => {
-          window.location.href = '/#templates';
-        }}
-        onHowItWorks={() => {
-          window.location.href = '/#how-it-works';
-        }}
-        onTrackOrder={() => {
-          window.location.href = '/track-order';
-        }}
-        active="track-order"
-        primaryAction={{
-          label: 'Xem template',
-          onClick: () => {
-            window.location.href = '/#templates';
-          },
-        }}
-      />
-
       <main className="mx-auto w-full max-w-4xl px-3 py-7 sm:px-6 sm:py-12">
         <section className="mx-auto max-w-2xl text-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#c9435d]">
-            Dearly order tracking
+            Tra cứu đơn
           </p>
 
           <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] sm:text-4xl">
@@ -223,7 +200,7 @@ React.FC<
           </h1>
 
           <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-black/45">
-            Nhập đúng mã đơn và số điện thoại đã dùng khi thanh toán.
+            Nhập mã đơn và số điện thoại.
           </p>
         </section>
 
@@ -301,10 +278,6 @@ React.FC<
             Tra cứu
           </button>
         </form>
-
-        <p className="mx-auto mt-3 max-w-2xl text-center text-[10px] leading-5 text-black/30">
-          Cần khớp cả hai thông tin. Trang này không hiển thị email, SĐT hoặc link riêng của món quà.
-        </p>
 
         {error && (
           <div className="mx-auto mt-6 max-w-2xl rounded-[18px] border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">

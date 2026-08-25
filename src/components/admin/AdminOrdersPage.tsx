@@ -1163,9 +1163,9 @@ React.FC<Props> = ({
     TAB_COPY[tab];
 
   return (
-    <div className="min-h-[100svh] bg-[#f6f5f3] text-[#191919] lg:grid lg:grid-cols-[188px_minmax(0,1fr)] xl:grid-cols-[216px_minmax(0,1fr)]">
+    <div className="dearly-admin-shell min-h-[100svh] bg-[#f6f5f3] text-[#191919] lg:grid lg:grid-cols-[176px_minmax(0,1fr)] xl:grid-cols-[190px_minmax(0,1fr)]">
       <aside className="sticky top-0 z-50 border-b border-black/8 bg-white/96 backdrop-blur-xl lg:h-[100svh] lg:border-b-0 lg:border-r">
-        <div className="flex items-center justify-between px-4 py-4 lg:block lg:px-5 lg:py-6">
+        <div className="flex items-center justify-between px-4 py-4 lg:block lg:px-4 lg:py-5">
           <button
             type="button"
             onClick={onBackHome}
@@ -1208,15 +1208,12 @@ React.FC<Props> = ({
                 <span className="block text-xs font-black">
                   {item.label}
                 </span>
-                <span className="mt-1 hidden text-[9px] leading-4 opacity-60 xl:block">
-                  {item.description}
-                </span>
               </button>
             )
           )}
         </nav>
 
-        <div className="hidden lg:absolute lg:bottom-0 lg:left-0 lg:right-0 lg:block lg:border-t lg:border-black/8 lg:p-4">
+        <div className="hidden lg:absolute lg:bottom-0 lg:left-0 lg:right-0 lg:block lg:border-t lg:border-black/8 lg:p-3.5">
           <p className="truncate text-xs font-bold text-black/65">
             {session.displayName ||
               'Google Admin'}
@@ -1253,15 +1250,10 @@ React.FC<Props> = ({
         >
           <header className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between lg:mb-5">
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#b83e57]">
-                Dearly Admin
-              </p>
-              <h1 className="mt-1.5 text-2xl font-black tracking-[-0.04em] sm:text-3xl">
+              <h1 className="text-2xl font-black tracking-[-0.04em] sm:text-3xl">
                 {tabCopy.title}
               </h1>
-              <p className="mt-1 text-xs text-black/38">
-                {tabCopy.description}
-              </p>
+
             </div>
 
             {tab !== 'templates' && (
@@ -1272,7 +1264,7 @@ React.FC<Props> = ({
                 }
                 className="self-start rounded-[10px] border border-black/10 bg-white px-3.5 py-2.5 text-[10px] font-bold text-black/45 hover:text-black/70 sm:self-auto"
               >
-                Làm mới dữ liệu
+                Làm mới
               </button>
             )}
           </header>

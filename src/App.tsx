@@ -49,9 +49,16 @@ export default function App() {
       | 'templates'
       | 'track-order'
       | 'cart'
-      | null = null
+      | null = null,
+    page:
+      | 'home'
+      | 'product'
+      | 'create'
+      | 'checkout'
+      | 'cart'
+      | 'track' = 'home'
   ) => (
-    <div className="dearly-customer-shell min-h-[100svh] bg-[#fffaf8]">
+    <div className={`dearly-customer-shell dearly-page-${page} min-h-[100svh] bg-[#fffaf8]`}>
       <CustomerSiteHeader
         active={active}
         cartCount={cartItems.length}
@@ -167,7 +174,9 @@ export default function App() {
         onTrackOrder={() =>
           navigate('/track-order')
         }
-      />
+      />,
+      null,
+      'home'
     );
   }
 
@@ -178,7 +187,8 @@ export default function App() {
           navigate('/')
         }
       />,
-      'track-order'
+      'track-order',
+      'track'
     );
   }
 
@@ -204,6 +214,7 @@ export default function App() {
           );
         }}
       />,
+      'cart',
       'cart'
     );
   }
@@ -242,7 +253,8 @@ export default function App() {
             onBack={() => navigate(`/create/${location.templateId}`)}
             onBackHome={() => navigate('/')}
           />,
-          'templates'
+          'templates',
+          'checkout'
         );
       }
 
@@ -255,7 +267,10 @@ export default function App() {
           onBackProduct={() => navigate(`/products/${location.templateId}`)}
           onCheckout={() => navigate(`/checkout/${location.templateId}`)}
         />,
-        'templates'
+        'templates',
+        location.kind === 'template-product'
+          ? 'product'
+          : 'create'
       );
     }
 
@@ -268,7 +283,8 @@ export default function App() {
           onBackHome={() => navigate('/')}
           onStartPersonalize={() => navigate(template.paths.create)}
         />,
-        'templates'
+        'templates',
+        'product'
       );
     }
 
@@ -291,7 +307,8 @@ export default function App() {
           }}
           onCheckout={() => navigate(template.paths.checkout)}
         />,
-        'templates'
+        'templates',
+        'create'
       );
     }
 
@@ -301,7 +318,8 @@ export default function App() {
         config={config}
         onBack={() => navigate(template.paths.create)}
       />,
-      'templates'
+      'templates',
+      'checkout'
     );
   }
 

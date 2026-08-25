@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Copy, Loader2 } from 'lucide-react';
 
-import { CustomerSiteHeader } from './CustomerSiteHeader';
 import { VisualSceneExperience } from '../engine';
 import type { TemplateVisualEditorConfig } from '../templates/visualEditor';
 import {
@@ -82,7 +81,6 @@ const hasUsableVisualEditor = (
 export const DynamicVisualCheckoutPage: React.FC<Props> = ({
   templateId,
   onBack,
-  onBackHome,
 }) => {
   const [template, setTemplate] = useState<TemplateConfig | null>(null);
   const [draft, setDraft] = useState<TemplateVisualEditorConfig | null>(null);
@@ -269,30 +267,12 @@ export const DynamicVisualCheckoutPage: React.FC<Props> = ({
 
   return (
     <div className="min-h-[100svh] bg-[#fbf8f6] text-[#171717]">
-      <CustomerSiteHeader
-        onHome={onBackHome}
-        onTemplates={() => {
-          window.location.href = '/#templates';
-        }}
-        onHowItWorks={() => {
-          window.location.href = '/#how-it-works';
-        }}
-        onTrackOrder={() => {
-          window.location.href = '/track-order';
-        }}
-        active="templates"
-        primaryAction={{
-          label: 'Chỉnh sửa',
-          onClick: onBack,
-        }}
-      />
-
-      <main className="mx-auto grid max-w-[1480px] gap-7 px-4 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_410px] lg:items-start lg:py-9">
-        <section className="min-w-0">
+      <main className="mx-auto grid max-w-[1180px] gap-5 px-4 py-6 sm:px-7 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-start lg:gap-7 lg:py-9">
+        <section className="order-2 hidden min-w-0 lg:order-1 lg:block">
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
               <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#c9435d]">
-                Xem lại mẫu
+                Bản quà của bạn
               </p>
               <h1 className="mt-2 text-2xl font-black tracking-[-0.035em]">
                 {template.name}
@@ -303,7 +283,7 @@ export const DynamicVisualCheckoutPage: React.FC<Props> = ({
               onClick={onBack}
               className="rounded-[11px] border border-black/[0.08] bg-white px-3 py-2 text-[10px] font-bold text-black/45"
             >
-              Chỉnh lại
+              Chỉnh sửa
             </button>
           </div>
 
@@ -315,7 +295,7 @@ export const DynamicVisualCheckoutPage: React.FC<Props> = ({
           </div>
         </section>
 
-        <aside className="h-fit rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-[0_20px_65px_rgba(45,20,28,0.06)] lg:sticky lg:top-6">
+        <aside className="order-1 h-fit rounded-[22px] border border-black/[0.07] bg-white p-5 shadow-[0_20px_60px_rgba(45,20,28,0.05)] sm:p-6 lg:order-2 lg:sticky lg:top-[88px] lg:rounded-[24px]">
           {!paymentReady ? (
             <>
               <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.14em] text-black/30">
@@ -332,8 +312,8 @@ export const DynamicVisualCheckoutPage: React.FC<Props> = ({
               <h2 className="mt-2 text-[26px] font-black leading-[1.05] tracking-[-0.04em]">
                 Thanh toán {template.name}
               </h2>
-              <p className="mt-2.5 text-xs leading-5 text-black/42">
-                Điền thông tin người mua để tạo mã chuyển khoản và giữ đúng bản mẫu bạn vừa chỉnh.
+              <p className="mt-2.5 text-xs leading-5 text-black/40">
+                Điền thông tin để tạo QR thanh toán.
               </p>
 
               <div className="mt-5 rounded-[14px] bg-[#faf7f6] p-4">
@@ -402,11 +382,11 @@ export const DynamicVisualCheckoutPage: React.FC<Props> = ({
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-[14px] bg-[#171717] px-5 py-3.5 text-sm font-black text-white transition hover:bg-[#c9435d] disabled:opacity-45"
               >
                 {creating && <Loader2 className="h-4 w-4 animate-spin" />}
-                Tiếp tục thanh toán
+                Tạo QR thanh toán
               </button>
 
-              <p className="mt-3 text-center text-[10px] leading-4 text-black/30">
-                Thanh toán bằng chuyển khoản ngân hàng. Link quà sẽ được mở sau khi xác nhận thanh toán.
+              <p className="mt-3 text-center text-[10px] leading-4 text-black/28">
+                Link quà mở sau khi thanh toán được xác nhận.
               </p>
             </>
           ) : (
@@ -430,7 +410,7 @@ export const DynamicVisualCheckoutPage: React.FC<Props> = ({
                 </h2>
                 {!paidAndPublished && (
                   <p className="mt-2 text-xs leading-5 text-black/40">
-                    Chuyển đúng số tiền và giữ nguyên nội dung chuyển khoản bên dưới.
+                    Quét QR hoặc dùng thông tin bên dưới.
                   </p>
                 )}
               </div>
@@ -488,7 +468,7 @@ export const DynamicVisualCheckoutPage: React.FC<Props> = ({
                 </div>
               ) : (
                 <p className="mt-4 text-center text-[10px] leading-5 text-black/35">
-                  Trang này sẽ tự cập nhật sau khi đơn được xác nhận.
+                  Trạng thái sẽ tự cập nhật khi thanh toán được xác nhận.
                 </p>
               )}
             </>
@@ -513,7 +493,7 @@ const Field: React.FC<{
   onChange,
 }) => (
   <label className="block">
-    <span className="text-[10px] font-black uppercase tracking-[0.08em] text-black/35">
+    <span className="text-xs font-bold text-black/50">
       {label}
     </span>
     <input
@@ -521,7 +501,7 @@ const Field: React.FC<{
       value={value}
       placeholder={placeholder}
       onChange={(event) => onChange(event.target.value)}
-      className="mt-1.5 w-full rounded-[12px] border border-black/[0.09] bg-[#fdfcfc] px-3.5 py-3 text-sm outline-none transition placeholder:text-black/20 focus:border-[#c9435d]/45 focus:bg-white"
+      className="mt-1.5 min-h-12 w-full rounded-[12px] border border-black/[0.09] bg-[#fdfcfc] px-3.5 py-3 text-[16px] outline-none transition placeholder:text-black/20 focus:border-[#c9435d]/45 focus:bg-white focus:ring-2 focus:ring-[#c9435d]/10 sm:text-sm"
     />
   </label>
 );
@@ -534,10 +514,10 @@ const PaymentRow: React.FC<{
 }> = ({ label, value, onCopy, copied }) => (
   <div className="flex items-center justify-between gap-3 rounded-[10px] bg-white px-3 py-2.5">
     <div className="min-w-0">
-      <p className="text-[8px] font-bold uppercase tracking-[0.08em] text-black/28">
+      <p className="text-[9px] font-black uppercase tracking-[0.08em] text-black/28">
         {label}
       </p>
-      <p className="mt-0.5 truncate text-xs font-black">{value}</p>
+      <p className="mt-0.5 break-all text-sm font-black">{value}</p>
     </div>
 
     {onCopy && (

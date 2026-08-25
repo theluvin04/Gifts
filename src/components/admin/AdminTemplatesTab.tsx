@@ -358,14 +358,11 @@ React.FC<Props> = ({
         <section className="rounded-[20px] border border-black/8 bg-white p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#b83e57]">
+              <h2 className="text-xl font-black tracking-[-0.035em] sm:text-2xl">
                 Templates
-              </p>
-              <h2 className="mt-1.5 text-xl font-black tracking-[-0.035em] sm:text-2xl">
-                Chọn template để chỉnh sửa
               </h2>
-              <p className="mt-2 max-w-[560px] text-xs leading-5 text-black/42">
-                Chọn một template có sẵn hoặc tạo template mới. Editor chỉ mở sau khi bạn chọn, tránh chỉnh nhầm sản phẩm.
+              <p className="mt-1 text-xs text-black/38">
+                Chọn mẫu để chỉnh sửa.
               </p>
             </div>
 
@@ -385,7 +382,7 @@ React.FC<Props> = ({
         <section className="rounded-[20px] border border-black/8 bg-white p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <p className="text-xs font-black text-black/70">
-              Template hiện có
+              Danh sách
             </p>
             <span className="text-[10px] font-semibold text-black/30">
               {sortedTemplates.length} template
@@ -657,11 +654,6 @@ React.FC<Props> = ({
           </div>
         </div>
 
-        {dirty && (
-          <p className="mt-3 text-[10px] font-bold text-amber-600">
-            Có thay đổi chưa lưu.
-          </p>
-        )}
       </section>
 
       <section className="rounded-[16px] border border-black/8 bg-white p-1.5 sm:p-2">
@@ -684,9 +676,7 @@ React.FC<Props> = ({
                 <p className="text-[11px] font-black">
                   {item.label}
                 </p>
-                <p className="mt-1 hidden text-[9px] leading-4 opacity-65 lg:block">
-                  {item.description}
-                </p>
+
               </button>
             )
           )}
@@ -827,7 +817,7 @@ React.FC<{
   <section className="rounded-[18px] border border-black/8 bg-white p-5 sm:p-6">
     <div className="mb-6">
       <h2 className="text-sm font-black">
-        Thông tin bán hàng
+        Thông tin
       </h2>
       <p className="mt-1 text-[11px] leading-5 text-black/38">
         Trạng thái quyết định trực tiếp việc template có được mở bán trên storefront hay không.

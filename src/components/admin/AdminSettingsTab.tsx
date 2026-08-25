@@ -16,10 +16,9 @@ export const AdminSettingsTab:
 React.FC<{
   session: AdminSession;
 }> = ({ session }) => (
-  <div className="grid gap-5 xl:grid-cols-2">
+  <div className="grid gap-4 xl:grid-cols-3">
     <SettingsCard
-      title="Tài khoản Admin"
-      description="Tài khoản Google đang có quyền truy cập hệ thống."
+      title="Tài khoản"
     >
       <SettingLine
         label="Tên"
@@ -39,22 +38,18 @@ React.FC<{
         value={
           session.uid || '—'
         }
+        mono
       />
     </SettingsCard>
 
     <SettingsCard
       title="Thương hiệu"
-      description="Thông tin đang được dùng trên storefront."
     >
-      <div className="mb-5 rounded-[12px] bg-[#faf9f8] p-4">
+      <div className="mb-4 rounded-[12px] bg-[#faf9f8] p-3">
         <img
-          src={
-            BRAND.logoPath
-          }
-          alt={
-            BRAND.name
-          }
-          className="h-12 w-auto object-contain"
+          src={BRAND.logoPath}
+          alt={BRAND.name}
+          className="h-10 w-auto object-contain"
         />
       </div>
       <SettingLine
@@ -69,7 +64,6 @@ React.FC<{
 
     <SettingsCard
       title="Thanh toán"
-      description="Cấu hình chuyển khoản hiện tại."
     >
       <SettingLine
         label="Ngân hàng"
@@ -78,32 +72,19 @@ React.FC<{
         }
       />
       <SettingLine
-        label="Số tài khoản"
+        label="Số TK"
         value={
           BANK_TRANSFER_CONFIG.accountNo
         }
+        mono
       />
       <SettingLine
         label="BIN"
         value={
           BANK_TRANSFER_CONFIG.bankId
         }
+        mono
       />
-      <SettingLine
-        label="QR template"
-        value={
-          BANK_TRANSFER_CONFIG.template
-        }
-      />
-    </SettingsCard>
-
-    <SettingsCard
-      title="Lưu ý cấu hình"
-      description="Các mục này đang là cấu hình trong code, chưa phải form chỉnh trực tiếp."
-    >
-      <p className="text-xs leading-6 text-black/45">
-        Brand nằm trong <code className="rounded bg-black/[0.04] px-1.5 py-1 font-mono text-[10px]">src/config/brand.ts</code> và thông tin ngân hàng nằm trong <code className="rounded bg-black/[0.04] px-1.5 py-1 font-mono text-[10px]">src/config/payment.ts</code>.
-      </p>
     </SettingsCard>
   </div>
 );
@@ -111,21 +92,16 @@ React.FC<{
 const SettingsCard:
 React.FC<{
   title: string;
-  description: string;
   children: React.ReactNode;
 }> = ({
   title,
-  description,
   children,
 }) => (
-  <section className="rounded-[18px] border border-black/8 bg-white p-5 sm:p-6">
+  <section className="rounded-[18px] border border-black/8 bg-white p-5">
     <h2 className="text-sm font-black">
       {title}
     </h2>
-    <p className="mt-1 text-[11px] leading-5 text-black/38">
-      {description}
-    </p>
-    <dl className="mt-5 space-y-3">
+    <dl className="mt-4 space-y-3">
       {children}
     </dl>
   </section>
@@ -135,15 +111,22 @@ const SettingLine:
 React.FC<{
   label: string;
   value: string;
+  mono?: boolean;
 }> = ({
   label,
   value,
+  mono = false,
 }) => (
-  <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 border-b border-black/6 pb-3 text-xs last:border-b-0 last:pb-0">
+  <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-3 border-b border-black/6 pb-3 text-xs last:border-b-0 last:pb-0">
     <dt className="text-black/35">
       {label}
     </dt>
-    <dd className="break-all font-bold text-black/65">
+    <dd
+      className={[
+        'break-all font-bold text-black/65',
+        mono ? 'font-mono text-[10px]' : '',
+      ].join(' ')}
+    >
       {value}
     </dd>
   </div>

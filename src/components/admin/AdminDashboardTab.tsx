@@ -45,77 +45,66 @@ React.FC<Props> = ({
   const recent =
     orders.slice(0, 5);
 
-  const visibleTemplates =
+  const availableTemplates =
     templates.filter(
       (template) =>
-        template.visible &&
         template.status ===
-          'available'
+        'available'
     ).length;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric
-          label="Đơn checkout"
+          label="Tổng đơn"
           value={String(
             orders.length
           )}
-          note={`${pendingCount} đơn đang chờ chuyển khoản`}
         />
-
         <Metric
-          label="Đã thanh toán"
+          label="Đang chờ"
+          value={String(
+            pendingCount
+          )}
+          tone="amber"
+        />
+        <Metric
+          label="Đã trả"
           value={String(
             paidCount
           )}
-          note="Đơn đã xác nhận thanh toán"
+          tone="green"
         />
-
         <Metric
-          label="Doanh thu đã trả"
+          label="Doanh thu"
           value={formatVnd(
             revenue
           )}
-          note="Chỉ tính đơn đã thanh toán"
-        />
-
-        <Metric
-          label="Khách hàng"
-          value={String(
-            customers.length
-          )}
-          note={`${visibleTemplates}/${templates.length} template đang bán`}
         />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="overflow-hidden rounded-[18px] border border-black/8 bg-white">
-          <div className="flex items-center justify-between gap-4 border-b border-black/7 px-5 py-4">
-            <div>
-              <h2 className="text-sm font-black">
-                Đơn mới nhất
-              </h2>
-              <p className="mt-1 text-[11px] text-black/38">
-                Bấm vào đơn để xử lý nhanh.
-              </p>
-            </div>
+          <div className="flex items-center justify-between gap-4 border-b border-black/7 px-4 py-3.5 sm:px-5">
+            <h2 className="text-sm font-black">
+              Đơn mới nhất
+            </h2>
 
             <button
               type="button"
               onClick={
                 onOpenOrders
               }
-              className="text-xs font-bold text-[#b83e57] hover:underline"
+              className="text-xs font-bold text-[#b83e57]"
             >
               Xem tất cả
             </button>
           </div>
 
           {recent.length ===
-            0 ? (
+          0 ? (
             <div className="px-5 py-12 text-center text-xs text-black/35">
-              Chưa có đơn checkout.
+              Chưa có đơn.
             </div>
           ) : (
             <div className="divide-y divide-black/6">
@@ -131,7 +120,7 @@ React.FC<Props> = ({
                         order.id
                       )
                     }
-                    className="grid w-full gap-2 px-5 py-4 text-left transition hover:bg-[#fff8fa] sm:grid-cols-[130px_minmax(0,1fr)_150px] sm:items-center"
+                    className="grid w-full gap-2 px-4 py-3.5 text-left transition hover:bg-[#fff9fa] sm:grid-cols-[120px_minmax(0,1fr)_135px] sm:items-center sm:px-5"
                   >
                     <div>
                       <p className="font-mono text-xs font-black text-[#b83e57]">
@@ -139,7 +128,7 @@ React.FC<Props> = ({
                           order
                         )}
                       </p>
-                      <p className="mt-1 text-[10px] text-black/30">
+                      <p className="mt-1 text-[10px] text-black/28">
                         {formatDateTime(
                           order.createdAtMs
                         )}
@@ -147,22 +136,22 @@ React.FC<Props> = ({
                     </div>
 
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-black/75">
+                      <p className="truncate text-xs font-bold text-black/70">
                         {order.customer
                           ?.fullName ||
-                          'Chưa có tên khách'}
+                          'Chưa có tên'}
                       </p>
-                      <p className="mt-1 truncate text-[11px] text-black/38">
+                      <p className="mt-1 truncate text-[10px] text-black/32">
                         {order.customer
                           ?.phone ||
                           order.customer
                             ?.email ||
-                          'Chưa có liên hệ'}
+                          '—'}
                       </p>
                     </div>
 
                     <div className="sm:text-right">
-                      <p className="text-xs font-black text-black/70">
+                      <p className="text-xs font-black text-black/65">
                         {typeof order.price ===
                         'number'
                           ? formatVnd(
@@ -170,7 +159,7 @@ React.FC<Props> = ({
                             )
                           : '—'}
                       </p>
-                      <p className="mt-1 text-[10px] font-bold text-black/35">
+                      <p className="mt-1 text-[9px] font-bold text-black/30">
                         {getPaymentLabel(
                           order
                         )}
@@ -183,28 +172,34 @@ React.FC<Props> = ({
           )}
         </div>
 
-        <div className="space-y-3">
-          <ActionCard
-            title="Đơn chờ thanh toán"
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+          <QuickCard
+            label="Khách hàng"
             value={String(
-              pendingCount
+              customers.length
             )}
-            description="Ưu tiên kiểm tra các đơn đang chờ chuyển khoản."
-            buttonLabel="Mở đơn hàng"
-            onClick={
-              onOpenOrders
-            }
           />
 
-          <ActionCard
-            title="Templates"
-            value={`${visibleTemplates}/${templates.length}`}
-            description="Template đang hiển thị / tổng số template."
-            buttonLabel="Quản lý template"
+          <button
+            type="button"
             onClick={
               onOpenTemplates
             }
-          />
+            className="rounded-[16px] border border-black/8 bg-white p-4 text-left transition hover:border-[#b83e57]/25"
+          >
+            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-black/30">
+              Templates
+            </p>
+            <div className="mt-2 flex items-end justify-between gap-3">
+              <p className="text-2xl font-black tracking-[-0.04em] text-black/70">
+                {availableTemplates}/
+                {templates.length}
+              </p>
+              <span className="text-xs font-black text-[#b83e57]">
+                Quản lý →
+              </span>
+            </div>
+          </button>
         </div>
       </section>
     </div>
@@ -215,62 +210,57 @@ const Metric:
 React.FC<{
   label: string;
   value: string;
-  note: string;
+  tone?:
+    | 'default'
+    | 'amber'
+    | 'green';
 }> = ({
   label,
   value,
-  note,
+  tone = 'default',
 }) => (
-  <div className="rounded-[16px] border border-black/8 bg-white p-4 sm:p-5">
-    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-black/32">
+  <div
+    className={[
+      'rounded-[16px] border p-4',
+      tone === 'amber'
+        ? 'border-amber-100 bg-amber-50/60'
+        : tone === 'green'
+          ? 'border-emerald-100 bg-emerald-50/50'
+          : 'border-black/8 bg-white',
+    ].join(' ')}
+  >
+    <p className="text-[10px] font-black uppercase tracking-[0.1em] text-black/30">
       {label}
     </p>
-    <p className="mt-3 text-2xl font-black tracking-[-0.04em] text-black/85">
+    <p
+      className={[
+        'mt-2 text-2xl font-black tracking-[-0.04em]',
+        tone === 'amber'
+          ? 'text-amber-800'
+          : tone === 'green'
+            ? 'text-emerald-700'
+            : 'text-black/75',
+      ].join(' ')}
+    >
       {value}
-    </p>
-    <p className="mt-2 text-[10px] leading-4 text-black/35">
-      {note}
     </p>
   </div>
 );
 
-const ActionCard:
+const QuickCard:
 React.FC<{
-  title: string;
+  label: string;
   value: string;
-  description: string;
-  buttonLabel: string;
-  onClick: () => void;
 }> = ({
-  title,
+  label,
   value,
-  description,
-  buttonLabel,
-  onClick,
 }) => (
-  <section className="rounded-[16px] border border-black/8 bg-white p-5">
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <p className="text-xs font-black">
-          {title}
-        </p>
-        <p className="mt-2 text-[11px] leading-5 text-black/38">
-          {description}
-        </p>
-      </div>
-      <p className="text-2xl font-black tracking-[-0.04em] text-[#b83e57]">
-        {value}
-      </p>
-    </div>
-
-    <button
-      type="button"
-      onClick={
-        onClick
-      }
-      className="mt-5 w-full rounded-[10px] bg-[#191919] px-4 py-2.5 text-[11px] font-bold text-white transition hover:bg-[#b83e57]"
-    >
-      {buttonLabel}
-    </button>
-  </section>
+  <div className="rounded-[16px] border border-black/8 bg-white p-4">
+    <p className="text-[10px] font-black uppercase tracking-[0.1em] text-black/30">
+      {label}
+    </p>
+    <p className="mt-2 text-2xl font-black tracking-[-0.04em] text-black/70">
+      {value}
+    </p>
+  </div>
 );

@@ -49,96 +49,171 @@ React.FC<{
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[16px] border border-black/8 bg-white p-3">
+      <div className="rounded-[16px] border border-black/8 bg-white p-3 sm:p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <input
-            value={
-              search
-            }
-            onChange={(
-              event
-            ) =>
+            value={search}
+            onChange={(event) =>
               setSearch(
                 event.target.value
               )
             }
             placeholder="Tìm tên, email hoặc SĐT..."
-            className="w-full rounded-[11px] border border-black/10 bg-[#faf9f8] px-4 py-3 text-sm outline-none focus:border-[#cf5068] sm:max-w-md"
+            className="min-h-11 w-full rounded-[11px] border border-black/10 bg-[#faf9f8] px-4 text-[16px] outline-none transition focus:border-[#cf5068]/45 focus:bg-white focus:ring-2 focus:ring-[#cf5068]/10 sm:max-w-md sm:text-sm"
           />
 
           <p className="px-1 text-[11px] font-bold text-black/35">
-            {filtered.length}/{customers.length} khách
+            {filtered.length}/
+            {customers.length} khách
           </p>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[18px] border border-black/8 bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-left">
-            <thead className="bg-[#faf9f8]">
-              <tr className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/35">
-                <th className="px-4 py-3.5">Khách hàng</th>
-                <th className="px-4 py-3.5">Liên hệ</th>
-                <th className="px-4 py-3.5">Đơn</th>
-                <th className="px-4 py-3.5">Đã trả</th>
-                <th className="px-4 py-3.5">Tổng chi</th>
-                <th className="px-4 py-3.5">Gần nhất</th>
-              </tr>
-            </thead>
+      <div className="grid gap-3 xl:hidden">
+        {filtered.map(
+          (customer) => (
+            <article
+              key={customer.key}
+              className="rounded-[16px] border border-black/8 bg-white p-4"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <h2 className="truncate text-sm font-black text-black/75">
+                    {customer.fullName}
+                  </h2>
+                  <p className="mt-1 text-xs text-black/42">
+                    {customer.phone || '—'}
+                  </p>
+                  <p className="mt-1 truncate text-[10px] text-black/28">
+                    {customer.email || '—'}
+                  </p>
+                </div>
 
-            <tbody>
-              {filtered.map(
-                (customer) => (
-                  <tr
-                    key={
-                      customer.key
-                    }
-                    className="border-t border-black/6 text-xs"
-                  >
-                    <td className="px-4 py-4 font-bold text-black/75">
-                      {customer.fullName}
-                    </td>
+                <p className="shrink-0 text-base font-black text-[#b83e57]">
+                  {formatVnd(
+                    customer.totalSpent
+                  )}
+                </p>
+              </div>
 
-                    <td className="px-4 py-4 text-black/50">
-                      <p>{customer.phone || '—'}</p>
-                      <p className="mt-1 text-[10px] text-black/30">
-                        {customer.email || '—'}
-                      </p>
-                    </td>
+              <div className="mt-4 grid grid-cols-3 gap-2 border-t border-black/6 pt-3">
+                <SmallMetric
+                  label="Đơn"
+                  value={String(
+                    customer.orderCount
+                  )}
+                />
+                <SmallMetric
+                  label="Đã trả"
+                  value={String(
+                    customer.paidOrders
+                  )}
+                />
+                <SmallMetric
+                  label="Gần nhất"
+                  value={formatDateTime(
+                    customer.lastOrderAt
+                  )}
+                  small
+                />
+              </div>
+            </article>
+          )
+        )}
 
-                    <td className="px-4 py-4 font-bold">
-                      {customer.orderCount}
-                    </td>
+        {filtered.length === 0 && (
+          <div className="rounded-[16px] border border-black/8 bg-white px-5 py-12 text-center text-xs text-black/35">
+            Không tìm thấy khách hàng.
+          </div>
+        )}
+      </div>
 
-                    <td className="px-4 py-4">
-                      {customer.paidOrders}
-                    </td>
+      <div className="hidden overflow-hidden rounded-[18px] border border-black/8 bg-white xl:block">
+        <table className="w-full table-fixed border-collapse text-left">
+          <thead className="bg-[#faf9f8]">
+            <tr className="text-[9px] font-black uppercase tracking-[0.09em] text-black/32">
+              <th className="w-[24%] px-4 py-3.5">Khách hàng</th>
+              <th className="w-[24%] px-4 py-3.5">Liên hệ</th>
+              <th className="w-[10%] px-4 py-3.5">Đơn</th>
+              <th className="w-[10%] px-4 py-3.5">Đã trả</th>
+              <th className="w-[14%] px-4 py-3.5">Tổng chi</th>
+              <th className="w-[18%] px-4 py-3.5">Gần nhất</th>
+            </tr>
+          </thead>
 
-                    <td className="px-4 py-4 font-black text-black/70">
-                      {formatVnd(
-                        customer.totalSpent
-                      )}
-                    </td>
+          <tbody>
+            {filtered.map(
+              (customer) => (
+                <tr
+                  key={customer.key}
+                  className="border-t border-black/6 text-xs"
+                >
+                  <td className="px-4 py-4 font-bold text-black/72">
+                    {customer.fullName}
+                  </td>
+                  <td className="px-4 py-4 text-black/48">
+                    <p className="truncate">
+                      {customer.phone || '—'}
+                    </p>
+                    <p className="mt-1 truncate text-[10px] text-black/28">
+                      {customer.email || '—'}
+                    </p>
+                  </td>
+                  <td className="px-4 py-4 font-black">
+                    {customer.orderCount}
+                  </td>
+                  <td className="px-4 py-4">
+                    {customer.paidOrders}
+                  </td>
+                  <td className="px-4 py-4 font-black text-black/68">
+                    {formatVnd(
+                      customer.totalSpent
+                    )}
+                  </td>
+                  <td className="px-4 py-4 text-[11px] text-black/38">
+                    {formatDateTime(
+                      customer.lastOrderAt
+                    )}
+                  </td>
+                </tr>
+              )
+            )}
+          </tbody>
+        </table>
 
-                    <td className="px-4 py-4 text-[11px] text-black/40">
-                      {formatDateTime(
-                        customer.lastOrderAt
-                      )}
-                    </td>
-                  </tr>
-                )
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {filtered.length ===
-          0 && (
+        {filtered.length === 0 && (
           <div className="px-5 py-12 text-center text-xs text-black/35">
-            Không tìm thấy khách hàng phù hợp.
+            Không tìm thấy khách hàng.
           </div>
         )}
       </div>
     </div>
   );
 };
+
+const SmallMetric:
+React.FC<{
+  label: string;
+  value: string;
+  small?: boolean;
+}> = ({
+  label,
+  value,
+  small = false,
+}) => (
+  <div className="min-w-0">
+    <p className="text-[9px] font-black uppercase tracking-[0.08em] text-black/25">
+      {label}
+    </p>
+    <p
+      className={[
+        'mt-1 font-black text-black/62',
+        small
+          ? 'truncate text-[10px]'
+          : 'text-sm',
+      ].join(' ')}
+    >
+      {value}
+    </p>
+  </div>
+);

@@ -750,7 +750,7 @@ React.FC<CheckoutPageProps> = ({
               </p>
 
               <p className="mt-2 text-xs leading-5 text-black/40">
-                QR đã điền sẵn số tiền và nội dung chuyển khoản.
+                QR đã điền sẵn số tiền và nội dung.
               </p>
             </div>
 
@@ -806,7 +806,7 @@ React.FC<CheckoutPageProps> = ({
                     Thông tin chuyển khoản
                   </h1>
                   <p className="mt-1 text-xs leading-5 text-black/40">
-                    Quan trọng nhất là chuyển đúng số tiền và đúng nội dung.
+                    Kiểm tra đúng số tiền và nội dung.
                   </p>
                 </div>
               </div>
@@ -877,7 +877,7 @@ React.FC<CheckoutPageProps> = ({
                     Đang chờ xác nhận
                   </p>
                   <p className="mt-1 text-xs leading-5 text-amber-800/75">
-                    Sau khi chuyển khoản, cứ giữ nguyên trang này. Hệ thống tự kiểm tra mỗi 5 giây và mở link quà khi thanh toán được xác nhận.
+                    Giữ trang này mở. Trạng thái sẽ tự cập nhật sau khi xác nhận.
                   </p>
                 </div>
               </div>
@@ -949,7 +949,7 @@ React.FC<CheckoutPageProps> = ({
                   Thông tin người mua
                 </h1>
                 <p className="mt-1 text-xs leading-5 text-black/40">
-                  Dùng để đối soát đơn và tra cứu thanh toán.
+                  Dùng để tra cứu và xác nhận đơn.
                 </p>
               </div>
             </div>
@@ -1065,7 +1065,7 @@ React.FC<CheckoutPageProps> = ({
             <div className="mt-4 flex items-start gap-2 text-xs leading-5 text-black/35">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
               <p>
-                Món quà chỉ được mở sau khi thanh toán được xác nhận.
+                Link quà mở sau khi thanh toán được xác nhận.
               </p>
             </div>
           </form>

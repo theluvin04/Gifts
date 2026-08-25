@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { CustomerSiteHeader } from './CustomerSiteHeader';
 import { VisualSceneExperience } from '../engine';
 import type { SceneElement } from '../engine';
 import {
@@ -80,22 +79,6 @@ const getTemplateCategory = (template: TemplateConfig) => {
   return 'Template';
 };
 
-const getTemplateKind = (template: TemplateConfig) => {
-  const id = template.id.toLowerCase();
-
-  if (
-    id.includes('story') ||
-    id.includes('letter') ||
-    id.includes('invitation') ||
-    id.includes('love') ||
-    id.includes('birthday')
-  ) {
-    return 'Website cá nhân hoá';
-  }
-
-  return 'Digital template';
-};
-
 const getIntroCopy = (
   template: TemplateConfig,
   customizableCount: number
@@ -103,22 +86,22 @@ const getIntroCopy = (
   const category = getTemplateCategory(template);
 
   if (category === 'Tình yêu') {
-    return 'Một website nhỏ dành riêng cho một người: ảnh, âm nhạc, câu hỏi và lời nhắn được ghép thành một trải nghiệm duy nhất.';
+    return 'Ảnh, nhạc và lời nhắn trong một website nhỏ dành riêng cho người nhận.';
   }
 
   if (category === 'Sinh nhật') {
-    return 'Một mẫu quà sinh nhật dạng website mini. Khách có thể thay ảnh và lời chúc để biến nó thành món quà thật sự dành riêng cho người nhận.';
+    return 'Website quà sinh nhật để thay ảnh và lời chúc của riêng bạn.';
   }
 
   if (category === 'Cưới') {
-    return 'Một trải nghiệm web tinh gọn để kể câu chuyện, chia sẻ thông tin và tạo cảm giác trang trọng hơn một tấm thiệp tĩnh.';
+    return 'Một website tinh gọn để kể câu chuyện và chia sẻ thông tin ngày cưới.';
   }
 
   if (category === 'Kỷ niệm') {
-    return 'Một câu chuyện số được ghép từ ảnh, chữ và tương tác nhỏ để lưu lại một dịp đặc biệt theo cách cảm xúc hơn.';
+    return 'Ảnh và lời nhắn được ghép thành một câu chuyện nhỏ cho dịp kỷ niệm.';
   }
 
-  return `Mẫu website cá nhân hoá với ${customizableCount} nội dung có thể thay để khách biến nó thành món quà của riêng mình.`;
+  return `Website cá nhân hoá với ${customizableCount} nội dung có thể thay.`;
 };
 
 const buildHeroChecklist = (
@@ -133,7 +116,7 @@ const buildHeroChecklist = (
     )
     .filter(Boolean);
 
-  return Array.from(new Set(items)).slice(0, 6);
+  return Array.from(new Set(items)).slice(0, 4);
 };
 
 const buildHighlights = (
@@ -160,15 +143,15 @@ const buildHighlights = (
       title: sceneCount > 1 ? 'Nhiều phần nội dung' : 'Màn mở đầu tương tác',
       description:
         sceneCount > 1
-          ? `Người nhận có thể đi qua ${sceneCount} phần nội dung theo đúng thứ tự bạn thiết kế.`
-          : 'Một trang đầu gọn gàng để mở câu chuyện trước khi đi vào nội dung chính.',
+          ? `${sceneCount} phần nội dung được mở theo đúng thứ tự.`
+          : 'Màn mở đầu gọn trước khi vào nội dung chính.',
     },
     {
       index: '02',
       title: hasImage ? 'Ảnh cá nhân hoá' : 'Bố cục có sẵn',
       description: hasImage
-        ? 'Khách thay ảnh trực tiếp trên mẫu mà vẫn giữ nguyên bố cục và hiệu ứng.'
-        : 'Mẫu giữ sẵn cấu trúc để khách chỉ cần điền đúng nội dung cần đổi.',
+        ? 'Thay ảnh mà không làm vỡ bố cục.'
+        : 'Bố cục được giữ sẵn, chỉ cần thay nội dung.',
     },
     {
       index: '03',
@@ -177,14 +160,14 @@ const buildHighlights = (
           ? 'Âm nhạc / cảm xúc riêng'
           : 'Nội dung riêng của khách',
       description: hasText
-        ? 'Các đoạn chữ, lời chúc hoặc CTA có thể chỉnh ngay trước khi thanh toán.'
-        : 'Nội dung được giữ tinh gọn để tối ưu trải nghiệm xem trên điện thoại.',
+        ? 'Thay lời chúc và nội dung cần thiết.'
+        : 'Tối ưu để xem gọn trên điện thoại.',
     },
     {
       index: '04',
       title: 'Giữ nguyên trải nghiệm mẫu',
       description:
-        'Admin khoá bố cục, hiệu ứng và tài nguyên trang trí để khách sửa mà không phá bố cục.',
+        'Bố cục và hiệu ứng được giữ nguyên khi khách chỉnh.',
     },
   ];
 
@@ -338,33 +321,12 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
 
     return (
       <div className="min-h-[100svh] bg-[#fffaf8] text-[#191919]">
-        <CustomerSiteHeader
-          onHome={onBackHome}
-          onTemplates={() => {
-            window.location.href = '/#templates';
-          }}
-          onHowItWorks={() => {
-            window.location.href = '/#how-it-works';
-          }}
-          onTrackOrder={() => {
-            window.location.href = '/track-order';
-          }}
-          active="templates"
-          primaryAction={{
-            label: 'Cá nhân hoá',
-            onClick: onStartPersonalize,
-          }}
-        />
-
         <main className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 lg:px-12 lg:py-14">
           <section className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(460px,560px)] lg:items-center lg:gap-14">
             <div>
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-[10px] bg-[#fdecef] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#c9455f]">
                   {getTemplateCategory(template)}
-                </span>
-                <span className="rounded-[10px] border border-black/8 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-black/40">
-                  {getTemplateKind(template)}
                 </span>
               </div>
 
@@ -396,19 +358,18 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
                 )}
               </div>
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
+              <div className="mt-6 flex flex-wrap items-center gap-4">
                 <button
                   type="button"
                   onClick={onStartPersonalize}
-                  className="rounded-[14px] bg-[#cf5068] px-7 py-3.5 text-sm font-black text-white shadow-[0_16px_32px_rgba(207,80,104,0.18)] transition hover:-translate-y-0.5"
+                  className="min-h-12 rounded-[13px] bg-[#171717] px-6 text-sm font-black text-white transition hover:bg-[#cf5068]"
                 >
-                  Cá nhân hoá →
+                  Cá nhân hoá
                 </button>
+                <span className="text-lg font-black text-[#c94861]">
+                  {formatVnd(price)}
+                </span>
               </div>
-
-              <p className="mt-4 max-w-[640px] text-[11px] leading-6 text-black/28">
-                Nội dung khách tự chỉnh không được mở xem trước toàn bộ. Khi thanh toán xong, khách sẽ tiếp tục chỉnh nội dung ở bước tiếp theo.
-              </p>
             </div>
 
             <div className="rounded-[34px] border border-black/[0.06] bg-[#f8edf0] p-4 shadow-[0_22px_55px_rgba(72,22,38,0.07)] sm:p-6">
@@ -440,19 +401,19 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
                   Bên trong có gì
                 </p>
                 <h2 className="mt-3 text-3xl font-black tracking-[-0.05em] sm:text-5xl">
-                  Không chỉ là một mẫu web.
+                  Có gì trong mẫu
                 </h2>
               </div>
 
-              <div>
-                <p className="max-w-[620px] text-[15px] leading-8 text-black/45">
-                  {template.name} được thiết kế để người nhận khám phá nội dung theo đúng nhịp mà bạn muốn. Ảnh, chữ và các điểm chạm đều có thể thay mà vẫn giữ nguyên giao diện chung của website.
+              <div className="flex items-end lg:justify-end">
+                <p className="max-w-[520px] text-sm leading-7 text-black/40">
+                  Chỉ thay nội dung cần thiết, bố cục và hiệu ứng vẫn được giữ nguyên.
                 </p>
               </div>
             </div>
 
             <div className="mt-10 grid overflow-hidden rounded-[24px] border border-black/8 bg-white sm:grid-cols-2">
-              {highlights.map((item, index) => (
+              {highlights.slice(0, 4).map((item, index) => (
                 <div
                   key={item.index}
                   className={[
@@ -483,42 +444,48 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
 
   return (
     <div className="min-h-[100svh] bg-[#f5f3f2] text-[#191919]">
-      <CustomerSiteHeader
-        onHome={onBackHome}
-        onTemplates={() => {
-          window.location.href = '/#templates';
-        }}
-        onHowItWorks={() => {
-          window.location.href = '/#how-it-works';
-        }}
-        onTrackOrder={() => {
-          window.location.href = '/track-order';
-        }}
-        active="templates"
-        primaryAction={{
-          label: `Tiếp tục · ${formatVnd(price)}`,
-          onClick: onCheckout,
-        }}
-        secondaryAction={{
-          label: 'Về mẫu',
-          onClick: onBackProduct,
-        }}
-      />
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pb-1 pt-5 sm:px-6 sm:pt-7">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#c94861]">
+            Cá nhân hoá
+          </p>
+          <h1 className="mt-1 truncate text-xl font-black tracking-[-0.035em] sm:text-2xl">
+            {template.name}
+          </h1>
+        </div>
 
-      <main className="mx-auto grid max-w-7xl gap-4 p-4 sm:p-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
+        <div className="hidden items-center gap-2 sm:flex">
+          <button
+            type="button"
+            onClick={onBackProduct}
+            className="min-h-11 rounded-[11px] border border-black/[0.09] bg-white px-4 text-xs font-bold text-black/50"
+          >
+            Về mẫu
+          </button>
+          <button
+            type="button"
+            onClick={onCheckout}
+            className="min-h-11 rounded-[11px] bg-[#171717] px-4 text-xs font-black text-white"
+          >
+            Thanh toán · {formatVnd(price)}
+          </button>
+        </div>
+      </div>
+
+      <main className="mx-auto grid max-w-7xl gap-4 px-4 pb-24 pt-4 sm:px-6 sm:pb-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
         <aside className="rounded-[18px] border border-black/7 bg-white p-4 lg:max-h-[calc(100svh-105px)] lg:overflow-y-auto">
-          <h2 className="text-base font-black">Thay nội dung của bạn</h2>
-          <p className="mt-1 text-[10px] leading-5 text-black/35">Bố cục, hiệu ứng và tài nguyên trang trí đã được khoá theo mẫu.</p>
+          <h2 className="text-base font-black">Nội dung</h2>
+          <p className="mt-1 text-xs text-black/35">Chỉ những mục bên dưới có thể thay.</p>
 
           <div className="mt-4 space-y-3">
             {slots.length === 0 ? (
-              <div className="rounded-[12px] border border-dashed border-black/10 bg-[#faf9f8] p-4 text-[10px] leading-5 text-black/40">
+              <div className="rounded-[12px] border border-dashed border-black/10 bg-[#faf9f8] p-4 text-xs leading-5 text-black/40">
                 Template này chưa có trường nào được Admin đánh dấu cho khách thay.
               </div>
             ) : (
               slots.map(({ sceneId, element, slot }, index) => (
-                <div key={`${sceneId}-${element.id}`} className="rounded-[12px] border border-black/7 bg-[#faf9f8] p-3">
-                  <p className="text-[8px] font-black uppercase tracking-[0.08em] text-black/25">{index + 1}. {slot.label || element.name || element.id}</p>
+                <div key={`${sceneId}-${element.id}`} className="rounded-[14px] border border-black/7 bg-[#faf9f8] p-3.5">
+                  <p className="text-[11px] font-black text-black/60">{index + 1}. {slot.label || element.name || element.id}</p>
 
                   {slot.kind === 'text' && (
                     <textarea
@@ -536,12 +503,12 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
                           return current;
                         })
                       }
-                      className="mt-2 min-h-[82px] w-full rounded-[9px] border border-black/9 bg-white px-3 py-2.5 text-[11px] outline-none focus:border-[#cf5068]/40"
+                      className="mt-2 min-h-[96px] w-full rounded-[11px] border border-black/9 bg-white px-3.5 py-3 text-[16px] leading-6 outline-none transition focus:border-[#cf5068]/40 focus:ring-2 focus:ring-[#cf5068]/10 sm:text-sm"
                     />
                   )}
 
                   {slot.kind === 'image' && (
-                    <label className="mt-2 block cursor-pointer rounded-[10px] border border-dashed border-[#cf5068]/30 bg-white p-3 text-center text-[9px] font-black text-[#a73551]">
+                    <label className="mt-2 flex min-h-11 cursor-pointer items-center justify-center rounded-[11px] border border-dashed border-[#cf5068]/30 bg-white p-3 text-center text-xs font-black text-[#a73551]">
                       Chọn ảnh của bạn
                       <input
                         type="file"
@@ -574,8 +541,8 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
           </div>
         </aside>
 
-        <section className="flex min-h-[650px] items-start justify-center rounded-[18px] border border-black/7 bg-[#dedbd8] p-4 sm:p-8">
-          <div className="max-h-[calc(100svh-120px)] w-full max-w-[430px] overflow-y-auto overflow-x-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_26px_80px_rgba(0,0,0,0.14)]">
+        <section className="flex min-h-[620px] items-center justify-center rounded-[18px] border border-black/7 bg-[#dedbd8] p-3 sm:p-6">
+          <div className="max-h-[calc(100svh-120px)] w-full max-w-[390px] overflow-y-auto overflow-x-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_26px_80px_rgba(0,0,0,0.14)]">
             <VisualSceneExperience
               scenes={draft.scenes}
               initialSceneId={draft.initialSceneId}
@@ -584,6 +551,25 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
           </div>
         </section>
       </main>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/[0.07] bg-white/95 p-3 backdrop-blur-xl sm:hidden">
+        <div className="mx-auto grid max-w-lg grid-cols-[auto_1fr] gap-2">
+          <button
+            type="button"
+            onClick={onBackProduct}
+            className="min-h-12 rounded-[13px] border border-black/[0.09] bg-white px-4 text-xs font-bold text-black/55"
+          >
+            Về mẫu
+          </button>
+          <button
+            type="button"
+            onClick={onCheckout}
+            className="min-h-12 rounded-[13px] bg-[#171717] px-4 text-sm font-black text-white"
+          >
+            Thanh toán · {formatVnd(price)}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

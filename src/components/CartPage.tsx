@@ -4,16 +4,11 @@ import React, {
 } from 'react';
 
 import {
-  ArrowLeft,
   CreditCard,
   Pencil,
   ShoppingBag,
   Trash2,
 } from 'lucide-react';
-
-import {
-  BrandLogo,
-} from './BrandLogo';
 
 import type {
   CartItem,
@@ -35,20 +30,13 @@ interface CartPageProps {
 
 const formatVnd = (
   amount: number
-) => {
-  return new Intl.NumberFormat(
-    'vi-VN',
-    {
-      style: 'currency',
-      currency: 'VND',
-    }
-  ).format(amount);
-};
+) =>
+  new Intl.NumberFormat(
+    'vi-VN'
+  ).format(amount) + 'đ';
 
 export const CartPage:
-React.FC<
-  CartPageProps
-> = ({
+React.FC<CartPageProps> = ({
   items,
   onBackHome,
   onEdit,
@@ -66,47 +54,46 @@ React.FC<
   useEffect(() => {
     let cancelled = false;
 
-    const loadPrices =
-      async () => {
-        const uniqueIds: string[] =
-          Array.from(
-            new Set(
-              items.map(
-                (item) =>
-                  item.templateId
-              )
+    const loadPrices = async () => {
+      const uniqueIds =
+        Array.from(
+          new Set(
+            items.map(
+              (item) =>
+                item.templateId
             )
-          );
+          )
+        );
 
-        const entries =
-          await Promise.all(
-            uniqueIds.map(
-              async (
-                templateId
-              ) => {
-                const config =
-                  await getPublicTemplateConfigById(
-                    templateId
-                  );
+      const entries =
+        await Promise.all(
+          uniqueIds.map(
+            async (
+              templateId
+            ) => {
+              const config =
+                await getPublicTemplateConfigById(
+                  templateId
+                );
 
-                return [
-                  templateId,
-                  getEffectiveTemplatePrice(
-                    config
-                  ),
-                ] as const;
-              }
-            )
-          );
+              return [
+                templateId,
+                getEffectiveTemplatePrice(
+                  config
+                ),
+              ] as const;
+            }
+          )
+        );
 
-        if (!cancelled) {
-          setPrices(
-            Object.fromEntries(
-              entries
-            )
-          );
-        }
-      };
+      if (!cancelled) {
+        setPrices(
+          Object.fromEntries(
+            entries
+          )
+        );
+      }
+    };
 
     void loadPrices();
 
@@ -116,40 +103,17 @@ React.FC<
   }, [items]);
 
   return (
-    <div className="min-h-[100svh] w-full overflow-x-hidden bg-[#fffaf8] text-[#1d1d1d]">
-      <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-[#fffaf8]/92 backdrop-blur-xl">
-        <div className="mx-auto grid h-[64px] w-full max-w-5xl grid-cols-[44px_minmax(0,1fr)_44px] items-center px-3 sm:h-[72px] sm:grid-cols-[1fr_auto_1fr] sm:px-6">
-          <button
-            type="button"
-            onClick={onBackHome}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-black/55 transition hover:bg-black/[0.04] hover:text-[#c9435d] sm:w-fit sm:justify-start sm:gap-2 sm:px-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden text-sm font-bold sm:inline">
-              Tiếp tục mua
-            </span>
-          </button>
-
-          <BrandLogo
-            onClick={
-              onBackHome
-            }
-            imageClassName="h-10 w-auto sm:h-11"
-          />
-
-          <div />
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-5xl px-3 py-5 sm:px-6 sm:py-10">
-        <div className="flex items-end justify-between gap-4">
+    <div className="min-h-[100svh] bg-[#fffaf8] text-[#171717]">
+      <main className="mx-auto w-full max-w-[1000px] px-4 py-8 sm:px-7 sm:py-12">
+        <div className="flex items-end justify-between gap-4 border-b border-black/[0.07] pb-5">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c9435d]">
-              Dearly cart
-            </p>
-
-            <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] sm:text-3xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#c94861]">
               Giỏ hàng
+            </p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.045em]">
+              {items.length > 0
+                ? `${items.length} món quà`
+                : 'Giỏ hàng trống'}
             </h1>
           </div>
 
@@ -157,7 +121,7 @@ React.FC<
             <button
               type="button"
               onClick={onClear}
-              className="text-xs font-bold text-black/35 transition hover:text-red-500"
+              className="min-h-10 rounded-[10px] px-3 text-xs font-bold text-black/35 transition hover:bg-red-50 hover:text-red-500"
             >
               Xóa tất cả
             </button>
@@ -165,97 +129,84 @@ React.FC<
         </div>
 
         {items.length === 0 ? (
-          <section className="mt-6 rounded-[26px] border border-black/[0.06] bg-white px-5 py-14 text-center shadow-[0_18px_60px_rgba(60,25,35,0.06)]">
-            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#fdecef] text-[#c9435d]">
+          <section className="mt-7 rounded-[22px] border border-black/[0.07] bg-white px-5 py-14 text-center">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#fdecef] text-[#c94861]">
               <ShoppingBag className="h-5 w-5" />
             </span>
 
-            <h2 className="mt-5 text-lg font-black">
-              Chưa có món quà nào
+            <h2 className="mt-4 text-lg font-black">
+              Chưa có template nào
             </h2>
-
-            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-black/45">
-              Cá nhân hoá một template rồi bấm “Thêm vào giỏ”.
-            </p>
 
             <button
               type="button"
               onClick={onBackHome}
-              className="mt-6 rounded-[14px] bg-[#c9435d] px-6 py-3 text-sm font-bold text-white"
+              className="mt-6 min-h-12 rounded-[13px] bg-[#171717] px-6 text-sm font-black text-white transition hover:bg-[#c94861]"
             >
-              Xem template
+              Xem templates
             </button>
           </section>
         ) : (
-          <div className="mt-6 grid gap-4">
+          <div className="mt-7 grid gap-3">
             {items.map(
               (item) => (
                 <article
                   key={item.id}
-                  className="rounded-[24px] border border-black/[0.06] bg-white p-4 shadow-[0_16px_50px_rgba(60,25,35,0.05)] sm:p-5"
+                  className="rounded-[20px] border border-black/[0.07] bg-white p-4 sm:p-5"
                 >
-                  <div className="flex min-w-0 items-start gap-4">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[18px] bg-[#fff0f3]">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[15px] bg-[#fff0f3]">
                       <img
                         src="/images/gifts/gift-1.png"
                         alt=""
-                        className="h-12 w-12 object-contain"
+                        className="h-10 w-10 object-contain"
                       />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#c9435d]">
-                        Website gift
-                      </p>
-
-                      <h2 className="mt-1 truncate text-base font-black">
+                      <h2 className="truncate text-base font-black">
                         {item.templateName}
                       </h2>
-
-                      <p className="mt-1 text-xs text-black/40">
-                        Nội dung cá nhân hoá đang được giữ trong bản nháp trên trình duyệt.
+                      <p className="mt-1 text-xs text-black/35">
+                        Bản nháp đang được lưu trên thiết bị này.
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onRemove(
-                          item.id
-                        )
-                      }
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/25 transition hover:bg-red-50 hover:text-red-500"
-                      aria-label="Xóa khỏi giỏ"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-black text-[#c94861]">
+                        {typeof prices[
+                          item.templateId
+                        ] === 'number'
+                          ? formatVnd(
+                              prices[
+                                item.templateId
+                              ]
+                            )
+                          : '—'}
+                      </p>
 
-                  <div className="mt-4 flex items-center justify-between border-t border-black/[0.06] pt-4">
-                    <span className="text-xs font-semibold text-black/40">
-                      Giá hiện tại
-                    </span>
-
-                    <span className="text-base font-black text-[#c9435d]">
-                      {typeof prices[
-                        item.templateId
-                      ] === 'number'
-                        ? formatVnd(
-                            prices[
-                              item.templateId
-                            ]
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onRemove(
+                            item.id
                           )
-                        : 'Đang tải...'}
-                    </span>
+                        }
+                        className="mt-2 inline-flex h-9 w-9 items-center justify-center rounded-[9px] text-black/25 transition hover:bg-red-50 hover:text-red-500"
+                        aria-label="Xóa khỏi giỏ"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-black/[0.06] pt-4">
                     <button
                       type="button"
                       onClick={() =>
                         onEdit(item)
                       }
-                      className="inline-flex items-center justify-center gap-2 rounded-[14px] border border-black/[0.08] bg-white px-3 py-3 text-xs font-bold text-black/60 transition hover:border-[#c9435d]/25 hover:text-[#c9435d]"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[12px] border border-black/[0.09] bg-white px-3 text-xs font-bold text-black/55 transition hover:text-black/75"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                       Chỉnh sửa
@@ -268,7 +219,7 @@ React.FC<
                           item
                         )
                       }
-                      className="inline-flex items-center justify-center gap-2 rounded-[14px] bg-[#c9435d] px-3 py-3 text-xs font-bold text-white transition hover:bg-[#b83951]"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[12px] bg-[#171717] px-3 text-xs font-black text-white transition hover:bg-[#c94861]"
                     >
                       <CreditCard className="h-3.5 w-3.5" />
                       Thanh toán

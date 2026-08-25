@@ -1,385 +1,236 @@
 import React from 'react';
 
 import {
-  motion,
-} from 'motion/react';
-
-import {
-  ArrowLeft,
   ArrowRight,
+  Image as ImageIcon,
+  Mail,
+  Music2,
+  Sparkles,
 } from 'lucide-react';
-
-import {
-  BrandLogo,
-} from './BrandLogo';
 
 interface ProductDetailPageProps {
   onBackHome: () => void;
   onPersonalize: () => void;
 }
 
-const customFields = [
-  'Tên người gửi và người nhận',
-  'Ảnh kỷ niệm',
-  'Video / nhạc YouTube',
-  'Câu hỏi YES / NO',
-  'Nội dung bức thư',
-];
-
-const included = [
+const features = [
   {
-    number: '01',
-    title:
-      'Màn mở đầu tương tác',
-    text:
-      'Một câu hỏi nhỏ trước khi người nhận bước vào món quà.',
+    icon: ImageIcon,
+    title: 'Ảnh kỷ niệm',
   },
   {
-    number: '02',
-    title:
-      'Album kỷ niệm',
-    text:
-      'Ảnh được sắp theo phong cách polaroid và photo strip.',
+    icon: Music2,
+    title: 'Nhạc riêng',
   },
   {
-    number: '03',
-    title:
-      'Âm nhạc riêng',
-    text:
-      'Thêm video YouTube hoặc bài hát gắn với câu chuyện.',
+    icon: Mail,
+    title: 'Bức thư',
   },
   {
-    number: '04',
-    title:
-      'Bức thư riêng',
-    text:
-      'Lời nhắn được cá nhân hoá chỉ dành cho người nhận.',
+    icon: Sparkles,
+    title: 'Tương tác',
   },
 ];
-
-const scrollToIncluded =
-  () => {
-    document
-      .getElementById(
-        'included'
-      )
-      ?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-  };
 
 export const ProductDetailPage:
-React.FC<
-  ProductDetailPageProps
-> = ({
-  onBackHome,
+React.FC<ProductDetailPageProps> = ({
   onPersonalize,
 }) => {
   return (
-    <div className="min-h-[100svh] w-full max-w-full overflow-x-hidden bg-[#fffaf8] text-[#191919]">
-      <header className="sticky top-0 z-50 border-b border-black/[0.055] bg-[#fffaf8]/90 backdrop-blur-xl">
-        <div className="mx-auto grid h-[64px] w-full max-w-7xl grid-cols-[44px_minmax(0,1fr)_44px] items-center px-3 sm:h-[72px] sm:grid-cols-[1fr_auto_1fr] sm:px-8">
-          <button
-            type="button"
-            onClick={onBackHome}
-            className="inline-flex h-10 w-10 items-center justify-center text-sm font-bold text-black/55 transition hover:text-[#c9435d] sm:h-auto sm:w-fit sm:justify-start sm:gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">
-              Trang chủ
-            </span>
-          </button>
-
-          <BrandLogo
-            onClick={
-              onBackHome
-            }
-            imageClassName="h-9 w-auto max-w-[104px] sm:h-12 sm:max-w-none"
-          />
-
-          <div />
-        </div>
-      </header>
-
+    <div className="min-h-[100svh] bg-[#fffaf8] text-[#171717]">
       <main>
-        <section className="relative overflow-hidden border-b border-black/[0.055] bg-[radial-gradient(circle_at_72%_30%,rgba(244,200,210,0.36),transparent_32%)]">
-          <div className="mx-auto grid w-full min-w-0 max-w-7xl gap-10 px-4 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-16 lg:pb-28">
-            <motion.div
-              initial={{
-                opacity: 0,
-                y: 18,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-            >
-              <div className="flex flex-wrap gap-2 text-[9px] font-bold uppercase tracking-[0.17em]">
-                <span className="rounded-[9px] bg-[#fdecef] px-3 py-2 text-[#c9435d]">
+        <section className="border-b border-black/[0.055]">
+          <div className="mx-auto grid max-w-[1320px] gap-10 px-5 py-12 sm:px-8 sm:py-18 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-16 lg:py-20">
+            <div className="max-w-xl">
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full bg-[#fdecef] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#c94861]">
                   Tình yêu
                 </span>
-
-                <span className="rounded-[9px] border border-black/[0.07] bg-white/70 px-3 py-2 text-black/38">
-                  Website cá nhân hoá
+                <span className="rounded-full border border-black/[0.08] bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-black/35">
+                  Website gift
                 </span>
               </div>
 
-              <h1 className="mt-6 text-[40px] font-black leading-[0.98] tracking-[-0.055em] min-[360px]:text-[44px] sm:text-[66px]">
+              <h1 className="mt-5 text-[44px] font-black leading-[0.98] tracking-[-0.055em] sm:text-[64px]">
                 Love Story 01
               </h1>
 
-              <p className="mt-6 max-w-xl text-[15px] leading-7 text-black/50 sm:text-base">
-                Một website nhỏ dành riêng cho một người:
-                ảnh, âm nhạc, câu hỏi và lời nhắn được
-                ghép thành một trải nghiệm duy nhất.
+              <p className="mt-5 max-w-lg text-[15px] leading-7 text-black/46 sm:text-base">
+                Ảnh, nhạc và lời nhắn của hai người trong một website nhỏ.
               </p>
 
-              <div className="mt-8 grid border-y border-black/[0.08] sm:grid-cols-2">
-                {customFields.map(
-                  (
-                    item,
-                    index
-                  ) => (
+              <div className="mt-7 grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+                {features.map(
+                  ({
+                    icon: Icon,
+                    title,
+                  }) => (
                     <div
-                      key={item}
-                      className={[
-                        'flex items-center gap-3 py-3.5 text-sm font-semibold text-black/58',
-                        index %
-                          2 ===
-                        0
-                          ? 'sm:border-r sm:border-black/[0.08] sm:pr-5'
-                          : 'sm:pl-5',
-                      ].join(' ')}
+                      key={title}
+                      className="rounded-[15px] border border-black/[0.07] bg-white p-3.5"
                     >
-                      <span className="text-[10px] font-black text-[#c9435d]">
-                        0
-                        {index + 1}
-                      </span>
-
-                      {item}
+                      <Icon className="h-4 w-4 text-[#c94861]" />
+                      <p className="mt-4 text-xs font-black text-black/62">
+                        {title}
+                      </p>
                     </div>
                   )
                 )}
               </div>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={
-                    onPersonalize
-                  }
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-[15px] bg-[#c9435d] px-6 py-3.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(201,67,93,0.18)] transition hover:-translate-y-0.5 hover:bg-[#b83951]"
-                >
-                  Cá nhân hoá
-                  <ArrowRight className="h-4 w-4" />
-                </button>
+              <button
+                type="button"
+                onClick={
+                  onPersonalize
+                }
+                className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-[13px] bg-[#171717] px-6 text-sm font-black text-white transition hover:bg-[#c94861]"
+              >
+                Cá nhân hoá
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
 
-                <button
-                  type="button"
-                  onClick={
-                    scrollToIncluded
-                  }
-                  className="inline-flex flex-1 items-center justify-center rounded-[15px] border border-black/[0.09] bg-white/75 px-6 py-3.5 text-sm font-bold text-black/58 transition hover:bg-white hover:text-black"
-                >
-                  Xem bên trong
-                </button>
-              </div>
+            <div className="mx-auto w-full max-w-[560px] rounded-[28px] border border-black/[0.06] bg-white p-2 shadow-[0_24px_70px_rgba(60,25,35,0.07)]">
+              <div className="rounded-[22px] bg-[#fff0f3] p-6 sm:p-8">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#c94861]">
+                    Love Story 01
+                  </p>
+                  <p className="text-[10px] font-bold text-black/28">
+                    3 phần quà
+                  </p>
+                </div>
 
-              <p className="mt-4 text-[11px] leading-5 text-black/35">
-                Nội dung khách tự chỉnh không được mở xem trước.
-                Món quà riêng chỉ mở sau khi thanh toán được xác nhận.
-              </p>
-            </motion.div>
+                <p className="mt-8 text-center text-xl font-semibold tracking-[-0.03em] text-[#c94861] sm:text-2xl">
+                  Một câu chuyện chỉ dành cho hai người.
+                </p>
 
-            <motion.div
-              initial={{
-                opacity: 0,
-                y: 24,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay: 0.08,
-              }}
-            >
-              <div className="overflow-hidden rounded-[32px] border border-black/[0.06] bg-white p-2 shadow-[0_26px_70px_rgba(60,25,35,0.08)]">
-                <div className="rounded-[26px] bg-[#fff1f3] px-5 py-8 sm:px-8 sm:py-10">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#c9435d]">
-                      Love Story 01
-                    </p>
+                <img
+                  src="/images/gifts/success.gif"
+                  alt="Love Story 01"
+                  className="mx-auto my-6 h-32 w-32 object-contain sm:h-40 sm:w-40"
+                />
 
-                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-black/25">
-                      3 phần quà
-                    </p>
-                  </div>
-
-                  <div className="mt-8 text-center">
-                    <p className="text-xl font-semibold tracking-[-0.03em] text-[#c9435d] sm:text-2xl">
-                      Một câu chuyện chỉ dành cho hai người.
-                    </p>
-
-                    <img
-                      src="/images/gifts/success.gif"
-                      alt=""
-                      className="mx-auto mt-5 h-28 w-28 object-contain sm:h-36 sm:w-36"
-                    />
-                  </div>
-
-                  <div className="mt-8 grid grid-cols-3 gap-3">
-                    {[
-                      {
-                        image:
-                          '/images/gifts/gift-1.png',
-                        label:
-                          'Kỷ niệm',
-                      },
-                      {
-                        image:
-                          '/images/gifts/gift-2.png',
-                        label:
-                          'Âm nhạc',
-                      },
-                      {
-                        image:
-                          '/images/gifts/gift-3.png',
-                        label:
-                          'Bức thư',
-                      },
-                    ].map(
-                      (item) => (
-                        <div
-                          key={
+                <div className="grid grid-cols-3 gap-2.5">
+                  {[
+                    {
+                      image:
+                        '/images/gifts/gift-1.png',
+                      label:
+                        'Kỷ niệm',
+                    },
+                    {
+                      image:
+                        '/images/gifts/gift-2.png',
+                      label:
+                        'Âm nhạc',
+                    },
+                    {
+                      image:
+                        '/images/gifts/gift-3.png',
+                      label:
+                        'Bức thư',
+                    },
+                  ].map(
+                    (item) => (
+                      <div
+                        key={
+                          item.label
+                        }
+                        className="rounded-[16px] bg-white/85 p-3 text-center"
+                      >
+                        <img
+                          src={
+                            item.image
+                          }
+                          alt=""
+                          className="mx-auto h-14 w-14 object-contain sm:h-16 sm:w-16"
+                        />
+                        <p className="mt-2 text-[9px] font-black uppercase tracking-[0.12em] text-black/30">
+                          {
                             item.label
                           }
-                          className="rounded-[20px] bg-white/80 p-3 text-center shadow-[0_8px_20px_rgba(60,25,35,0.04)] sm:p-4"
-                        >
-                          <img
-                            src={
-                              item.image
-                            }
-                            alt=""
-                            className="mx-auto aspect-square w-full max-w-[100px] object-contain"
-                          />
-
-                          <p className="mt-2 text-[9px] font-bold uppercase tracking-[0.14em] text-black/32">
-                            {
-                              item.label
-                            }
-                          </p>
-                        </div>
-                      )
-                    )}
-                  </div>
+                        </p>
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </section>
 
-        <section
-          id="included"
-          className="scroll-mt-24 bg-white py-20 sm:py-24"
-        >
-          <div className="mx-auto max-w-7xl px-5 sm:px-8">
-            <div className="grid gap-8 border-b border-black/[0.08] pb-8 lg:grid-cols-[0.8fr_1.2fr]">
+        <section className="bg-white">
+          <div className="mx-auto max-w-[1100px] px-5 py-14 sm:px-8 sm:py-18">
+            <div className="grid gap-8 lg:grid-cols-[0.75fr_1.25fr]">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-[#c9435d]">
-                  Bên trong có gì
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#c94861]">
+                  Có gì bên trong
                 </p>
-
-                <h2 className="mt-3 max-w-md text-3xl font-black tracking-[-0.05em] sm:text-4xl">
-                  Không phải một tấm thiệp tĩnh.
+                <h2 className="mt-2 text-3xl font-black tracking-[-0.045em]">
+                  Đủ để kể một câu chuyện.
                 </h2>
               </div>
 
-              <p className="max-w-xl text-sm leading-7 text-black/45">
-                Love Story 01 được chia thành từng phần để
-                người nhận khám phá lần lượt thay vì nhìn
-                thấy toàn bộ nội dung ngay từ đầu.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2">
-              {included.map(
-                (item) => (
-                  <div
-                    key={
-                      item.number
-                    }
-                    className="grid grid-cols-[54px_1fr] gap-4 border-b border-black/[0.08] py-7 md:odd:border-r md:odd:pr-8 md:even:pl-8"
-                  >
-                    <span className="text-xs font-black text-[#c9435d]">
-                      {
-                        item.number
-                      }
-                    </span>
-
-                    <div>
-                      <h3 className="text-base font-black tracking-[-0.025em]">
-                        {
-                          item.title
-                        }
+              <div className="grid overflow-hidden rounded-[20px] border border-black/[0.07] sm:grid-cols-2">
+                {[
+                  [
+                    '01',
+                    'Màn mở đầu',
+                    'Một điểm chạm nhỏ trước khi mở món quà.',
+                  ],
+                  [
+                    '02',
+                    'Album ảnh',
+                    'Ảnh kỷ niệm được sắp sẵn theo bố cục.',
+                  ],
+                  [
+                    '03',
+                    'Âm nhạc',
+                    'Thêm bài hát hoặc video gắn với câu chuyện.',
+                  ],
+                  [
+                    '04',
+                    'Bức thư',
+                    'Lời nhắn riêng dành cho người nhận.',
+                  ],
+                ].map(
+                  ([
+                    number,
+                    title,
+                    description,
+                  ], index) => (
+                    <div
+                      key={number}
+                      className={[
+                        'p-5 sm:p-6',
+                        index % 2 === 0
+                          ? 'sm:border-r sm:border-black/[0.07]'
+                          : '',
+                        index < 2
+                          ? 'border-b border-black/[0.07]'
+                          : '',
+                      ].join(' ')}
+                    >
+                      <p className="text-[10px] font-black text-[#c94861]">
+                        {number}
+                      </p>
+                      <h3 className="mt-4 text-base font-black">
+                        {title}
                       </h3>
-
-                      <p className="mt-2 text-sm leading-6 text-black/43">
+                      <p className="mt-1.5 text-sm leading-6 text-black/40">
                         {
-                          item.text
+                          description
                         }
                       </p>
                     </div>
-                  </div>
-                )
-              )}
+                  )
+                )}
+              </div>
             </div>
           </div>
         </section>
-
-        <section className="bg-[#181818] px-5 py-16 text-white sm:px-8 sm:py-20">
-          <div className="mx-auto flex max-w-5xl flex-col items-center text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#f0a0af]">
-              Love Story 01
-            </p>
-
-            <h2 className="mt-4 max-w-2xl text-3xl font-black tracking-[-0.05em] sm:text-4xl">
-              Biến template thành câu chuyện của riêng bạn.
-            </h2>
-
-            <p className="mt-4 max-w-lg text-sm leading-7 text-white/48">
-              Chỉnh ảnh, nhạc và lời nhắn. Thanh toán xong,
-              Dearly mới tạo link riêng để gửi người nhận.
-            </p>
-
-            <button
-              type="button"
-              onClick={
-                onPersonalize
-              }
-              className="mt-7 rounded-[15px] bg-[#f0a0af] px-7 py-3.5 text-sm font-black text-[#181818] transition hover:-translate-y-0.5 hover:bg-white"
-            >
-              Bắt đầu cá nhân hoá
-            </button>
-          </div>
-        </section>
       </main>
-
-      <footer className="border-t border-black/[0.06] bg-white py-6">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
-          <BrandLogo
-            onClick={
-              onBackHome
-            }
-            imageClassName="h-9 w-auto"
-          />
-
-          <span className="text-[10px] font-semibold text-black/30">
-            Digital gifts for special moments.
-          </span>
-        </div>
-      </footer>
     </div>
   );
 };

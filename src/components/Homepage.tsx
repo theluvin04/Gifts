@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
 import { motion } from 'motion/react';
 
 import {
@@ -9,8 +12,6 @@ import {
   where,
 } from 'firebase/firestore';
 
-import { BRAND } from '../config/brand';
-import { CustomerSiteHeader } from './CustomerSiteHeader';
 import { db } from '../config/firebase';
 
 import {
@@ -34,45 +35,6 @@ interface HomePageProps {
   onTrackOrder: () => void;
 }
 
-const features = [
-  {
-    number: '01',
-    title: 'Ảnh của riêng bạn',
-    description:
-      'Thay ảnh, lời nhắn và những kỷ niệm của hai người.',
-  },
-  {
-    number: '02',
-    title: 'Nhạc riêng',
-    description:
-      'Thêm bài hát gắn với câu chuyện của bạn.',
-  },
-  {
-    number: '03',
-    title: 'Hiệu ứng tương tác',
-    description:
-      'Không chỉ là một tấm thiệp, mà là một trải nghiệm.',
-  },
-];
-
-const steps = [
-  {
-    step: '01',
-    title: 'Chọn template',
-    text: 'Chọn phong cách phù hợp với dịp và người bạn muốn tặng.',
-  },
-  {
-    step: '02',
-    title: 'Cá nhân hoá',
-    text: 'Thêm ảnh, tên, nhạc, lời nhắn và những chi tiết của riêng hai người.',
-  },
-  {
-    step: '03',
-    title: 'Gửi món quà',
-    text: 'Nhận một đường link riêng để gửi trực tiếp cho người ấy.',
-  },
-];
-
 const formatVnd = (
   amount: number
 ) =>
@@ -87,9 +49,7 @@ const findPreviewImage = (
     template.visualEditor
       ?.scenes || [];
 
-  for (
-    const scene of scenes
-  ) {
+  for (const scene of scenes) {
     for (
       const element of
         scene.elements
@@ -113,12 +73,18 @@ const findPreviewImage = (
   return '/images/gifts/success.gif';
 };
 
-const DynamicTemplateCard:
+const TemplateCard:
 React.FC<{
   template: TemplateConfig;
+  preview: string;
+  category: string;
+  description: string;
   onOpen: () => void;
 }> = ({
   template,
+  preview,
+  category,
+  description,
   onOpen,
 }) => {
   const price =
@@ -131,225 +97,160 @@ React.FC<{
       template
     );
 
-  const presentation =
-    getTemplatePresentation(
-      template
-    );
-
-  const preview =
-    findPreviewImage(
-      template
-    );
-
   return (
     <motion.button
       type="button"
       onClick={onOpen}
-      whileHover={{
-        y: -5,
-      }}
+      whileHover={{ y: -4 }}
       transition={{
-        duration: 0.2,
+        duration: 0.18,
       }}
-      className="group overflow-hidden rounded-[30px] border border-black/[0.07] bg-[#fffafb] p-2 text-left shadow-[0_12px_35px_rgba(23,23,23,0.04)] transition hover:border-black/[0.12] hover:shadow-[0_24px_55px_rgba(23,23,23,0.08)]"
+      className="group overflow-hidden rounded-[22px] border border-black/[0.07] bg-white text-left shadow-[0_12px_35px_rgba(23,23,23,0.035)] transition hover:border-black/[0.12] hover:shadow-[0_20px_50px_rgba(23,23,23,0.07)]"
     >
-      <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[24px] bg-[#f7edf0] p-6">
-        <span className="absolute right-4 top-4 rounded-[10px] border border-white/70 bg-white/85 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#d94763] backdrop-blur-sm">
-          Available
-        </span>
-
+      <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-[#f8edef] p-6">
         <img
           src={preview}
           alt={template.name}
-          className="h-[82%] w-[82%] object-contain transition duration-500 group-hover:scale-[1.035]"
+          className="h-[80%] w-[80%] object-contain transition duration-500 group-hover:scale-[1.03]"
         />
       </div>
 
-      <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#d94763]">
-              {
-                presentation.category
-              }
-            </p>
+      <div className="p-5">
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#c94861]">
+          {category}
+        </p>
 
-            <h3 className="mt-1.5 truncate text-xl font-black tracking-[-0.035em] text-[#171717]">
-              {template.name}
-            </h3>
-          </div>
+        <div className="mt-2 flex items-start justify-between gap-4">
+          <h3 className="min-w-0 truncate text-xl font-black tracking-[-0.035em]">
+            {template.name}
+          </h3>
 
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-black/[0.08] bg-white text-base font-medium text-black/45 transition group-hover:border-[#d94763]/25 group-hover:bg-[#fff1f4] group-hover:text-[#d94763]">
+          <span className="shrink-0 text-lg text-black/28 transition group-hover:translate-x-0.5 group-hover:text-[#c94861]">
             →
           </span>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-base font-black text-[#171717]">
-            {formatVnd(
-              price
-            )}
+        <p className="mt-2 line-clamp-2 text-sm leading-6 text-black/42">
+          {description}
+        </p>
+
+        <div className="mt-4 flex items-center gap-2 border-t border-black/[0.06] pt-4">
+          <span className="text-base font-black">
+            {formatVnd(price)}
           </span>
 
           {discount > 0 && (
             <>
-              <span className="text-xs text-black/28 line-through">
+              <span className="text-xs text-black/25 line-through">
                 {formatVnd(
                   template.basePrice
                 )}
               </span>
-
-              <span className="rounded-[8px] bg-[#fdecef] px-2 py-1 text-[9px] font-bold text-[#c93f59]">
+              <span className="rounded-full bg-[#fdecef] px-2 py-1 text-[9px] font-black text-[#c94861]">
                 -{discount}%
               </span>
             </>
           )}
         </div>
-
-        <p className="mt-3 line-clamp-2 text-sm leading-6 text-black/48">
-          {
-            presentation.description
-          }
-        </p>
       </div>
     </motion.button>
   );
 };
 
-export const HomePage: React.FC<
-  HomePageProps
-> = ({
+export const HomePage:
+React.FC<HomePageProps> = ({
   onOpenLoveTemplate,
   onOpenTemplate,
   onTrackOrder,
 }) => {
   const [
-    template,
-    setTemplate,
-  ] =
-    useState<TemplateConfig>(
-      DEFAULT_LOVE_TEMPLATE_CONFIG
-    );
+    loveTemplate,
+    setLoveTemplate,
+  ] = useState<TemplateConfig>(
+    DEFAULT_LOVE_TEMPLATE_CONFIG
+  );
 
   const [
     dynamicTemplates,
     setDynamicTemplates,
-  ] =
-    useState<TemplateConfig[]>(
-      []
-    );
+  ] = useState<TemplateConfig[]>(
+    []
+  );
 
   useEffect(() => {
     void getPublicTemplateConfig()
-      .then(setTemplate);
+      .then(setLoveTemplate);
   }, []);
 
   useEffect(() => {
-    let active =
-      true;
+    let active = true;
 
-    const loadTemplates =
-      async () => {
-        try {
-          const snapshot =
-            await getDocs(
-              query(
-                collection(
-                  db,
-                  'templates'
-                ),
-                where(
-                  'status',
-                  '==',
-                  'available'
-                ),
-                limit(50)
-              )
-            );
-
-          if (!active) {
-            return;
-          }
-
-          const next =
-            snapshot.docs
-              .map(
-                (
-                  item
-                ) =>
-                  normalizeTemplateConfig({
-                    ...item.data(),
-                    id:
-                      item.id,
-                  })
-              )
-              .filter(
-                (
-                  item
-                ) =>
-                  item.id !==
-                    'love-01' &&
-                  item.status ===
-                    'available' &&
-                  Boolean(
-                    item.visualEditor
-                      ?.scenes
-                      ?.length
-                  )
-              )
-              .sort(
-                (
-                  left,
-                  right
-                ) =>
-                  left.name.localeCompare(
-                    right.name,
-                    'vi'
-                  )
-              );
-
-          setDynamicTemplates(
-            next
+    const load = async () => {
+      try {
+        const snapshot =
+          await getDocs(
+            query(
+              collection(
+                db,
+                'templates'
+              ),
+              where(
+                'status',
+                '==',
+                'available'
+              ),
+              limit(50)
+            )
           );
-        } catch (
+
+        if (!active) return;
+
+        setDynamicTemplates(
+          snapshot.docs
+            .map((item) =>
+              normalizeTemplateConfig({
+                ...item.data(),
+                id: item.id,
+              })
+            )
+            .filter(
+              (item) =>
+                item.id !==
+                  'love-01' &&
+                item.status ===
+                  'available' &&
+                Boolean(
+                  item.visualEditor
+                    ?.scenes
+                    ?.length
+                )
+            )
+            .sort((left, right) =>
+              left.name.localeCompare(
+                right.name,
+                'vi'
+              )
+            )
+        );
+      } catch (error) {
+        console.warn(
+          'Public template catalog:',
           error
-        ) {
-          console.warn(
-            'Public template catalog:',
-            error
-          );
+        );
+      }
+    };
 
-          if (active) {
-            setDynamicTemplates(
-              []
-            );
-          }
-        }
-      };
-
-    void loadTemplates();
+    void load();
 
     return () => {
       active = false;
     };
   }, []);
 
-  const effectivePrice =
-    getEffectiveTemplatePrice(
-      template
-    );
-
-  const discount =
-    getTemplateDiscountPercent(
-      template
-    );
-
-  const scrollToSection = (
-    sectionId: string
-  ) => {
+  const scrollToTemplates = () => {
     document
       .getElementById(
-        sectionId
+        'templates'
       )
       ?.scrollIntoView({
         behavior: 'smooth',
@@ -358,427 +259,222 @@ export const HomePage: React.FC<
   };
 
   useEffect(() => {
-    const legacySection =
-      window.location.hash
-        .replace('#', '');
-
     if (
-      legacySection ===
-        'templates' ||
-      legacySection ===
-        'how-it-works'
+      window.location.hash ===
+      '#templates'
     ) {
-      window.history.replaceState(
-        {},
-        '',
-        window.location.pathname +
-          window.location.search
-      );
-
       window.setTimeout(
-        () =>
-          scrollToSection(
-            legacySection
-          ),
+        scrollToTemplates,
         0
       );
     }
   }, []);
 
+  const lovePrice =
+    getEffectiveTemplatePrice(
+      loveTemplate
+    );
+
   return (
-    <div className="min-h-[100svh] w-full max-w-full overflow-x-hidden bg-[#fffaf8] text-[#171717]">
-      <CustomerSiteHeader
-        onHome={() =>
-          window.scrollTo({
-            top: 0,
-            behavior: 'smooth',
-          })
-        }
-        onTemplates={() => scrollToSection('templates')}
-        onHowItWorks={() => scrollToSection('how-it-works')}
-        onTrackOrder={onTrackOrder}
-        primaryAction={{
-          label: 'Xem template',
-          onClick: onOpenLoveTemplate,
-        }}
-      />
-
+    <div className="min-h-[100svh] bg-[#fffaf8] text-[#171717]">
       <main>
-        <section className="relative overflow-hidden border-b border-black/5">
-          <div className="mx-auto grid w-full min-w-0 max-w-7xl items-center gap-10 px-4 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-[1fr_0.92fr] lg:gap-16 lg:pb-28 lg:pt-24">
-            <div className="mx-auto min-w-0 max-w-2xl text-center lg:mx-0 lg:text-left">
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  y: 10,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                className="mb-6 flex items-center justify-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#d94763] lg:justify-start"
-              >
-                <span className="h-px w-8 bg-[#d94763]/45" />
+        <section className="border-b border-black/[0.055]">
+          <div className="mx-auto grid max-w-[1320px] gap-10 px-5 py-14 sm:px-8 sm:py-20 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:gap-16 lg:py-24">
+            <div className="max-w-2xl">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#c94861]">
+                Digital gifts
+              </p>
 
-                <span>
-                  Digital gifts · personal by design
-                </span>
-              </motion.div>
-
-              <motion.h1
-                initial={{
-                  opacity: 0,
-                  y: 16,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                transition={{
-                  delay: 0.05,
-                }}
-                className="text-[40px] font-black leading-[0.98] tracking-[-0.055em] text-[#171717] min-[360px]:text-[44px] sm:text-[64px] lg:text-[76px]"
-              >
-                Một món quà
+              <h1 className="mt-4 text-[44px] font-black leading-[0.98] tracking-[-0.055em] sm:text-[66px] lg:text-[78px]">
+                Quà tặng
                 <br />
-
-                <span className="font-medium italic text-[#d94763]">
+                <span className="font-medium italic text-[#c94861]">
                   có câu chuyện.
                 </span>
-              </motion.h1>
+              </h1>
 
-              <motion.p
-                initial={{
-                  opacity: 0,
-                  y: 16,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                transition={{
-                  delay: 0.1,
-                }}
-                className="mx-auto mt-6 max-w-xl text-[15px] leading-7 text-black/52 sm:text-[17px] lg:mx-0"
-              >
-                Chọn một template, thêm ảnh,
-                nhạc và lời nhắn của riêng bạn.
-                Sau đó gửi người ấy một đường
-                link nhỏ nhưng chứa cả một trải
-                nghiệm.
-              </motion.p>
+              <p className="mt-6 max-w-xl text-[15px] leading-7 text-black/48 sm:text-base">
+                Chọn mẫu, thêm nội dung của riêng bạn và gửi bằng một đường link.
+              </p>
 
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  y: 16,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                transition={{
-                  delay: 0.15,
-                }}
-                className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center lg:justify-start"
-              >
+              <div className="mt-8 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   onClick={
-                    onOpenLoveTemplate
+                    scrollToTemplates
                   }
-                  className="w-full rounded-[14px] bg-[#d94763] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#c83b56] sm:w-auto"
+                  className="min-h-12 rounded-[13px] bg-[#171717] px-6 text-sm font-black text-white transition hover:bg-[#c94861]"
                 >
-                  Xem Love Story 01
+                  Xem templates
                 </button>
 
                 <button
                   type="button"
-                  onClick={() =>
-                    scrollToSection(
-                      'how-it-works'
-                    )
+                  onClick={
+                    onTrackOrder
                   }
-                  className="border-b border-black/30 pb-1 text-sm font-semibold text-black/60 transition hover:border-black hover:text-black"
+                  className="min-h-12 rounded-[13px] border border-black/[0.09] bg-white px-5 text-sm font-bold text-black/52 transition hover:text-black/75"
                 >
-                  Xem cách hoạt động
+                  Tra cứu đơn
                 </button>
-              </motion.div>
+              </div>
 
-              <motion.div
-                initial={{
-                  opacity: 0,
-                }}
-                animate={{
-                  opacity: 1,
-                }}
-                transition={{
-                  delay: 0.24,
-                }}
-                className="mt-8 flex flex-wrap justify-center gap-x-3 gap-y-2 text-[11px] font-semibold text-black/38 lg:justify-start"
-              >
-                <span>
-                  Không cần cài app
-                </span>
-
-                <span aria-hidden="true">
-                  /
-                </span>
-
-                <span>
-                  Mở trên điện thoại
-                </span>
-
-                <span aria-hidden="true">
-                  /
-                </span>
-
-                <span>
-                  Cá nhân hoá
-                </span>
-              </motion.div>
+              <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-black/35">
+                <span>Không cần cài app</span>
+                <span>Mở bằng link</span>
+                <span>Cá nhân hoá</span>
+              </div>
             </div>
 
-            <motion.div
+            <motion.button
+              type="button"
+              onClick={
+                onOpenLoveTemplate
+              }
               initial={{
                 opacity: 0,
-                y: 24,
+                y: 16,
               }}
               animate={{
                 opacity: 1,
                 y: 0,
               }}
-              transition={{
-                delay: 0.12,
-                duration: 0.55,
-              }}
-              className="mx-auto w-full max-w-[520px]"
+              className="group mx-auto w-full max-w-[520px] overflow-hidden rounded-[28px] border border-black/[0.06] bg-white p-2 text-left shadow-[0_24px_70px_rgba(70,25,40,0.07)]"
             >
-              <div className="overflow-hidden rounded-[30px] border border-black/[0.07] bg-white shadow-[0_18px_50px_rgba(23,23,23,0.06)]">
-                <div className="flex items-center justify-between border-b border-black/6 px-5 py-3.5">
-                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-black/35">
+              <div className="rounded-[22px] bg-[#fff0f3] p-6 sm:p-8">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#c94861]">
                     Love Story 01
-                  </span>
-
-                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#d94763]">
-                    Preview
-                  </span>
+                  </p>
+                  <p className="text-xs font-black text-black/55">
+                    {formatVnd(
+                      lovePrice
+                    )}
+                  </p>
                 </div>
 
-                <div className="bg-[#fff5f6] px-5 py-8 text-center sm:px-7 sm:py-10">
-                  <p className="text-lg font-semibold tracking-[-0.02em] text-[#d94763] sm:text-xl">
-                    I knew you'd say yes 💕
+                <img
+                  src="/images/gifts/success.gif"
+                  alt="Love Story 01"
+                  className="mx-auto my-6 h-36 w-36 object-contain transition duration-500 group-hover:scale-[1.03] sm:h-44 sm:w-44"
+                />
+
+                <div className="flex items-center justify-between gap-4 border-t border-[#c94861]/10 pt-4">
+                  <p className="text-sm font-bold text-black/55">
+                    Ảnh · nhạc · lời nhắn
                   </p>
-
-                  <img
-                    src="/images/gifts/success.gif"
-                    alt="Love template preview"
-                    className="mx-auto mt-4 h-28 w-28 object-contain sm:h-36 sm:w-36"
-                  />
-
-                  <div className="mt-7 grid grid-cols-3 gap-2.5">
-                    {[
-                      '/images/gifts/gift-1.png',
-                      '/images/gifts/gift-2.png',
-                      '/images/gifts/gift-3.png',
-                    ].map(
-                      (
-                        src,
-                        index
-                      ) => (
-                        <div
-                          key={src}
-                          className="aspect-square rounded-[18px] border border-black/5 bg-white/75 p-3 shadow-[0_8px_22px_rgba(23,23,23,0.035)] sm:p-4"
-                        >
-                          <img
-                            src={src}
-                            alt={`Gift ${
-                              index + 1
-                            }`}
-                            className="h-full w-full object-contain"
-                          />
-                        </div>
-                      )
-                    )}
-                  </div>
-
-                  <div className="mt-6 flex items-center justify-between border-t border-[#d94763]/10 pt-4 text-left">
-                    <div>
-                      <p className="text-[9px] font-bold uppercase tracking-[0.17em] text-black/30">
-                        Includes
-                      </p>
-
-                      <p className="mt-1 text-xs font-semibold text-black/55">
-                        ảnh · nhạc · lời nhắn
-                      </p>
-                    </div>
-
-                    <span className="text-xs font-bold text-[#d94763]">
-                      01
-                    </span>
-                  </div>
+                  <span className="text-lg text-[#c94861]">
+                    →
+                  </span>
                 </div>
               </div>
-            </motion.div>
+            </motion.button>
           </div>
         </section>
 
         <section
           id="templates"
-          className="bg-white py-18 sm:py-24"
+          className="scroll-mt-20 bg-white"
         >
-          <div className="mx-auto max-w-7xl px-5 sm:px-8">
-            <div className="mb-10 grid gap-4 border-b border-black/8 pb-7 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="mx-auto max-w-[1320px] px-5 py-14 sm:px-8 sm:py-20">
+            <div className="flex flex-col gap-3 border-b border-black/[0.07] pb-6 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d94763]">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#c94861]">
                   Templates
                 </p>
-
-                <h2 className="mt-3 text-3xl font-black tracking-[-0.045em] text-[#171717] sm:text-4xl">
-                  Chọn câu chuyện của bạn
+                <h2 className="mt-2 text-3xl font-black tracking-[-0.045em] sm:text-4xl">
+                  Chọn mẫu phù hợp
                 </h2>
               </div>
 
-              <p className="max-w-md text-sm leading-6 text-black/48">
-                Bắt đầu với một mẫu, sau đó
-                biến nó thành món quà chỉ thuộc
-                về hai người.
+              <p className="max-w-sm text-sm leading-6 text-black/38">
+                Mỗi mẫu có bố cục riêng, bạn chỉ thay nội dung cần thiết.
               </p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {template.status ===
+            <div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {loveTemplate.status ===
                 'available' && (
-                <motion.button
-                  type="button"
-                  onClick={
+                <TemplateCard
+                  template={
+                    loveTemplate
+                  }
+                  preview="/images/gifts/success.gif"
+                  category="Tình yêu"
+                  description="Một website nhỏ với ảnh, nhạc và bức thư riêng."
+                  onOpen={
                     onOpenLoveTemplate
                   }
-                  whileHover={{
-                    y: -5,
-                  }}
-                  transition={{
-                    duration: 0.2,
-                  }}
-                  className="group overflow-hidden rounded-[30px] border border-black/[0.07] bg-[#fffafb] p-2 text-left shadow-[0_12px_35px_rgba(23,23,23,0.04)] transition hover:border-black/[0.12] hover:shadow-[0_24px_55px_rgba(23,23,23,0.08)]"
-                >
-                  <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[24px] bg-[#fae8ec] p-8">
-                    <span className="absolute right-4 top-4 rounded-[10px] border border-white/70 bg-white/80 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#d94763] backdrop-blur-sm">
-                      Available
-                    </span>
-
-                    <img
-                      src="/images/gifts/success.gif"
-                      alt="Love template"
-                      className="h-[66%] w-[66%] object-contain transition duration-500 group-hover:scale-[1.045]"
-                    />
-                  </div>
-
-                  <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#d94763]">
-                          Love
-                        </p>
-
-                        <h3 className="mt-1.5 text-xl font-black tracking-[-0.035em] text-[#171717]">
-                          Love Story 01
-                        </h3>
-                      </div>
-
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-black/[0.08] bg-white text-base font-medium text-black/45 transition group-hover:border-[#d94763]/25 group-hover:bg-[#fff1f4] group-hover:text-[#d94763]">
-                        →
-                      </span>
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <span className="text-base font-black text-[#171717]">
-                        {formatVnd(
-                          effectivePrice
-                        )}
-                      </span>
-
-                      {discount > 0 && (
-                        <>
-                          <span className="text-xs text-black/28 line-through">
-                            {formatVnd(
-                              template.basePrice
-                            )}
-                          </span>
-
-                          <span className="rounded-[8px] bg-[#fdecef] px-2 py-1 text-[9px] font-bold text-[#c93f59]">
-                            -{discount}%
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-                    <p className="mt-3 max-w-[31ch] text-sm leading-6 text-black/48">
-                      YES/NO tương tác, album ảnh,
-                      đĩa nhạc và một bức thư riêng
-                      dành cho người ấy.
-                    </p>
-                  </div>
-                </motion.button>
+                />
               )}
 
               {dynamicTemplates.map(
-                (
-                  item
-                ) => (
-                  <DynamicTemplateCard
-                    key={
-                      item.id
-                    }
-                    template={
-                      item
-                    }
-                    onOpen={() =>
-                      onOpenTemplate(
-                        item.id
-                      )
-                    }
-                  />
-                )
+                (template) => {
+                  const presentation =
+                    getTemplatePresentation(
+                      template
+                    );
+
+                  return (
+                    <TemplateCard
+                      key={
+                        template.id
+                      }
+                      template={
+                        template
+                      }
+                      preview={
+                        findPreviewImage(
+                          template
+                        )
+                      }
+                      category={
+                        presentation.category
+                      }
+                      description={
+                        presentation.description
+                      }
+                      onOpen={() =>
+                        onOpenTemplate(
+                          template.id
+                        )
+                      }
+                    />
+                  );
+                }
               )}
             </div>
           </div>
         </section>
 
-        <section
-          id="how-it-works"
-          className="border-y border-black/5 bg-[#fffaf8] py-20 sm:py-28"
-        >
-          <div className="mx-auto max-w-7xl px-5 sm:px-8">
-            <div className="grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:gap-16">
+        <section className="border-y border-black/[0.055] bg-[#fbf7f5]">
+          <div className="mx-auto max-w-[1100px] px-5 py-14 sm:px-8 sm:py-18">
+            <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-start">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d94763]">
-                  How it works
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#c94861]">
+                  Cách hoạt động
                 </p>
-
-                <h2 className="mt-3 max-w-lg text-3xl font-black tracking-[-0.045em] text-[#171717] sm:text-4xl">
-                  Từ template thành món quà của
-                  riêng bạn
+                <h2 className="mt-2 text-3xl font-black tracking-[-0.045em]">
+                  3 bước là xong.
                 </h2>
               </div>
 
-              <div className="border-t border-black/10">
-                {steps.map(
-                  (item) => (
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  ['01', 'Chọn mẫu'],
+                  ['02', 'Thay nội dung'],
+                  ['03', 'Thanh toán & gửi link'],
+                ].map(
+                  ([number, title]) => (
                     <div
-                      key={item.step}
-                      className="grid gap-3 border-b border-black/10 py-6 sm:grid-cols-[64px_180px_1fr] sm:items-start sm:gap-5"
+                      key={number}
+                      className="rounded-[18px] border border-black/[0.07] bg-white p-5"
                     >
-                      <span className="text-[11px] font-bold tracking-[0.12em] text-[#d94763]">
-                        {item.step}
-                      </span>
-
-                      <h3 className="text-base font-bold tracking-[-0.02em] text-[#171717]">
-                        {item.title}
-                      </h3>
-
-                      <p className="text-sm leading-6 text-black/48">
-                        {item.text}
+                      <p className="text-[10px] font-black text-[#c94861]">
+                        {number}
+                      </p>
+                      <p className="mt-6 text-sm font-black">
+                        {title}
                       </p>
                     </div>
                   )
@@ -787,85 +483,12 @@ export const HomePage: React.FC<
             </div>
           </div>
         </section>
-
-        <section className="bg-[#171717] text-white">
-          <div className="mx-auto grid max-w-7xl gap-12 px-5 py-18 sm:px-8 sm:py-24 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#f18a9d]">
-                More than a card
-              </p>
-
-              <h2 className="mt-3 max-w-md text-3xl font-black tracking-[-0.045em] sm:text-4xl">
-                Một website nhỏ dành riêng cho
-                một người.
-              </h2>
-            </div>
-
-            <div className="grid gap-0 border-t border-white/15 sm:grid-cols-3">
-              {features.map(
-                (feature) => (
-                  <div
-                    key={feature.title}
-                    className="border-b border-white/15 py-6 sm:border-r sm:px-5 sm:last:border-r-0"
-                  >
-                    <span className="text-[10px] font-bold tracking-[0.15em] text-[#f18a9d]">
-                      {feature.number}
-                    </span>
-
-                    <h3 className="mt-6 text-sm font-bold">
-                      {feature.title}
-                    </h3>
-
-                    <p className="mt-2 text-xs leading-5 text-white/48">
-                      {feature.description}
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-white py-20 sm:py-24">
-          <div className="mx-auto max-w-3xl px-5 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d94763]">
-              Love Story 01
-            </p>
-
-            <h2 className="mt-4 text-3xl font-black tracking-[-0.045em] text-[#171717] sm:text-4xl">
-              Thử template đầu tiên?
-            </h2>
-
-            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-black/48">
-              Mở thử trải nghiệm Love Story 01
-              và xem món quà sẽ trông như thế
-              nào trên điện thoại.
-            </p>
-
-            <button
-              type="button"
-              onClick={
-                onOpenLoveTemplate
-              }
-              className="mt-7 rounded-[14px] bg-[#d94763] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#c83b56]"
-            >
-              Mở Love Story 01
-            </button>
-          </div>
-        </section>
       </main>
 
-      <footer className="border-t border-black/6 bg-white py-7">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 text-xs text-black/35 sm:flex-row sm:px-8">
-          <img
-            src={BRAND.logoPath}
-            alt={BRAND.name}
-            className="h-9 w-auto object-contain"
-          />
-
-          <span>
-            Digital gifts for special moments.
-          </span>
+      <footer className="bg-white">
+        <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-4 px-5 py-7 text-xs text-black/30 sm:px-8">
+          <span>Dearly</span>
+          <span>Digital gifts</span>
         </div>
       </footer>
     </div>
