@@ -104,11 +104,6 @@ React.FC<Props> = ({
           characters.length
         : durationMs;
 
-    const showCursor =
-      animation
-        ?.showCursor !==
-      false;
-
     return (
       <span
         key={
@@ -177,42 +172,6 @@ React.FC<Props> = ({
               </motion.span>
             );
           }
-        )}
-
-        {showCursor && (
-          <motion.span
-            aria-hidden="true"
-            initial={{
-              opacity: 0,
-            }}
-            animate={{
-              opacity: [
-                0,
-                1,
-                0,
-              ],
-            }}
-            transition={{
-              delay:
-                delayMs /
-                1000,
-              duration: 0.75,
-              repeat:
-                Infinity,
-              ease:
-                'linear',
-            }}
-            style={{
-              display:
-                'inline-block',
-              marginLeft:
-                '0.08em',
-              fontWeight:
-                400,
-            }}
-          >
-            |
-          </motion.span>
         )}
       </span>
     );

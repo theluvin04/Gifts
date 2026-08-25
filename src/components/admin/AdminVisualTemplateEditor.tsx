@@ -8,6 +8,7 @@ import React, {
 import type {
   SceneCanvasDefinition,
   SceneElement,
+  SceneElementAction,
   SceneElementFrame,
 } from '../../engine';
 
@@ -42,6 +43,30 @@ import {
 import {
   QuickAssetPickerModal,
 } from './visual-editor/QuickAssetPickerModal';
+
+import {
+  QuickFontPicker,
+} from './visual-editor/QuickFontPicker';
+
+import {
+  MultiSelectPopover,
+} from './visual-editor/MultiSelectPopover';
+
+import {
+  CustomerSlotControl,
+} from './visual-editor/CustomerSlotControl';
+
+import {
+  CustomerPreviewOverlay,
+} from './visual-editor/CustomerPreviewOverlay';
+
+import {
+  GroupInspector,
+} from './visual-editor/GroupInspector';
+
+import {
+  GroupTransformOverlay,
+} from './visual-editor/GroupTransformOverlay';
 
 import {
   EditorToolbar,
@@ -118,14 +143,37 @@ type AssetPickerTarget =
         string;
     };
 
-const MOBILE_ASPECT_RATIO =
-  9 / 16;
+const LONG_PAGE_DESKTOP_WIDTH =
+  1366;
 
-const MOBILE_MARGIN_X =
-  5;
+const LONG_PAGE_MOBILE_WIDTH =
+  390;
 
-const MOBILE_MARGIN_Y =
-  4;
+const LONG_PAGE_DEFAULT_HEIGHT =
+  3500;
+
+const getLongPageMobileHeight = (
+  desktopHeight: number
+) =>
+  Math.round(
+    clamp(
+      desktopHeight *
+        0.72,
+      1800,
+      3000
+    )
+  );
+
+const isLongPageScene = (
+  scene:
+    SceneCanvasDefinition
+) =>
+  Boolean(
+    (scene.minHeight || 0) >=
+      1200 &&
+    (scene.maxWidth || 0) >=
+      1000
+  );
 
 const hasMobileFrame = (
   element:
@@ -138,672 +186,6 @@ const hasMobileFrame = (
     ).length >
       0
   );
-
-const isLayoutContentElement = (
-  element:
-    SceneElement
-) =>
-  element.type ===
-    'text' ||
-  element.type ===
-    'button' ||
-  element.type ===
-    'image' ||
-  element.type ===
-    'photo-frame' ||
-  element.type ===
-    'custom';
-
-const getSmartWidthMultiplier = (
-  element:
-    SceneElement
-) => {
-  if (
-    element.groupId
-  ) {
-    return 1.45;
-  }
-
-  if (
-    element.type ===
-    'text'
-  ) {
-    return 1.55;
-  }
-
-  if (
-    element.type ===
-    'button'
-  ) {
-    return 1.5;
-  }
-
-  if (
-    element.type ===
-      'image' ||
-    element.type ===
-      'photo-frame'
-  ) {
-    return 1.65;
-  }
-
-  if (
-    element.type ===
-    'decor'
-  ) {
-    return 1.3;
-  }
-
-  return 1.4;
-};
-
-const getSmartMinWidth = (
-  element:
-    SceneElement
-) => {
-  if (
-    element.type ===
-    'text'
-  ) {
-    return 28;
-  }
-
-  if (
-    element.type ===
-    'button'
-  ) {
-    return 32;
-  }
-
-  if (
-    element.type ===
-      'image' ||
-    element.type ===
-      'photo-frame'
-  ) {
-    return 20;
-  }
-
-  if (
-    element.type ===
-    'decor'
-  ) {
-    return 8;
-  }
-
-  return 12;
-};
-
-const getSmartMaxVisualWidth = (
-  element:
-    SceneElement
-) => {
-  if (
-    element.type ===
-    'decor'
-  ) {
-    return 58;
-  }
-
-  if (
-    element.type ===
-      'image' ||
-    element.type ===
-      'photo-frame'
-  ) {
-    return 88;
-  }
-
-  return 90;
-};
-
-const clampMobileFrameToCanvas = (
-  frame:
-    SceneElementFrame
-) => {
-  let next = {
-    ...frame,
-  };
-
-  let bounds =
-    getFrameBounds(
-      next
-    );
-
-  if (
-    bounds.left <
-    MOBILE_MARGIN_X
-  ) {
-    next =
-      moveFrameToBounds(
-        next,
-        {
-          left:
-            MOBILE_MARGIN_X,
-        }
-      );
-
-    bounds =
-      getFrameBounds(
-        next
-      );
-  }
-
-  if (
-    bounds.right >
-    100 -
-      MOBILE_MARGIN_X
-  ) {
-    next =
-      moveFrameToBounds(
-        next,
-        {
-          right:
-            100 -
-            MOBILE_MARGIN_X,
-        }
-      );
-
-    bounds =
-      getFrameBounds(
-        next
-      );
-  }
-
-  if (
-    bounds.top <
-    MOBILE_MARGIN_Y
-  ) {
-    next =
-      moveFrameToBounds(
-        next,
-        {
-          top:
-            MOBILE_MARGIN_Y,
-        }
-      );
-
-    bounds =
-      getFrameBounds(
-        next
-      );
-  }
-
-  if (
-    bounds.bottom >
-    100 -
-      MOBILE_MARGIN_Y
-  ) {
-    next =
-      moveFrameToBounds(
-        next,
-        {
-          bottom:
-            100 -
-            MOBILE_MARGIN_Y,
-        }
-      );
-  }
-
-  return next;
-};
-
-const getBoundsOverlapRatio = (
-  left:
-    ReturnType<
-      typeof getFrameBounds
-    >,
-  right:
-    ReturnType<
-      typeof getFrameBounds
-    >
-) => {
-  const overlapWidth =
-    Math.max(
-      0,
-      Math.min(
-        left.right,
-        right.right
-      ) -
-      Math.max(
-        left.left,
-        right.left
-      )
-    );
-
-  const overlapHeight =
-    Math.max(
-      0,
-      Math.min(
-        left.bottom,
-        right.bottom
-      ) -
-      Math.max(
-        left.top,
-        right.top
-      )
-    );
-
-  const overlapArea =
-    overlapWidth *
-    overlapHeight;
-
-  if (
-    overlapArea <=
-    0
-  ) {
-    return 0;
-  }
-
-  const leftArea =
-    Math.max(
-      0.001,
-      left.width *
-      left.height
-    );
-
-  const rightArea =
-    Math.max(
-      0.001,
-      right.width *
-      right.height
-    );
-
-  return overlapArea /
-    Math.min(
-      leftArea,
-      rightArea
-    );
-};
-
-const toMobileFramePatch = (
-  frame:
-    SceneElementFrame
-): Partial<
-  SceneElementFrame
-> => ({
-  x:
-    frame.x,
-  y:
-    frame.y,
-  width:
-    frame.width,
-  ...(typeof frame.height ===
-  'number'
-    ? {
-        height:
-          frame.height,
-      }
-    : {}),
-});
-
-const buildSmartMobileFrames = (
-  scene:
-    SceneCanvasDefinition,
-  overwrite =
-    false
-) => {
-  const desktopAspect =
-    scene.aspectRatio ||
-    16 / 9;
-
-  const aspectCorrection =
-    MOBILE_ASPECT_RATIO /
-    Math.max(
-      0.1,
-      desktopAspect
-    );
-
-  const result:
-    Record<
-      string,
-      SceneElementFrame
-    > = {};
-
-  const workingFrames =
-    new Map<
-      string,
-      SceneElementFrame
-    >();
-
-  const desktopBounds =
-    new Map(
-      scene.elements.map(
-        (element) => [
-          element.id,
-          getFrameBounds(
-            element.frame
-          ),
-        ]
-      )
-    );
-
-  scene.elements.forEach(
-    (element) => {
-      if (
-        !overwrite &&
-        hasMobileFrame(
-          element
-        )
-      ) {
-        workingFrames.set(
-          element.id,
-          {
-            ...element.frame,
-            ...element.mobileFrame,
-          }
-        );
-        return;
-      }
-
-      const source =
-        element.frame;
-
-      let multiplier =
-        getSmartWidthMultiplier(
-          element
-        );
-
-      if (
-        source.width >=
-        68
-      ) {
-        multiplier =
-          Math.min(
-            multiplier,
-            1.1
-          );
-      } else if (
-        source.width >=
-        46
-      ) {
-        multiplier =
-          Math.min(
-            multiplier,
-            1.28
-          );
-      }
-
-      const visualScale =
-        Math.max(
-          0.2,
-          source.scale ??
-            1
-        );
-
-      const maxFrameWidth =
-        getSmartMaxVisualWidth(
-          element
-        ) /
-        visualScale;
-
-      const targetWidth =
-        clamp(
-          Math.max(
-            getSmartMinWidth(
-              element
-            ),
-            source.width *
-              multiplier
-          ),
-          1,
-          maxFrameWidth
-        );
-
-      const widthRatio =
-        targetWidth /
-        Math.max(
-          0.1,
-          source.width
-        );
-
-      const targetHeight =
-        typeof source.height ===
-        'number'
-          ? clamp(
-              source.height *
-                widthRatio *
-                aspectCorrection,
-              1,
-              90
-            )
-          : source.height;
-
-      const sourceBounds =
-        desktopBounds.get(
-          element.id
-        )!;
-
-      const targetCenterX =
-        50 +
-        (
-          sourceBounds.centerX -
-          50
-        ) *
-          0.82;
-
-      const targetCenterY =
-        MOBILE_MARGIN_Y +
-        sourceBounds.centerY *
-          (
-            1 -
-            MOBILE_MARGIN_Y /
-              50
-          );
-
-      let frame:
-        SceneElementFrame = {
-        ...source,
-        width:
-          targetWidth,
-        height:
-          targetHeight,
-      };
-
-      frame =
-        moveFrameToBounds(
-          frame,
-          {
-            centerX:
-              targetCenterX,
-            centerY:
-              targetCenterY,
-          }
-        );
-
-      frame =
-        clampMobileFrameToCanvas(
-          frame
-        );
-
-      result[
-        element.id
-      ] =
-        frame;
-
-      workingFrames.set(
-        element.id,
-        frame
-      );
-    }
-  );
-
-  const ordered =
-    scene.elements
-      .filter(
-        isLayoutContentElement
-      )
-      .sort(
-        (
-          left,
-          right
-        ) => {
-          const leftBounds =
-            getFrameBounds(
-              workingFrames.get(
-                left.id
-              ) ||
-              left.frame
-            );
-
-          const rightBounds =
-            getFrameBounds(
-              workingFrames.get(
-                right.id
-              ) ||
-              right.frame
-            );
-
-          return (
-            leftBounds.top -
-            rightBounds.top ||
-            leftBounds.left -
-            rightBounds.left
-          );
-        }
-      );
-
-  const placed:
-    SceneElement[] = [];
-
-  ordered.forEach(
-    (element) => {
-      const generated =
-        Boolean(
-          result[
-            element.id
-          ]
-        );
-
-      let currentFrame =
-        workingFrames.get(
-          element.id
-        ) ||
-        element.frame;
-
-      if (
-        generated
-      ) {
-        let currentBounds =
-          getFrameBounds(
-            currentFrame
-          );
-
-        let pushDown =
-          0;
-
-        placed.forEach(
-          (previous) => {
-            if (
-              element.groupId &&
-              previous.groupId ===
-                element.groupId
-            ) {
-              return;
-            }
-
-            const sourceCurrent =
-              desktopBounds.get(
-                element.id
-              );
-
-            const sourcePrevious =
-              desktopBounds.get(
-                previous.id
-              );
-
-            if (
-              sourceCurrent &&
-              sourcePrevious &&
-              getBoundsOverlapRatio(
-                sourceCurrent,
-                sourcePrevious
-              ) >=
-                0.16
-            ) {
-              return;
-            }
-
-            const previousFrame =
-              workingFrames.get(
-                previous.id
-              ) ||
-              previous.frame;
-
-            const previousBounds =
-              getFrameBounds(
-                previousFrame
-              );
-
-            const horizontalOverlap =
-              currentBounds.left <
-                previousBounds.right +
-                  1.5 &&
-              currentBounds.right >
-                previousBounds.left -
-                  1.5;
-
-            const verticalOverlap =
-              currentBounds.top <
-                previousBounds.bottom +
-                  2 &&
-              currentBounds.bottom >
-                previousBounds.top -
-                  2;
-
-            if (
-              !horizontalOverlap ||
-              !verticalOverlap
-            ) {
-              return;
-            }
-
-            pushDown =
-              Math.max(
-                pushDown,
-                previousBounds.bottom +
-                  2.5 -
-                  currentBounds.top
-              );
-          }
-        );
-
-        if (
-          pushDown >
-          0
-        ) {
-          currentFrame = {
-            ...currentFrame,
-            y:
-              currentFrame.y +
-              pushDown,
-          };
-
-          currentFrame =
-            clampMobileFrameToCanvas(
-              currentFrame
-            );
-
-          result[
-            element.id
-          ] =
-            currentFrame;
-
-          workingFrames.set(
-            element.id,
-            currentFrame
-          );
-        }
-      }
-
-      placed.push(
-        element
-      );
-    }
-  );
-
-  return result;
-};
 
 export const AdminVisualTemplateEditor:
 React.FC<Props> = ({
@@ -840,6 +222,12 @@ React.FC<Props> = ({
   const [
     previewOpen,
     setPreviewOpen,
+  ] =
+    useState(false);
+
+  const [
+    customerPreviewOpen,
+    setCustomerPreviewOpen,
   ] =
     useState(false);
 
@@ -1239,103 +627,71 @@ React.FC<Props> = ({
       SceneElement[]
   ) => {
     if (
-      !scene ||
       device !==
       'mobile'
     ) {
       return elements;
     }
 
-    const smartFrames =
-      buildSmartMobileFrames(
-        {
-          ...scene,
-          elements,
-        },
-        false
-      );
-
-    if (
-      Object.keys(
-        smartFrames
-      ).length ===
-      0
-    ) {
-      return elements;
-    }
-
     return elements.map(
       (element) =>
-        smartFrames[
-          element.id
-        ]
-          ? ({
+        hasMobileFrame(
+          element
+        )
+          ? element
+          : ({
               ...element,
-              mobileFrame:
-                toMobileFramePatch(
-                  smartFrames[
-                    element.id
-                  ]
-                ),
+              mobileFrame: {
+                ...element.frame,
+              },
             } as
               SceneElement)
-          : element
     );
   };
 
-  const applySmartMobileLayout = (
-    overwrite =
-      false
-  ) => {
-    if (!scene) {
-      return false;
-    }
+  const snapshotMissingMobileFrames =
+    () => {
+      if (!scene) {
+        return;
+      }
 
-    const smartFrames =
-      buildSmartMobileFrames(
-        scene,
-        overwrite
-      );
-
-    if (
-      Object.keys(
-        smartFrames
-      ).length ===
-      0
-    ) {
-      return false;
-    }
-
-    updateScene({
-      ...scene,
-      elements:
-        scene.elements.map(
+      const hasMissing =
+        scene.elements.some(
           (element) =>
-            smartFrames[
-              element.id
-            ]
-              ? ({
-                  ...element,
-                  mobileFrame:
-                    toMobileFramePatch(
-                      smartFrames[
-                        element.id
-                      ]
-                    ),
-                } as
-                  SceneElement)
-              : element
-        ),
-    });
+            !hasMobileFrame(
+              element
+            )
+        );
 
-    return true;
-  };
+      if (!hasMissing) {
+        return;
+      }
+
+      updateScene({
+        ...scene,
+        elements:
+          scene.elements.map(
+            (element) =>
+              hasMobileFrame(
+                element
+              )
+                ? element
+                : ({
+                    ...element,
+                    mobileFrame: {
+                      ...element.frame,
+                    },
+                  } as
+                    SceneElement)
+          ),
+      });
+    };
 
   const openMobileDevice =
     () => {
-      applySmartMobileLayout(
-        false
-      );
+      // Từ lúc mở Mobile, mọi lớp chưa có mobileFrame sẽ được
+      // chụp lại từ PC đúng 1 lần. Sau đó hai layout tách biệt.
+      snapshotMissingMobileFrames();
 
       setDevice(
         'mobile'
@@ -1346,33 +702,25 @@ React.FC<Props> = ({
       );
     };
 
-  const regenerateMobileLayout =
+  const copyDesktopLayoutToMobile =
     () => {
       if (!scene) {
         return;
       }
 
-      const hasExisting =
-        scene.elements.some(
-          hasMobileFrame
-        );
-
-      if (
-        hasExisting
-      ) {
-        const confirmed =
-          window.confirm(
-            'Tự căn lại mobile từ Desktop sẽ ghi đè vị trí mobile hiện tại. Tiếp tục?'
-          );
-
-        if (!confirmed) {
-          return;
-        }
-      }
-
-      applySmartMobileLayout(
-        true
-      );
+      updateScene({
+        ...scene,
+        elements:
+          scene.elements.map(
+            (element) => ({
+              ...element,
+              mobileFrame: {
+                ...element.frame,
+              },
+            } as
+              SceneElement)
+          ),
+      });
 
       setDevice(
         'mobile'
@@ -1440,12 +788,7 @@ React.FC<Props> = ({
 
   const deleteScene =
     () => {
-      if (
-        !scene ||
-        config.scenes
-          .length <=
-          1
-      ) {
+      if (!scene) {
         return;
       }
 
@@ -1458,12 +801,79 @@ React.FC<Props> = ({
         return;
       }
 
+      // Editor luôn giữ tối thiểu một trang trống để config vẫn hợp lệ.
+      // Vì vậy khi xóa trang cuối, nội dung cũ biến mất hoàn toàn và
+      // được thay bằng một canvas trắng mới thay vì khóa nút Xóa.
+      if (
+        config.scenes
+          .length ===
+        1
+      ) {
+        const blank =
+          createVisualScene(
+            1
+          );
+
+        blank.title =
+          'Scene 1';
+
+        blank.background = {
+          color:
+            '#ffffff',
+          imageFit:
+            'cover',
+          overlayColor:
+            '#000000',
+          overlayOpacity: 0,
+          blurPx: 0,
+          brightness: 1,
+        };
+
+        history.commit({
+          ...config,
+          initialSceneId:
+            blank.id,
+          scenes: [
+            blank,
+          ],
+        });
+
+        setSelectedSceneId(
+          blank.id
+        );
+
+        setSelectedElementIds(
+          []
+        );
+
+        return;
+      }
+
+      const currentIndex =
+        config.scenes.findIndex(
+          (item) =>
+            item.id ===
+            scene.id
+        );
+
       const remaining =
         config.scenes.filter(
           (item) =>
             item.id !==
             scene.id
         );
+
+      const nextScene =
+        remaining[
+          Math.min(
+            Math.max(
+              0,
+              currentIndex
+            ),
+            remaining.length -
+              1
+          )
+        ];
 
       const nextInitial =
         config.initialSceneId ===
@@ -1481,8 +891,9 @@ React.FC<Props> = ({
       });
 
       setSelectedSceneId(
-        remaining[0]
-          .id
+        nextScene?.id ||
+          remaining[0]
+            .id
       );
 
       setSelectedElementIds(
@@ -2008,6 +1419,13 @@ React.FC<Props> = ({
                 ? {
                     ...element,
                     groupId,
+                    ...(device ===
+                    'desktop'
+                      ? {
+                          mobileFrame:
+                            undefined,
+                        }
+                      : {}),
                   }
                 : element
           ),
@@ -2064,6 +1482,48 @@ React.FC<Props> = ({
           ),
       });
     };
+
+
+  const updateGroupedSelectionAction = (
+    action:
+      SceneElementAction |
+      null
+  ) => {
+    if (
+      !scene ||
+      !groupedSelection
+    ) {
+      return;
+    }
+
+    const selected =
+      new Set(
+        selectedElementIds
+      );
+
+    updateScene({
+      ...scene,
+      elements:
+        scene.elements.map(
+          (element) =>
+            selected.has(
+              element.id
+            )
+              ? {
+                  ...element,
+                  actions:
+                    action
+                      ? [
+                          cloneValue(
+                            action
+                          ),
+                        ]
+                      : [],
+                }
+              : element
+        ),
+    });
+  };
 
   const nudgeSelection = (
     dx: number,
@@ -2939,6 +2399,62 @@ React.FC<Props> = ({
     );
   };
 
+  const singleSelectedElement =
+    selectedElements.length ===
+      1
+      ? selectedElements[0]
+      : null;
+
+  const quickFontElement =
+    selectedElements.length ===
+      1 &&
+    (
+      selectedElements[0]
+        .type ===
+        'text' ||
+      selectedElements[0]
+        .type ===
+        'button'
+    )
+      ? selectedElements[0]
+      : null;
+
+  const quickFontValue =
+    quickFontElement?.type ===
+      'text'
+      ? quickFontElement
+          .textStyle
+          ?.fontFamily ||
+        '"Quicksand", sans-serif'
+      : quickFontElement?.type ===
+          'button'
+        ? quickFontElement
+            .buttonStyle
+            ?.fontFamily ||
+          '"Quicksand", sans-serif'
+        : '"Quicksand", sans-serif';
+
+  const quickFontPreviewText =
+    quickFontElement?.type ===
+      'text'
+      ? quickFontElement.text
+          .trim()
+          .slice(
+            0,
+            34
+          ) ||
+        'Dearly'
+      : quickFontElement?.type ===
+          'button'
+        ? quickFontElement.label
+            .trim()
+            .slice(
+              0,
+              34
+            ) ||
+          'Dearly'
+        : 'Dearly';
+
   useEditorShortcuts({
     undo:
       history.undo,
@@ -3028,6 +2544,77 @@ React.FC<Props> = ({
         ),
   });
 
+  const toggleLongPageMode =
+    () => {
+      if (!scene) {
+        return;
+      }
+
+      history.checkpoint();
+
+      if (
+        isLongPageScene(
+          scene
+        )
+      ) {
+        updateScene({
+          ...scene,
+          aspectRatio:
+            16 / 9,
+          minHeight:
+            undefined,
+          maxWidth:
+            1200,
+          overflow:
+            'hidden',
+        });
+        return;
+      }
+
+      updateScene({
+        ...scene,
+        aspectRatio:
+          LONG_PAGE_DESKTOP_WIDTH /
+          LONG_PAGE_DEFAULT_HEIGHT,
+        minHeight:
+          LONG_PAGE_DEFAULT_HEIGHT,
+        maxWidth:
+          LONG_PAGE_DESKTOP_WIDTH,
+        overflow:
+          'hidden',
+      });
+    };
+
+  const setLongPageHeight =
+    (height: number) => {
+      if (
+        !scene ||
+        !isLongPageScene(
+          scene
+        )
+      ) {
+        return;
+      }
+
+      const safeHeight =
+        clamp(
+          height,
+          1800,
+          4000
+        );
+
+      updateScene({
+        ...scene,
+        minHeight:
+          safeHeight,
+        maxWidth:
+          LONG_PAGE_DESKTOP_WIDTH,
+        aspectRatio:
+          LONG_PAGE_DESKTOP_WIDTH /
+          safeHeight,
+      });
+    };
+
   if (!scene) {
     return (
       <div className="rounded-[16px] bg-slate-50 p-8 text-center">
@@ -3047,6 +2634,53 @@ React.FC<Props> = ({
       </div>
     );
   }
+
+  const longPage =
+    isLongPageScene(
+      scene
+    );
+
+  // EditorCanvas hard-codes 9:16 for mobile. For a long page we feed it
+  // a mobile-frame snapshot as a desktop canvas so the page can use the
+  // real 390 × pageHeight ratio while all edits are still written back
+  // to mobileFrame by updateFrames().
+  const editorCanvasScene:
+    SceneCanvasDefinition =
+    longPage &&
+    device === 'mobile'
+      ? {
+          ...scene,
+          aspectRatio:
+            LONG_PAGE_MOBILE_WIDTH /
+            getLongPageMobileHeight(
+              Math.max(
+                1800,
+                scene.minHeight ||
+                  LONG_PAGE_DEFAULT_HEIGHT
+              )
+            ),
+          elements:
+            scene.elements.map(
+              (element) => ({
+                ...element,
+                frame:
+                  getEffectiveFrame(
+                    element,
+                    'mobile'
+                  ),
+                mobileFrame:
+                  undefined,
+              })
+            ),
+        }
+      : scene;
+
+  const editorCanvasDevice:
+    DeviceMode =
+    longPage &&
+    device === 'mobile'
+      ? 'desktop'
+      : device;
 
   return (
     <>
@@ -3100,23 +2734,66 @@ React.FC<Props> = ({
                 device ===
                 'mobile'
               }
-              label="Điện thoại ✨"
+              label="Điện thoại"
               onClick={
                 openMobileDevice
               }
             />
 
+            <TogglePill
+              active={
+                longPage
+              }
+              label="Trang dài ↕"
+              onClick={
+                toggleLongPageMode
+              }
+            />
+
+            {longPage && (
+              <select
+                value={
+                  String(
+                    scene.minHeight ||
+                      LONG_PAGE_DEFAULT_HEIGHT
+                  )
+                }
+                onChange={(event) =>
+                  setLongPageHeight(
+                    Number(
+                      event.target.value
+                    )
+                  )
+                }
+                className="rounded-[8px] border border-black/8 bg-white px-2 py-2 text-[9px] font-black text-black/50 outline-none"
+                title="Chiều cao trang dài"
+              >
+                <option value="2000">Ngắn · 2000</option>
+                <option value="2600">Vừa · 2600</option>
+                <option value="3200">Dài · 3200</option>
+                <option value="3500">Canva · 3500</option>
+                <option value="4000">Rất dài · 4000</option>
+              </select>
+            )}
+
             {device ===
               'mobile' && (
-              <button
-                type="button"
-                onClick={
-                  regenerateMobileLayout
-                }
-                className="rounded-[8px] border border-[#cf5068]/20 bg-[#fff7f9] px-2.5 py-2 text-[9px] font-black text-[#a63550] transition hover:bg-[#f9eef1]"
-              >
-                ✨ Tự căn lại
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={
+                    copyDesktopLayoutToMobile
+                  }
+                  className="rounded-[8px] border border-[#cf5068]/20 bg-[#fff7f9] px-2.5 py-2 text-[9px] font-black text-[#a63550] transition hover:bg-[#f9eef1]"
+                  title="Ghi đè bố cục Mobile của trang hiện tại bằng bố cục PC. Có thể Hoàn tác nếu bấm nhầm."
+                >
+                  Chép PC → Mobile
+                </button>
+
+                <span className="rounded-[8px] bg-sky-50 px-2.5 py-2 text-[8px] font-bold text-sky-700">
+                  Layout riêng · không tự đồng bộ
+                </span>
+              </>
             )}
 
             <button
@@ -3168,6 +2845,18 @@ React.FC<Props> = ({
               {fullscreen
                 ? 'Thu nhỏ'
                 : 'Toàn màn hình'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setCustomerPreviewOpen(
+                  true
+                )
+              }
+              className="rounded-[8px] border border-[#cf5068]/20 bg-[#fff7f9] px-3 py-2 text-[9px] font-black text-[#a63550]"
+            >
+              Mẫu khách
             </button>
 
             <button
@@ -3249,15 +2938,10 @@ React.FC<Props> = ({
 
             <button
               type="button"
-              disabled={
-                config.scenes
-                  .length <=
-                1
-              }
               onClick={
                 deleteScene
               }
-              className="rounded-[8px] border border-red-100 bg-white px-2.5 py-2 text-[9px] font-black text-red-500 disabled:opacity-30"
+              className="rounded-[8px] border border-red-100 bg-white px-2.5 py-2 text-[9px] font-black text-red-500"
             >
               Xóa
             </button>
@@ -3389,6 +3073,26 @@ React.FC<Props> = ({
         />
 
         <div className="mt-3 flex flex-wrap gap-2">
+          <MultiSelectPopover
+            elements={scene.elements}
+            selectedIds={selectedElementIds}
+            onChange={setSelectedElementIds}
+            onGroup={groupSelected}
+            onUngroup={ungroupSelected}
+          />
+
+          {singleSelectedElement && (
+            <CustomerSlotControl
+              element={singleSelectedElement}
+              onChange={(next) =>
+                updateElement(
+                  singleSelectedElement.id,
+                  () => next
+                )
+              }
+            />
+          )}
+
           <AddElementButton
             label="+ Chữ"
             onClick={() =>
@@ -3397,6 +3101,53 @@ React.FC<Props> = ({
               )
             }
           />
+
+          {quickFontElement && (
+            <QuickFontPicker
+              value={
+                quickFontValue
+              }
+              previewText={
+                quickFontPreviewText
+              }
+              onChange={(
+                fontFamily
+              ) =>
+                updateElement(
+                  quickFontElement.id,
+                  (current) => {
+                    if (
+                      current.type ===
+                      'text'
+                    ) {
+                      return {
+                        ...current,
+                        textStyle: {
+                          ...current.textStyle,
+                          fontFamily,
+                        },
+                      };
+                    }
+
+                    if (
+                      current.type ===
+                      'button'
+                    ) {
+                      return {
+                        ...current,
+                        buttonStyle: {
+                          ...current.buttonStyle,
+                          fontFamily,
+                        },
+                      };
+                    }
+
+                    return current;
+                  }
+                )
+              }
+            />
+          )}
 
           <button
             type="button"
@@ -3408,7 +3159,7 @@ React.FC<Props> = ({
             }
             className="rounded-[9px] bg-[#191919] px-3 py-2 text-[10px] font-black text-white shadow-[0_8px_20px_rgba(0,0,0,0.08)]"
           >
-            Tài nguyên
+            Tài nguyên thiết kế
           </button>
 
           <AddElementButton
@@ -3500,13 +3251,27 @@ React.FC<Props> = ({
           />
           )}
 
-          <div className="min-w-0">
+          <div
+            className={[
+              'min-w-0',
+              longPage
+                ? 'max-h-[72svh] overflow-y-auto overscroll-contain rounded-[12px] border border-black/7 bg-[#e9e8e5] p-2'
+                : '',
+            ].join(' ')}
+          >
+            {longPage && (
+              <div className="sticky top-0 z-30 mb-2 flex items-center justify-between rounded-[9px] border border-black/7 bg-white/95 px-3 py-2 text-[9px] font-bold text-black/45 backdrop-blur">
+                <span>Trang dài · cuộn ngay trong khung này</span>
+                <span>Desktop {LONG_PAGE_DESKTOP_WIDTH} × {Math.round(scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT)} · Mobile {LONG_PAGE_MOBILE_WIDTH} × {getLongPageMobileHeight(scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT)}</span>
+              </div>
+            )}
+
             <EditorCanvas
               scene={
-                scene
+                editorCanvasScene
               }
               device={
-                device
+                editorCanvasDevice
               }
               selectedElementIds={
                 selectedElementIds
@@ -3522,6 +3287,29 @@ React.FC<Props> = ({
               }
               onSelectionChange={
                 setSelectedElementIds
+              }
+              onTransformStart={
+                history.checkpoint
+              }
+              onFramesChange={
+                updateFrames
+              }
+            />
+
+            <GroupTransformOverlay
+              enabled={
+                groupedSelection
+              }
+              elements={
+                editorCanvasScene.elements.filter(
+                  (element) =>
+                    selectedElementIds.includes(
+                      element.id
+                    )
+                )
+              }
+              device={
+                editorCanvasDevice
               }
               onTransformStart={
                 history.checkpoint
@@ -3554,66 +3342,94 @@ React.FC<Props> = ({
           </div>
 
           {inspectorOpen && (
-          <InspectorPanel
-            scene={
-              scene
-            }
-            elements={
-              selectedElements
-            }
-            device={
-              device
-            }
-            scenes={
-              config.scenes
-            }
-            onSceneChange={
-              updateScenePatch
-            }
-            onElementChange={
-              updateElement
-            }
-            onFrameChange={
-              updateElementFrame
-            }
-            onNhân bản={
-              duplicateSelected
-            }
-            onDelete={
-              deleteSelected
-            }
-            onLayerUp={() =>
-              moveLayer(
-                'forward'
+            groupedSelection
+              ? (
+                <GroupInspector
+                  elements={
+                    selectedElements
+                  }
+                  scenes={
+                    config.scenes
+                  }
+                  currentSceneId={
+                    scene.id
+                  }
+                  onActionChange={
+                    updateGroupedSelectionAction
+                  }
+                  onUngroup={
+                    ungroupSelected
+                  }
+                  onDuplicate={
+                    duplicateSelected
+                  }
+                  onDelete={
+                    deleteSelected
+                  }
+                />
               )
-            }
-            onLayerDown={() =>
-              moveLayer(
-                'backward'
+              : (
+                <InspectorPanel
+                  scene={
+                    scene
+                  }
+                  elements={
+                    selectedElements
+                  }
+                  device={
+                    device
+                  }
+                  scenes={
+                    config.scenes
+                  }
+                  onSceneChange={
+                    updateScenePatch
+                  }
+                  onElementChange={
+                    updateElement
+                  }
+                  onFrameChange={
+                    updateElementFrame
+                  }
+                  onNhân bản={
+                    duplicateSelected
+                  }
+                  onDelete={
+                    deleteSelected
+                  }
+                  onLayerUp={() =>
+                    moveLayer(
+                      'forward'
+                    )
+                  }
+                  onLayerDown={() =>
+                    moveLayer(
+                      'backward'
+                    )
+                  }
+                  onToggleLock={
+                    toggleSelectedLock
+                  }
+                  onOpenAssetLibrary={(
+                    target
+                  ) =>
+                    setAssetPickerTarget(
+                      target.kind ===
+                        'background'
+                        ? {
+                            kind:
+                              'background',
+                          }
+                        : {
+                            kind:
+                              'element',
+                            elementId:
+                              target.elementId,
+                          }
+                    )
+                  }
+                />
               )
-            }
-            onToggleLock={
-              toggleSelectedLock
-            }
-            onOpenAssetLibrary={(
-              target
-            ) =>
-              setAssetPickerTarget(
-                target.kind ===
-                  'background'
-                  ? {
-                      kind:
-                        'background',
-                    }
-                  : {
-                      kind:
-                        'element',
-                      elementId:
-                        target.elementId,
-                    }
-              )
-            }
-          />
           )}
         </div>
 
@@ -3642,6 +3458,17 @@ React.FC<Props> = ({
           }
           onSelect={
             handleAssetSelected
+          }
+        />
+      )}
+
+      {customerPreviewOpen && (
+        <CustomerPreviewOverlay
+          config={config}
+          onClose={() =>
+            setCustomerPreviewOpen(
+              false
+            )
           }
         />
       )}

@@ -574,6 +574,20 @@ React.FC<Props> = ({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              onClick={() =>
+                window.open(
+                  `/products/${template.id}`,
+                  '_blank',
+                  'noopener,noreferrer'
+                )
+              }
+              className="rounded-[10px] border border-[#cf5068]/20 bg-[#fff7f9] px-3.5 py-2.5 text-[10px] font-black text-[#a73551]"
+            >
+              Xem mẫu ↗
+            </button>
+
+            <button
+              type="button"
               disabled={catalogBusy}
               onClick={() =>
                 openCreate('blank')

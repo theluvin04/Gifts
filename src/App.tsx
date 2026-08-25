@@ -1,80 +1,24 @@
-import React, {
-  useEffect,
-} from 'react';
+import React, { useEffect } from 'react';
+import { motion } from 'motion/react';
+import { Heart } from 'lucide-react';
 
-import {
-  motion,
-} from 'motion/react';
-
-import {
-  Heart,
-} from 'lucide-react';
-
-import {
-  HomePage,
-} from './components/Homepage';
-
-import {
-  CartPage,
-} from './components/CartPage';
-
-import {
-  TrackOrderPage,
-} from './components/TrackOrderPage';
-
-import {
-  AdminOrdersPage,
-} from './components/admin/AdminOrdersPage';
-
-import {
-  AdminOrderDetailPage,
-} from './components/admin/AdminOrderDetailPage';
-
-import {
-  BRAND,
-} from './config/brand';
-
-import {
-  useAppNavigation,
-} from './hooks/useAppNavigation';
-
-import {
-  useTemplateDrafts,
-} from './hooks/useTemplateDrafts';
-
-import {
-  useSharedGift,
-} from './hooks/useSharedGift';
-
-import {
-  useCart,
-} from './hooks/useCart';
-
-import {
-  DEFAULT_TEMPLATE_ID,
-  getTemplateModule,
-} from './templates/registry';
+import { HomePage } from './components/Homepage';
+import { CartPage } from './components/CartPage';
+import { TrackOrderPage } from './components/TrackOrderPage';
+import { DynamicVisualTemplatePage } from './components/DynamicVisualTemplatePage';
+import { AdminOrdersPage } from './components/admin/AdminOrdersPage';
+import { AdminOrderDetailPage } from './components/admin/AdminOrderDetailPage';
+import { BRAND } from './config/brand';
+import { useAppNavigation } from './hooks/useAppNavigation';
+import { useTemplateDrafts } from './hooks/useTemplateDrafts';
+import { useSharedGift } from './hooks/useSharedGift';
+import { useCart } from './hooks/useCart';
+import { DEFAULT_TEMPLATE_ID, getTemplateModule } from './templates/registry';
 
 export default function App() {
-  const {
-    location,
-    navigate,
-  } = useAppNavigation();
-
-  const {
-    getDraft,
-    persistDraft,
-    resetDraft,
-  } = useTemplateDrafts();
-
-  const {
-    sharedGift,
-    isLoadingGift,
-    giftError,
-  } = useSharedGift(
-    location
-  );
-
+  const { location, navigate } = useAppNavigation();
+  const { getDraft, persistDraft, resetDraft } = useTemplateDrafts();
+  const { sharedGift, isLoadingGift, giftError } = useSharedGift(location);
   const {
     items: cartItems,
     addItem: addCartItem,
@@ -83,26 +27,13 @@ export default function App() {
   } = useCart();
 
   useEffect(() => {
-    if (
-      location.kind !==
-      'legacy-template'
-    ) {
-      return;
-    }
-
-    const template =
-      getTemplateModule(
-        location.templateId
-      );
+    if (location.kind !== 'legacy-template') return;
 
     navigate(
-      template
-        ? template
-            .paths.product
-        : '/',
+      `/products/${location.templateId}`,
       true
     );
-  }, [location]);
+  }, [location, navigate]);
 
   const renderMessage = (
     title: string,
@@ -110,29 +41,12 @@ export default function App() {
   ) => (
     <main className="flex min-h-[100svh] items-center justify-center bg-[#fffaf8] px-5">
       <div className="w-full max-w-sm rounded-[28px] border border-black/[0.06] bg-white p-7 text-center shadow-[0_24px_70px_rgba(60,25,35,0.08)]">
-        <img
-          src={
-            BRAND.logoPath
-          }
-          alt={
-            BRAND.name
-          }
-          className="mx-auto h-12 w-auto"
-        />
-
-        <h1 className="mt-6 text-xl font-black">
-          {title}
-        </h1>
-
-        <p className="mt-2 text-sm leading-6 text-black/45">
-          {message}
-        </p>
-
+        <img src={BRAND.logoPath} alt={BRAND.name} className="mx-auto h-12 w-auto" />
+        <h1 className="mt-6 text-xl font-black">{title}</h1>
+        <p className="mt-2 text-sm leading-6 text-black/45">{message}</p>
         <button
           type="button"
-          onClick={() =>
-            navigate('/')
-          }
+          onClick={() => navigate('/')}
           className="mt-6 rounded-[14px] bg-[#c9435d] px-5 py-3 text-sm font-bold text-white"
         >
           Về Dearly
@@ -141,345 +55,200 @@ export default function App() {
     </main>
   );
 
-  if (
-    location.kind ===
-    'legacy-template'
-  ) {
-    return null;
-  }
+  if (location.kind === 'legacy-template') return null;
 
-  if (
-    location.kind ===
-    'gift'
-  ) {
-    if (
-      isLoadingGift
-    ) {
+  if (location.kind === 'gift') {
+    if (isLoadingGift) {
       return (
         <main className="flex min-h-[100svh] flex-col items-center justify-center bg-[#fffaf8] px-5 text-center">
           <motion.div
-            animate={{
-              scale: [
-                1,
-                1.12,
-                1,
-              ],
-            }}
-            transition={{
-              duration: 1.4,
-              repeat:
-                Infinity,
-            }}
+            animate={{ scale: [1, 1.12, 1] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
             className="flex h-14 w-14 items-center justify-center rounded-full bg-[#c9435d] text-white shadow-[0_14px_30px_rgba(201,67,93,0.18)]"
           >
             <Heart className="h-6 w-6 fill-current" />
           </motion.div>
-
-          <p className="mt-5 text-sm font-bold text-black/55">
-            Đang mở món quà...
-          </p>
+          <p className="mt-5 text-sm font-bold text-black/55">Đang mở món quà...</p>
         </main>
       );
     }
 
-    if (
-      giftError ||
-      !sharedGift
-    ) {
+    if (giftError || !sharedGift) {
       return renderMessage(
         'Không tìm thấy món quà',
-        giftError ||
-          'Món quà không tồn tại.'
+        giftError || 'Món quà không tồn tại.'
       );
     }
 
-    const template =
-      getTemplateModule(
-        sharedGift.templateId
-      );
+    const template = getTemplateModule(sharedGift.templateId);
 
     if (!template) {
       return renderMessage(
         'Template chưa được hỗ trợ',
-        'Template của món quà này chưa có trong Dearly.'
+        'Món quà này đang dùng template động. Hãy mở lại từ đường dẫn đơn hàng sau khi hệ thống xuất bản.'
       );
     }
 
-    const Experience =
-      template.Experience;
+    const Experience = template.Experience;
 
     return (
       <Experience
-        config={
-          sharedGift.config
-        }
+        config={sharedGift.config}
         onCreateSimilar={() => {
-          persistDraft(
-            template,
-            sharedGift.config
-          );
-
-          navigate(
-            template.paths
-              .create
-          );
+          persistDraft(template, sharedGift.config);
+          navigate(template.paths.create);
         }}
       />
     );
   }
 
-  if (
-    location.kind ===
-    'home'
-  ) {
-    const template =
-      getTemplateModule(
-        DEFAULT_TEMPLATE_ID
-      );
+  if (location.kind === 'home') {
+    const template = getTemplateModule(DEFAULT_TEMPLATE_ID);
 
     return (
       <HomePage
         onOpenLoveTemplate={() =>
-          navigate(
-            template
-              ?.paths.product ||
-              '/'
-          )
+          navigate(template?.paths.product || '/')
         }
-        onTrackOrder={() =>
-          navigate(
-            '/track-order'
-          )
-        }
+        onTrackOrder={() => navigate('/track-order')}
       />
     );
   }
 
-  if (
-    location.kind ===
-    'track-order'
-  ) {
-    return (
-      <TrackOrderPage
-        onBackHome={() =>
-          navigate('/')
-        }
-      />
-    );
+  if (location.kind === 'track-order') {
+    return <TrackOrderPage onBackHome={() => navigate('/')} />;
   }
 
-  if (
-    location.kind ===
-    'cart'
-  ) {
+  if (location.kind === 'cart') {
     return (
       <CartPage
         items={cartItems}
-        onBackHome={() =>
-          navigate('/')
-        }
-        onRemove={
-          removeCartItem
-        }
-        onClear={
-          clearCart
-        }
+        onBackHome={() => navigate('/')}
+        onRemove={removeCartItem}
+        onClear={clearCart}
         onEdit={(item) => {
-          const template =
-            getTemplateModule(
-              item.templateId
-            );
-
-          if (!template) {
-            return;
-          }
-
+          const template = getTemplateModule(item.templateId);
           navigate(
-            template.paths
-              .create
+            template?.paths.create ||
+              `/create/${item.templateId}`
           );
         }}
         onCheckout={(item) => {
-          const template =
-            getTemplateModule(
-              item.templateId
-            );
-
-          if (!template) {
-            return;
-          }
-
+          const template = getTemplateModule(item.templateId);
           navigate(
-            template.paths
-              .checkout
+            template?.paths.checkout ||
+              `/create/${item.templateId}`
           );
         }}
       />
     );
   }
 
-  if (
-    location.kind ===
-    'admin-order'
-  ) {
+  if (location.kind === 'admin-order') {
     return (
       <AdminOrderDetailPage
-        giftId={
-          location.giftId
-        }
-        onBack={() =>
-          navigate(
-            '/admin/orders'
-          )
-        }
-        onBackHome={() =>
-          navigate('/')
-        }
+        giftId={location.giftId}
+        onBack={() => navigate('/admin/orders')}
+        onBackHome={() => navigate('/')}
       />
     );
   }
 
-  if (
-    location.kind ===
-    'admin'
-  ) {
+  if (location.kind === 'admin') {
     return (
       <AdminOrdersPage
-        onBackHome={() =>
-          navigate('/')
-        }
-        onOpenOrder={(
-          giftId
-        ) =>
-          navigate(
-            `/admin/orders/${giftId}`
-          )
-        }
+        onBackHome={() => navigate('/')}
+        onOpenOrder={(giftId) => navigate(`/admin/orders/${giftId}`)}
       />
     );
   }
 
   if (
-    location.kind ===
-      'template-product' ||
-    location.kind ===
-      'template-create' ||
-    location.kind ===
-      'template-checkout'
+    location.kind === 'template-product' ||
+    location.kind === 'template-create' ||
+    location.kind === 'template-checkout'
   ) {
-    const template =
-      getTemplateModule(
-        location.templateId
-      );
+    const template = getTemplateModule(location.templateId);
 
     if (!template) {
-      return renderMessage(
-        'Template chưa phát hành',
-        'Template này chưa có module trong hệ thống.'
-      );
-    }
-
-    const config =
-      getDraft(
-        template
-      );
-
-    if (
-      location.kind ===
-      'template-product'
-    ) {
-      const ProductPage =
-        template
-          .ProductPage;
+      if (location.kind === 'template-checkout') {
+        return (
+          <DynamicVisualTemplatePage
+            templateId={location.templateId}
+            mode="create"
+            onBackHome={() => navigate('/')}
+            onStartPersonalize={() => navigate(`/create/${location.templateId}`)}
+            onBackProduct={() => navigate(`/products/${location.templateId}`)}
+            onCheckout={() => {
+              try {
+                addCartItem(location.templateId, location.templateId);
+                navigate('/cart');
+              } catch {
+                window.alert('Không thể thêm vào giỏ hàng trên trình duyệt này.');
+              }
+            }}
+          />
+        );
+      }
 
       return (
-        <ProductPage
-          onBackHome={() =>
-            navigate('/')
-          }
-          onStartPersonalize={() =>
-            navigate(
-              template
-                .paths.create
-            )
-          }
+        <DynamicVisualTemplatePage
+          templateId={location.templateId}
+          mode={location.kind === 'template-product' ? 'product' : 'create'}
+          onBackHome={() => navigate('/')}
+          onStartPersonalize={() => navigate(`/create/${location.templateId}`)}
+          onBackProduct={() => navigate(`/products/${location.templateId}`)}
+          onCheckout={() => {
+            try {
+              addCartItem(location.templateId, location.templateId);
+              navigate('/cart');
+            } catch {
+              window.alert('Không thể thêm vào giỏ hàng trên trình duyệt này.');
+            }
+          }}
         />
       );
     }
 
-    if (
-      location.kind ===
-      'template-create'
-    ) {
-      const EditorPage =
-        template
-          .EditorPage;
+    const config = getDraft(template);
 
+    if (location.kind === 'template-product') {
+      const ProductPage = template.ProductPage;
+      return (
+        <ProductPage
+          onBackHome={() => navigate('/')}
+          onStartPersonalize={() => navigate(template.paths.create)}
+        />
+      );
+    }
+
+    if (location.kind === 'template-create') {
+      const EditorPage = template.EditorPage;
       return (
         <EditorPage
           config={config}
-          onChange={(
-            nextConfig
-          ) =>
-            persistDraft(
-              template,
-              nextConfig
-            )
-          }
-          onBack={() =>
-            navigate(
-              template
-                .paths.product
-            )
-          }
-          onReset={() =>
-            resetDraft(
-              template
-            )
-          }
+          onChange={(nextConfig) => persistDraft(template, nextConfig)}
+          onBack={() => navigate(template.paths.product)}
+          onReset={() => resetDraft(template)}
           onAddToCart={() => {
             try {
-              addCartItem(
-                template.id,
-                template.name
-              );
-
-              navigate(
-                '/cart'
-              );
+              addCartItem(template.id, template.name);
+              navigate('/cart');
             } catch (error) {
-              console.error(
-                error
-              );
-
-              window.alert(
-                'Không thể thêm vào giỏ hàng trên trình duyệt này.'
-              );
+              console.error(error);
+              window.alert('Không thể thêm vào giỏ hàng trên trình duyệt này.');
             }
           }}
-          onCheckout={() =>
-            navigate(
-              template
-                .paths.checkout
-            )
-          }
+          onCheckout={() => navigate(template.paths.checkout)}
         />
       );
     }
 
-    const Checkout =
-      template
-        .CheckoutPage;
-
+    const Checkout = template.CheckoutPage;
     return (
       <Checkout
         config={config}
-        onBack={() =>
-          navigate(
-            template
-              .paths.create
-          )
-        }
+        onBack={() => navigate(template.paths.create)}
       />
     );
   }

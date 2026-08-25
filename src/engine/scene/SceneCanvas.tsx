@@ -167,18 +167,59 @@ React.FC<
       )
     );
 
+  const longPage =
+    Boolean(
+      (scene.minHeight || 0) >=
+        1200 &&
+      (scene.maxWidth || 0) >=
+        1000
+    );
+
+  const pageHeight =
+    Math.max(
+      1800,
+      scene.minHeight ||
+        3500
+    );
+
+  const longPageDesktopWidth =
+    scene.maxWidth ||
+    1366;
+
+  const longPageMobileHeight =
+    Math.round(
+      Math.max(
+        1800,
+        Math.min(
+          3000,
+          pageHeight *
+            0.72
+        )
+      )
+    );
+
   const aspectRatio =
-    mobile
-      ? 9 / 16
-      : scene.aspectRatio ||
-        16 / 9;
+    longPage
+      ? (
+          mobile
+            ? 390 /
+              longPageMobileHeight
+            : longPageDesktopWidth /
+              pageHeight
+        )
+      : mobile
+        ? 9 / 16
+        : scene.aspectRatio ||
+          16 / 9;
 
   return (
     <div
       style={{
         maxWidth:
-          scene.maxWidth ||
-          1280,
+          longPage
+            ? 'none'
+            : scene.maxWidth ||
+              1280,
       }}
       className={[
         'relative mx-auto w-full min-w-0',
@@ -192,7 +233,9 @@ React.FC<
               aspectRatio
             ),
           minHeight:
-            scene.minHeight,
+            longPage
+              ? undefined
+              : scene.minHeight,
           overflow:
             scene.overflow ||
             'hidden',
