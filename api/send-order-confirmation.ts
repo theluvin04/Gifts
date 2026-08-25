@@ -652,12 +652,14 @@ const buildEmailHtml = ({
   templateName,
   amount,
   giftUrl,
+  qrUrl,
 }: {
   customerName: string;
   orderCode: string;
   templateName: string;
   amount: string;
   giftUrl: string;
+  qrUrl: string;
 }) => {
   const safeName =
     escapeHtml(
@@ -684,6 +686,11 @@ const buildEmailHtml = ({
       giftUrl
     );
 
+  const safeQrUrl =
+    escapeHtml(
+      qrUrl
+    );
+
   return `<!doctype html>
 <html lang="vi">
 <body style="margin:0;padding:0;background:#fffaf8;font-family:Arial,Helvetica,sans-serif;color:#191919;">
@@ -705,7 +712,7 @@ const buildEmailHtml = ({
 </td></tr>
 <tr><td align="center" style="padding:0 32px 8px;">
 <p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#555;">Quét QR để mở món quà</p>
-<img src="cid:dearly-gift-qr" width="220" height="220" alt="QR mở món quà" style="display:block;width:220px;height:220px;border:1px solid #eee;border-radius:18px;padding:10px;background:#fff;" />
+<img src="${safeQrUrl}" width="220" height="220" alt="QR mở món quà" style="display:block;width:220px;height:220px;border:1px solid #eee;border-radius:18px;padding:10px;background:#fff;" />
 </td></tr>
 <tr><td align="center" style="padding:16px 32px 30px;">
 <a href="${safeGiftUrl}" style="display:inline-block;background:#191919;color:#fff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 26px;border-radius:13px;">Mở món quà</a>
@@ -719,62 +726,81 @@ const buildEmailHtml = ({
 </html>`;
 };
 
+const buildEmailText = ({
+  customerName,
+  orderCode,
+  templateName,
+  amount,
+  giftUrl,
+}: {
+  customerName: string;
+  orderCode: string;
+  templateName: string;
+  amount: string;
+  giftUrl: string;
+}) =>
+  [
+    `Dearly đã xác nhận đơn ${orderCode}`,
+    '',
+    `Cảm ơn ${customerName}.`,
+    'Đơn hàng của bạn đã được xác nhận và món quà đã sẵn sàng.',
+    '',
+    `Mã đơn: ${orderCode}`,
+    `Template: ${templateName}`,
+    `Tổng thanh toán: ${amount}`,
+    '',
+    `Mở món quà: ${giftUrl}`,
+    '',
+    'Cảm ơn bạn đã chọn Dearly.',
+  ].join('\n');
+
 const buildMimeMessage = ({
   fromEmail,
   fromName,
   toEmail,
   subject,
+  text,
   html,
-  qrPng,
-  orderCode,
   messageId,
 }: {
   fromEmail: string;
   fromName: string;
   toEmail: string;
   subject: string;
+  text: string;
   html: string;
-  qrPng: Buffer;
-  orderCode: string;
   messageId: string;
 }) => {
   const boundary =
-    `dearly_${randomUUID().replace(
+    `dearly_alt_${randomUUID().replace(
       /-/g,
       ''
     )}`;
 
-  const filename =
-    `${orderCode}-QR.png`
-      .replace(
-        /[^a-zA-Z0-9._-]/g,
-        '_'
-      );
-
   const parts = [
     `From: ${encodeHeader(fromName)} <${fromEmail}>`,
     `To: <${toEmail}>`,
+    `Reply-To: <${fromEmail}>`,
     `Subject: ${encodeHeader(subject)}`,
     `Date: ${new Date().toUTCString()}`,
     `Message-ID: <${messageId}>`,
     'MIME-Version: 1.0',
-    `Content-Type: multipart/related; boundary="${boundary}"`,
+    'Auto-Submitted: auto-generated',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
     '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    wrapBase64(
+      text
+    ),
     `--${boundary}`,
     'Content-Type: text/html; charset=UTF-8',
     'Content-Transfer-Encoding: base64',
     '',
     wrapBase64(
       html
-    ),
-    `--${boundary}`,
-    `Content-Type: image/png; name="${filename}"`,
-    'Content-Transfer-Encoding: base64',
-    'Content-ID: <dearly-gift-qr>',
-    `Content-Disposition: inline; filename="${filename}"`,
-    '',
-    wrapBase64(
-      qrPng
     ),
     `--${boundary}--`,
     '',
@@ -797,9 +823,8 @@ const sendViaGmailSmtp =
     fromName,
     to,
     subject,
+    text,
     html,
-    qrPng,
-    orderCode,
     messageId,
   }: {
     user: string;
@@ -807,9 +832,8 @@ const sendViaGmailSmtp =
     fromName: string;
     to: string;
     subject: string;
+    text: string;
     html: string;
-    qrPng: Buffer;
-    orderCode: string;
     messageId: string;
   }) => {
     const message =
@@ -820,9 +844,8 @@ const sendViaGmailSmtp =
         toEmail:
           to,
         subject,
+        text,
         html,
-        qrPng,
-        orderCode,
         messageId,
       });
 
@@ -1636,29 +1659,29 @@ export default async function handler(
         giftId
       )}`;
 
-    const qrResponse =
-      await fetch(
-        buildGiftQrUrl(
-          giftUrl
-        )
+    const qrUrl =
+      buildGiftQrUrl(
+        giftUrl
       );
 
-    if (!qrResponse.ok) {
-      throw new Error(
-        'Không tạo được QR để gửi email.'
-      );
-    }
-
-    const qrPng =
-      Buffer.from(
-        await qrResponse.arrayBuffer()
-      );
+    const senderDomain =
+      gmailUser.split('@')[1] ||
+      'gmail.com';
 
     const messageId =
-      `${Date.now()}.${randomUUID()}@dearly.local`;
+      `${Date.now()}.${randomUUID()}@${senderDomain}`;
 
     const subject =
-      `Dearly đã xác nhận đơn ${orderCode} 💌`;
+      `Dearly xác nhận đơn ${orderCode}`;
+
+    const text =
+      buildEmailText({
+        customerName,
+        orderCode,
+        templateName,
+        amount,
+        giftUrl,
+      });
 
     const html =
       buildEmailHtml({
@@ -1667,6 +1690,7 @@ export default async function handler(
         templateName,
         amount,
         giftUrl,
+        qrUrl,
       });
 
     try {
@@ -1679,9 +1703,8 @@ export default async function handler(
           gmailFromName,
         to,
         subject,
+        text,
         html,
-        qrPng,
-        orderCode,
         messageId,
       });
     } catch (
