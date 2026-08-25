@@ -22,30 +22,35 @@ export const QuickConfigModal: React.FC<
   onReset,
 }) => {
   const [senderName, setSenderName] = useState(
-    config.couple.senderName
+    config?.couple?.senderName || ''
   );
   const [receiverName, setReceiverName] = useState(
-    config.couple.receiverName
+    config?.couple?.receiverName || ''
   );
   const [question, setQuestion] = useState(
-    config.proposal.question
+    config?.proposal?.question || ''
   );
   const [yesText, setYesText] = useState(
-    config.proposal.yesBtnText
+    config?.proposal?.yesBtnText || ''
   );
 
   useEffect(() => {
-    if (!open) {
+    if (!open || !config) {
       return;
     }
 
-    setSenderName(config.couple.senderName);
-    setReceiverName(config.couple.receiverName);
-    setQuestion(config.proposal.question);
-    setYesText(config.proposal.yesBtnText);
+    setSenderName(config.couple?.senderName || '');
+    setReceiverName(config.couple?.receiverName || '');
+    setQuestion(config.proposal?.question || '');
+    setYesText(config.proposal?.yesBtnText || '');
   }, [open, config]);
 
   const handleSave = () => {
+    if (!config) {
+      onClose();
+      return;
+    }
+
     onSave({
       ...config,
       couple: {
@@ -54,21 +59,28 @@ export const QuickConfigModal: React.FC<
         receiverName,
       },
       proposal: {
-        ...config.proposal,
+        ...(config.proposal || {
+          noBtnStages: [],
+          initialGif: '/images/gifts/proposal-initial.gif',
+          successHeading: "Anh biết em sẽ đồng ý mà 💕",
+          successGif: '/images/gifts/success.gif',
+        }),
         question,
         yesBtnText: yesText,
       },
-      gifts: {
-        ...config.gifts,
-        gift3: {
-          ...config.gifts.gift3,
-          letter: {
-            ...config.gifts.gift3.letter,
-            salutation: `Gửi ${receiverName},`,
-            signature: senderName,
-          },
-        },
-      },
+      gifts: config.gifts
+        ? {
+            ...config.gifts,
+            gift3: {
+              ...config.gifts.gift3,
+              letter: {
+                ...config.gifts.gift3.letter,
+                salutation: `Gửi ${receiverName},`,
+                signature: senderName,
+              },
+            },
+          }
+        : config.gifts,
     });
 
     onClose();

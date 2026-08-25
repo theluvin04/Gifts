@@ -153,13 +153,11 @@ React.FC<
           }}
           style={{
             background:
-              design.proposal
-                .yesButtonBackground,
+              design?.proposal?.yesButtonBackground || '#e11d48',
             color:
-              design.proposal
-                .yesButtonText,
+              design?.proposal?.yesButtonText || '#ffffff',
             fontFamily:
-              design.fonts.body,
+              design?.fonts?.body || 'sans-serif',
           }}
           className="flex items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-[13px] font-bold shadow-lg sm:text-base"
         >
@@ -212,13 +210,11 @@ React.FC<
           }
           style={{
             background:
-              design.proposal
-                .noButtonBackground,
+              design?.proposal?.noButtonBackground || '#ffffff',
             color:
-              design.proposal
-                .noButtonText,
+              design?.proposal?.noButtonText || '#64748b',
             fontFamily:
-              design.fonts.body,
+              design?.fonts?.body || 'sans-serif',
           }}
           className="flex min-h-[42px] w-full items-center justify-center rounded-full border border-black/10 px-3 py-2 text-center text-[11px] font-semibold leading-[1.25] shadow-md"
         >

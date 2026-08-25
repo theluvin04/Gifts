@@ -1,9 +1,14 @@
 import type {
   AnimationPreset,
+  SceneButtonElement,
   SceneCanvasDefinition,
   SceneElement,
   SceneElementAction,
   SceneElementFrame,
+  SceneImageElement,
+  ScenePhotoFrameElement,
+  SceneShapeElement,
+  SceneTextElement,
   SceneTransitionPreset,
 } from '../engine';
 
@@ -279,7 +284,7 @@ export const createTextElement =
   (
     index = 1
   ):
-    SceneElement => ({
+    SceneTextElement => ({
     id:
       createId(
         'text'
@@ -328,7 +333,7 @@ export const createImageElement =
   (
     index = 1
   ):
-    SceneElement => ({
+    SceneImageElement => ({
     id:
       createId(
         'image'
@@ -377,7 +382,7 @@ export const createDecorElement =
   (
     index = 1
   ):
-    SceneElement => ({
+    SceneImageElement => ({
     ...createImageElement(
       index
     ),
@@ -419,7 +424,7 @@ export const createButtonElement =
   (
     index = 1
   ):
-    SceneElement => ({
+    SceneButtonElement => ({
     id:
       createId(
         'button'
@@ -476,7 +481,7 @@ export const createShapeElement =
   (
     index = 1
   ):
-    SceneElement => ({
+    SceneShapeElement => ({
     id:
       createId(
         'shape'
@@ -528,7 +533,7 @@ export const createPolaroidElement =
   (
     index = 1
   ):
-    SceneElement => ({
+    ScenePhotoFrameElement => ({
     id:
       createId(
         'polaroid'

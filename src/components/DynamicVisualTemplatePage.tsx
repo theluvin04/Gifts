@@ -1,34 +1,17 @@
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
-import {
-  BrandLogo,
-} from './BrandLogo';
-
-import {
-  VisualSceneExperience,
-} from '../engine';
-
-import type {
-  SceneElement,
-} from '../engine';
-
+import { BrandLogo } from './BrandLogo';
+import { VisualSceneExperience } from '../engine';
+import type { SceneElement } from '../engine';
 import {
   getEffectiveTemplatePrice,
   getPublicTemplateConfigById,
+  getTemplateDiscountPercent,
   type TemplateConfig,
 } from '../services/templateService';
-
-import type {
-  TemplateVisualEditorConfig,
-} from '../templates/visualEditor';
-
-import {
-  getCustomerSlot,
-} from '../templates/customerSlots';
+import type { TemplateVisualEditorConfig } from '../templates/visualEditor';
+import { getCustomerSlot } from '../templates/customerSlots';
+import { getTemplatePresentation } from '../templates/templatePresentation';
 
 interface Props {
   templateId: string;
@@ -41,89 +24,53 @@ interface Props {
 
 interface StoredDraft {
   fingerprint: string;
-  config:
-    TemplateVisualEditorConfig;
+  config: TemplateVisualEditorConfig;
 }
 
-const clone = <T,>(
-  value: T
-): T =>
-  JSON.parse(
-    JSON.stringify(value)
-  );
+const clone = <T,>(value: T): T =>
+  JSON.parse(JSON.stringify(value));
 
-const draftKey = (
-  templateId: string
-) =>
+const draftKey = (templateId: string) =>
   `dearly:visual-customer-draft:${templateId}`;
 
 const getTemplateFingerprint = (
-  config:
-    TemplateVisualEditorConfig
+  config: TemplateVisualEditorConfig
 ) =>
   JSON.stringify(
-    config.scenes.map(
-      (scene) => ({
-        id: scene.id,
-        title:
-          scene.title || '',
-        elements:
-          scene.elements.map(
-            (element) => ({
-              id: element.id,
-              type: element.type,
-              ariaLabel:
-                element.ariaLabel ||
-                '',
-            })
-          ),
-      })
-    )
+    config.scenes.map((scene) => ({
+      id: scene.id,
+      title: scene.title || '',
+      elements: scene.elements.map((element) => ({
+        id: element.id,
+        type: element.type,
+        ariaLabel: element.ariaLabel || '',
+      })),
+    }))
   );
 
 const loadDraft = (
   templateId: string,
-  fallback:
-    TemplateVisualEditorConfig
+  fallback: TemplateVisualEditorConfig
 ): TemplateVisualEditorConfig => {
-  const fingerprint =
-    getTemplateFingerprint(
-      fallback
-    );
+  const fingerprint = getTemplateFingerprint(fallback);
 
   try {
-    const raw =
-      window.localStorage.getItem(
-        draftKey(templateId)
-      );
+    const raw = window.localStorage.getItem(draftKey(templateId));
+    if (!raw) return clone(fallback);
 
-    if (!raw) {
-      return clone(fallback);
-    }
-
-    const parsed =
-      JSON.parse(raw) as
-        StoredDraft |
-        TemplateVisualEditorConfig;
+    const parsed = JSON.parse(raw) as StoredDraft | TemplateVisualEditorConfig;
 
     if (
       parsed &&
       'fingerprint' in parsed &&
       'config' in parsed &&
-      parsed.fingerprint ===
-        fingerprint &&
-      Array.isArray(
-        parsed.config?.scenes
-      )
+      parsed.fingerprint === fingerprint &&
+      Array.isArray(parsed.config?.scenes)
     ) {
       return parsed.config;
     }
 
-    // Draft cũ không có fingerprint hoặc template Admin đã đổi.
-    // Bỏ draft cũ để không giữ slot/tài nguyên đã lỗi thời.
-    window.localStorage.removeItem(
-      draftKey(templateId)
-    );
+    window.localStorage.removeItem(draftKey(templateId));
   } catch {
     // fallback below
   }
@@ -133,18 +80,12 @@ const loadDraft = (
 
 const saveDraft = (
   templateId: string,
-  templateConfig:
-    TemplateVisualEditorConfig,
-  config:
-    TemplateVisualEditorConfig
+  templateConfig: TemplateVisualEditorConfig,
+  config: TemplateVisualEditorConfig
 ) => {
   try {
-    const payload:
-      StoredDraft = {
-      fingerprint:
-        getTemplateFingerprint(
-          templateConfig
-        ),
+    const payload: StoredDraft = {
+      fingerprint: getTemplateFingerprint(templateConfig),
       config,
     };
 
@@ -157,16 +98,19 @@ const saveDraft = (
   }
 };
 
-const formatVnd = (
-  value: number
-) =>
-  new Intl.NumberFormat(
-    'vi-VN'
-  ).format(value) +
-  'đ';
+const formatVnd = (value: number) =>
+  new Intl.NumberFormat('vi-VN').format(value) + 'đ';
 
-export const DynamicVisualTemplatePage:
-React.FC<Props> = ({
+const hasUsableVisualEditor = (
+  template: TemplateConfig
+) =>
+  Boolean(
+    template.visualEditor &&
+      Array.isArray(template.visualEditor.scenes) &&
+      template.visualEditor.scenes.length > 0
+  );
+
+export const DynamicVisualTemplatePage: React.FC<Props> = ({
   templateId,
   mode,
   onBackHome,
@@ -174,24 +118,11 @@ React.FC<Props> = ({
   onBackProduct,
   onCheckout,
 }) => {
-  const [template, setTemplate] =
-    useState<TemplateConfig | null>(
-      null
-    );
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState('');
-
-  const [draft, setDraft] =
-    useState<TemplateVisualEditorConfig | null>(
-      null
-    );
-
-  const [previewMobile, setPreviewMobile] =
-    useState(true);
+  const [template, setTemplate] = useState<TemplateConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [draft, setDraft] = useState<TemplateVisualEditorConfig | null>(null);
+  const [previewMobile, setPreviewMobile] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -199,138 +130,77 @@ React.FC<Props> = ({
     setLoading(true);
     setError('');
 
-    void getPublicTemplateConfigById(
-      templateId
-    )
+    void getPublicTemplateConfigById(templateId)
       .then((next) => {
         if (!active) return;
 
-        const visualEditor =
-          next.visualEditor;
-
-        // Template động chỉ cần đang bán + đang hiển thị + có scene thật.
-        // Không chặn bằng visualEditor.enabled vì template cũ có thể lưu cờ này = false
-        // dù Admin đã thiết kế đầy đủ và đã chuyển trạng thái sang Đang bán.
         if (
           !next.visible ||
-          next.status !==
-            'available' ||
-          !visualEditor ||
-          visualEditor.scenes.length ===
-            0
+          next.status !== 'available' ||
+          !hasUsableVisualEditor(next)
         ) {
-          setError(
-            'Template này hiện chưa mở bán.'
-          );
+          setError('Template này hiện chưa mở bán.');
           return;
         }
 
         setTemplate(next);
-        setDraft(
-          loadDraft(
-            templateId,
-            visualEditor
-          )
-        );
+        setDraft(loadDraft(templateId, next.visualEditor!));
       })
       .catch((loadError: any) => {
         if (!active) return;
-
-        setError(
-          loadError?.message ||
-          'Không tải được template.'
-        );
+        setError(loadError?.message || 'Không tải được template.');
       })
       .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, [
-    templateId,
-  ]);
+  }, [templateId]);
 
   useEffect(() => {
-    if (
-      draft &&
-      template?.visualEditor
-    ) {
-      saveDraft(
-        templateId,
-        template.visualEditor,
-        draft
-      );
+    if (draft && template?.visualEditor) {
+      saveDraft(templateId, template.visualEditor, draft);
     }
-  }, [
-    draft,
-    template,
-    templateId,
-  ]);
+  }, [draft, template, templateId]);
 
-  const slots =
-    useMemo(() => {
-      if (!draft) {
-        return [];
-      }
+  const slots = useMemo(() => {
+    if (!draft) return [];
 
-      return draft.scenes.flatMap(
-        (scene) =>
-          scene.elements
-            .map((element) => ({
-              sceneId:
-                scene.id,
-              sceneTitle:
-                scene.title ||
-                scene.id,
-              element,
-              slot:
-                getCustomerSlot(
-                  element
-                ),
-            }))
-            .filter(
-              (item) =>
-                item.slot.kind !==
-                'none'
-            )
-      );
-    }, [draft]);
+    return draft.scenes.flatMap((scene) =>
+      scene.elements
+        .map((element) => ({
+          sceneId: scene.id,
+          sceneTitle: scene.title || scene.id,
+          element,
+          slot: getCustomerSlot(element),
+        }))
+        .filter((item) => item.slot.kind !== 'none')
+    );
+  }, [draft]);
 
   const updateElement = (
     sceneId: string,
     elementId: string,
-    updater: (
-      element: SceneElement
-    ) => SceneElement
+    updater: (element: SceneElement) => SceneElement
   ) => {
     setDraft((current) =>
       current
         ? {
             ...current,
-            scenes:
-              current.scenes.map(
-                (scene) =>
-                  scene.id ===
-                  sceneId
-                    ? {
-                        ...scene,
-                        elements:
-                          scene.elements.map(
-                            (element) =>
-                              element.id ===
-                              elementId
-                                ? updater(
-                                    element
-                                  )
-                                : element
-                          ),
-                      }
-                    : scene
-              ),
+            scenes: current.scenes.map((scene) =>
+              scene.id === sceneId
+                ? {
+                    ...scene,
+                    elements: scene.elements.map((element) =>
+                      element.id === elementId
+                        ? updater(element)
+                        : element
+                    ),
+                  }
+                : scene
+            ),
           }
         : current
     );
@@ -338,53 +208,33 @@ React.FC<Props> = ({
 
   const readImage = (
     file: File,
-    done: (
-      value: string
-    ) => void
+    done: (value: string) => void
   ) => {
-    const reader =
-      new FileReader();
-
-    reader.onload = () =>
-      done(
-        String(
-          reader.result ||
-          ''
-        )
-      );
-
-    reader.readAsDataURL(
-      file
-    );
+    const reader = new FileReader();
+    reader.onload = () => done(String(reader.result || ''));
+    reader.readAsDataURL(file);
   };
 
   if (loading) {
     return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#fffaf8] text-sm font-bold text-black/45">
+      <main className="flex min-h-[100svh] items-center justify-center bg-[#fbf8f6] text-sm font-semibold text-black/40">
         Đang tải template...
       </main>
     );
   }
 
-  if (
-    error ||
-    !template ||
-    !draft
-  ) {
+  if (error || !template || !draft) {
     return (
-      <main className="flex min-h-[100svh] items-center justify-center bg-[#fffaf8] px-5">
-        <div className="w-full max-w-sm rounded-[24px] border border-black/7 bg-white p-6 text-center">
-          <p className="text-base font-black">
-            Không mở được template
-          </p>
-          <p className="mt-2 text-sm text-black/40">
-            {error ||
-              'Template không tồn tại.'}
+      <main className="flex min-h-[100svh] items-center justify-center bg-[#fbf8f6] px-5">
+        <div className="w-full max-w-sm rounded-[24px] border border-black/[0.07] bg-white p-7 text-center shadow-[0_20px_60px_rgba(50,20,30,0.07)]">
+          <p className="text-lg font-black">Không mở được template</p>
+          <p className="mt-2 text-sm leading-6 text-black/40">
+            {error || 'Template không tồn tại.'}
           </p>
           <button
             type="button"
             onClick={onBackHome}
-            className="mt-5 rounded-[12px] bg-[#191919] px-5 py-3 text-sm font-black text-white"
+            className="mt-6 rounded-[13px] bg-[#171717] px-5 py-3 text-sm font-bold text-white"
           >
             Về trang chủ
           </button>
@@ -393,20 +243,19 @@ React.FC<Props> = ({
     );
   }
 
-  const price =
-    getEffectiveTemplatePrice(
-      template
-    );
+  const price = getEffectiveTemplatePrice(template);
+  const discount = getTemplateDiscountPercent(template);
+  const presentation = getTemplatePresentation(template);
 
   if (mode === 'product') {
     return (
-      <div className="min-h-[100svh] bg-[#f7f4f2] text-[#191919]">
-        <header className="border-b border-black/6 bg-white">
-          <div className="mx-auto flex h-[68px] max-w-[1500px] items-center justify-between px-4 sm:px-8">
+      <div className="min-h-[100svh] bg-[#fbf8f6] text-[#171717]">
+        <header className="border-b border-black/[0.06] bg-white/95 backdrop-blur-xl">
+          <div className="mx-auto flex h-[68px] max-w-[1480px] items-center justify-between px-4 sm:px-8">
             <button
               type="button"
               onClick={onBackHome}
-              className="text-xs font-black text-black/45"
+              className="text-xs font-bold text-black/42 transition hover:text-black"
             >
               ← Templates
             </button>
@@ -416,66 +265,84 @@ React.FC<Props> = ({
               imageClassName="h-10 w-auto"
             />
 
-            <span className="text-xs font-black">
-              {formatVnd(
-                price
-              )}
+            <span className="text-xs font-black text-black/70">
+              {formatVnd(price)}
             </span>
           </div>
         </header>
 
-        <main className="mx-auto grid max-w-[1500px] gap-6 px-4 py-5 sm:px-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:py-8">
-          <section className="min-w-0 overflow-hidden rounded-[24px] border border-black/7 bg-white shadow-[0_18px_55px_rgba(0,0,0,0.06)]">
+        <main className="mx-auto grid max-w-[1480px] gap-7 px-4 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-start lg:py-9">
+          <section className="min-w-0 overflow-hidden rounded-[26px] border border-black/[0.07] bg-white shadow-[0_20px_65px_rgba(45,20,28,0.07)]">
             <VisualSceneExperience
-              scenes={
-                template
-                  .visualEditor!
-                  .scenes
-              }
-              initialSceneId={
-                template
-                  .visualEditor!
-                  .initialSceneId
-              }
+              scenes={template.visualEditor!.scenes}
+              initialSceneId={template.visualEditor!.initialSceneId}
             />
           </section>
 
-          <aside className="h-fit rounded-[24px] border border-black/7 bg-white p-5 shadow-[0_18px_55px_rgba(0,0,0,0.05)] lg:sticky lg:top-5">
-            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#b83e57]">
-              Digital template
+          <aside className="h-fit rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-[0_20px_65px_rgba(45,20,28,0.06)] lg:sticky lg:top-6">
+            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#c9435d]">
+              {presentation.category}
             </p>
 
-            <h1 className="mt-2 text-3xl font-black tracking-[-0.045em]">
+            <h1 className="mt-2.5 text-[32px] font-black leading-[1.02] tracking-[-0.045em]">
               {template.name}
             </h1>
 
-            <p className="mt-3 text-2xl font-black">
-              {formatVnd(
-                price
-              )}
+            <p className="mt-3 text-sm leading-6 text-black/48">
+              {presentation.description}
             </p>
 
-            <div className="mt-5 space-y-2 border-y border-black/7 py-4 text-xs leading-5 text-black/48">
-              <p>
-                • Mẫu bên trái là đúng thiết kế Admin đã lưu.
+            <div className="mt-5 flex flex-wrap items-end gap-x-2.5 gap-y-1.5">
+              <span className="text-[26px] font-black tracking-[-0.035em]">
+                {formatVnd(price)}
+              </span>
+
+              {discount > 0 && (
+                <>
+                  <span className="pb-1 text-xs text-black/28 line-through">
+                    {formatVnd(template.basePrice)}
+                  </span>
+                  <span className="mb-1 rounded-full bg-[#fdecef] px-2 py-1 text-[9px] font-black text-[#c9435d]">
+                    -{discount}%
+                  </span>
+                </>
+              )}
+            </div>
+
+            {template.promotionLabel && (
+              <div className="mt-3 inline-flex rounded-full bg-[#fff4f6] px-3 py-1.5 text-[10px] font-bold text-[#b63c55]">
+                {template.promotionLabel}
+              </div>
+            )}
+
+            <div className="mt-6 border-y border-black/[0.07] py-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-black/30">
+                Có trong mẫu
               </p>
-              <p>
-                • Khách chỉ sửa những ảnh/chữ được đánh dấu “Khách thay”.
-              </p>
-              <p>
-                • Bố cục, hiệu ứng và trang trí giữ nguyên.
-              </p>
+              <div className="mt-3 space-y-2.5">
+                {presentation.highlights.map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-start gap-2.5 text-xs leading-5 text-black/55"
+                  >
+                    <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#c9435d]" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <button
               type="button"
-              onClick={
-                onStartPersonalize
-              }
-              className="mt-5 w-full rounded-[14px] bg-[#191919] px-5 py-3.5 text-sm font-black text-white"
+              onClick={onStartPersonalize}
+              className="mt-5 w-full rounded-[14px] bg-[#171717] px-5 py-3.5 text-sm font-black text-white transition hover:bg-[#c9435d]"
             >
-              Chỉnh mẫu này
+              Cá nhân hoá mẫu này
             </button>
+
+            <p className="mt-3 text-center text-[10px] leading-4 text-black/30">
+              Chỉnh trực tiếp trên web · Thanh toán chuyển khoản · Nhận link riêng
+            </p>
           </aside>
         </main>
       </div>
@@ -483,226 +350,155 @@ React.FC<Props> = ({
   }
 
   return (
-    <div className="min-h-[100svh] bg-[#f5f3f2] text-[#191919]">
-      <header className="sticky top-0 z-40 border-b border-black/6 bg-white/95 backdrop-blur-xl">
+    <div className="min-h-[100svh] bg-[#f4f1ef] text-[#171717]">
+      <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-white/95 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[64px] max-w-[1500px] flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-8">
           <button
             type="button"
             onClick={onBackProduct}
-            className="text-xs font-black text-black/45"
+            className="text-xs font-bold text-black/42"
           >
             ← Mẫu
           </button>
 
           <div className="min-w-0 text-center">
-            <p className="truncate text-sm font-black">
-              {template.name}
-            </p>
+            <p className="truncate text-sm font-black">{template.name}</p>
             <p className="text-[9px] text-black/30">
-              {slots.length}{' '}
-              nội dung được phép thay
+              {slots.length} nội dung được phép thay
             </p>
           </div>
 
           <button
             type="button"
             onClick={onCheckout}
-            className="rounded-[11px] bg-[#191919] px-4 py-2.5 text-[10px] font-black text-white"
+            className="rounded-[11px] bg-[#171717] px-4 py-2.5 text-[10px] font-black text-white"
           >
-            Thanh toán ·{' '}
-            {formatVnd(
-              price
-            )}
+            Thanh toán · {formatVnd(price)}
           </button>
         </div>
       </header>
 
       <main className="mx-auto grid max-w-[1500px] gap-4 p-4 sm:p-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
-        <aside className="rounded-[18px] border border-black/7 bg-white p-4 lg:max-h-[calc(100svh-105px)] lg:overflow-y-auto">
-          <h2 className="text-base font-black">
-            Nội dung của bạn
-          </h2>
+        <aside className="rounded-[18px] border border-black/[0.07] bg-white p-4 lg:max-h-[calc(100svh-105px)] lg:overflow-y-auto">
+          <h2 className="text-base font-black">Nội dung của bạn</h2>
           <p className="mt-1 text-[10px] leading-5 text-black/35">
-            Chỉ các trường Admin đã bật “Khách thay” mới xuất hiện ở đây.
+            Chỉ những nội dung được cho phép thay mới xuất hiện ở đây.
           </p>
 
           <div className="mt-4 space-y-3">
-            {slots.length ===
-            0 ? (
+            {slots.length === 0 ? (
               <div className="rounded-[12px] border border-dashed border-black/10 bg-[#faf9f8] p-4 text-[10px] leading-5 text-black/40">
-                Chưa có nội dung nào cho khách sửa. Vào Admin → Tài nguyên và bật “Khách thay” cho đúng layer rồi lưu template.
+                Mẫu này chưa có nội dung nào được bật cho khách thay.
               </div>
             ) : (
-              slots.map(
-                ({
-                  sceneId,
-                  sceneTitle,
-                  element,
-                  slot,
-                }, index) => (
-                  <div
-                    key={`${sceneId}-${element.id}`}
-                    className="rounded-[12px] border border-black/7 bg-[#faf9f8] p-3"
-                  >
-                    <p className="text-[8px] font-black uppercase tracking-[0.08em] text-black/25">
-                      {index + 1}.{' '}
-                      {slot.label ||
-                        element.name ||
-                        element.id}
-                    </p>
-                    <p className="mt-1 text-[8px] text-black/25">
-                      {sceneTitle}
-                    </p>
+              slots.map(({ sceneId, sceneTitle, element, slot }, index) => (
+                <div
+                  key={`${sceneId}-${element.id}`}
+                  className="rounded-[12px] border border-black/[0.07] bg-[#faf9f8] p-3"
+                >
+                  <p className="text-[8px] font-black uppercase tracking-[0.08em] text-black/25">
+                    {index + 1}. {slot.label || element.name || element.id}
+                  </p>
+                  <p className="mt-1 text-[8px] text-black/25">{sceneTitle}</p>
 
-                    {slot.kind ===
-                      'text' && (
-                      <textarea
-                        value={
-                          element.type ===
-                          'text'
-                            ? element.text
-                            : element.type ===
-                              'button'
-                              ? element.label
-                              : ''
-                        }
-                        onChange={(event) =>
-                          updateElement(
-                            sceneId,
-                            element.id,
-                            (current) => {
-                              if (
-                                current.type ===
-                                'text'
-                              ) {
-                                return {
-                                  ...current,
-                                  text:
-                                    event.target.value,
-                                };
-                              }
+                  {slot.kind === 'text' && (
+                    <textarea
+                      value={
+                        element.type === 'text'
+                          ? element.text
+                          : element.type === 'button'
+                            ? element.label
+                            : ''
+                      }
+                      onChange={(event) =>
+                        updateElement(sceneId, element.id, (current) => {
+                          if (current.type === 'text') {
+                            return { ...current, text: event.target.value };
+                          }
 
-                              if (
-                                current.type ===
-                                'button'
-                              ) {
-                                return {
-                                  ...current,
-                                  label:
-                                    event.target.value,
-                                };
-                              }
+                          if (current.type === 'button') {
+                            return { ...current, label: event.target.value };
+                          }
 
-                              return current;
-                            }
-                          )
-                        }
-                        className="mt-2 min-h-[82px] w-full rounded-[9px] border border-black/9 bg-white px-3 py-2.5 text-[11px] outline-none focus:border-[#cf5068]/40"
-                      />
-                    )}
+                          return current;
+                        })
+                      }
+                      className="mt-2 min-h-[82px] w-full rounded-[9px] border border-black/9 bg-white px-3 py-2.5 text-[11px] outline-none focus:border-[#cf5068]/40"
+                    />
+                  )}
 
-                    {slot.kind ===
-                      'image' && (
-                      <div className="mt-2">
-                        {(
-                          element.type ===
-                            'image' ||
-                          element.type ===
-                            'photo-frame'
-                        ) &&
-                          element.src && (
-                            <img
-                              src={element.src}
-                              alt=""
-                              className="mb-2 h-24 w-full rounded-[9px] bg-white object-contain"
-                            />
-                          )}
-
-                        <label className="block cursor-pointer rounded-[10px] border border-dashed border-[#cf5068]/30 bg-white p-3 text-center text-[9px] font-black text-[#a73551]">
-                          Chọn ảnh khác
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(event) => {
-                              const file =
-                                event.target.files?.[0];
-
-                              if (!file) {
-                                return;
-                              }
-
-                              readImage(
-                                file,
-                                (url) =>
-                                  updateElement(
-                                    sceneId,
-                                    element.id,
-                                    (current) => {
-                                      if (
-                                        current.type ===
-                                          'image' ||
-                                        current.type ===
-                                          'photo-frame'
-                                      ) {
-                                        return {
-                                          ...current,
-                                          src: url,
-                                          alt:
-                                            file.name,
-                                        } as
-                                          SceneElement;
-                                      }
-
-                                      return current;
-                                    }
-                                  )
-                              );
-                            }}
+                  {slot.kind === 'image' && (
+                    <div className="mt-2">
+                      {(
+                        element.type === 'image' ||
+                        element.type === 'photo-frame'
+                      ) &&
+                        element.src && (
+                          <img
+                            src={element.src}
+                            alt=""
+                            className="mb-2 h-24 w-full rounded-[9px] bg-white object-contain"
                           />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                )
-              )
+                        )}
+
+                      <label className="block cursor-pointer rounded-[10px] border border-dashed border-[#cf5068]/30 bg-white p-3 text-center text-[9px] font-black text-[#a73551]">
+                        Chọn ảnh khác
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (!file) return;
+
+                            readImage(file, (url) =>
+                              updateElement(sceneId, element.id, (current) => {
+                                if (
+                                  current.type === 'image' ||
+                                  current.type === 'photo-frame'
+                                ) {
+                                  return {
+                                    ...current,
+                                    src: url,
+                                    alt: file.name,
+                                  } as SceneElement;
+                                }
+
+                                return current;
+                              })
+                            );
+                          }}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              ))
             )}
           </div>
         </aside>
 
-        <section className="min-w-0 rounded-[18px] border border-black/7 bg-[#dedbd8] p-3 sm:p-5">
+        <section className="min-w-0 rounded-[18px] border border-black/[0.07] bg-[#ddd9d6] p-3 sm:p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-[9px] font-black uppercase tracking-[0.12em] text-black/30">
-              Bản của khách
+              Bản của bạn
             </p>
 
             <div className="flex rounded-[10px] bg-white p-1">
               <button
                 type="button"
-                onClick={() =>
-                  setPreviewMobile(
-                    false
-                  )
-                }
+                onClick={() => setPreviewMobile(false)}
                 className={`rounded-[8px] px-3 py-1.5 text-[9px] font-black ${
-                  !previewMobile
-                    ? 'bg-black text-white'
-                    : 'text-black/40'
+                  !previewMobile ? 'bg-black text-white' : 'text-black/40'
                 }`}
               >
                 Máy tính
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  setPreviewMobile(
-                    true
-                  )
-                }
+                onClick={() => setPreviewMobile(true)}
                 className={`rounded-[8px] px-3 py-1.5 text-[9px] font-black ${
-                  previewMobile
-                    ? 'bg-black text-white'
-                    : 'text-black/40'
+                  previewMobile ? 'bg-black text-white' : 'text-black/40'
                 }`}
               >
                 Điện thoại
@@ -713,17 +509,13 @@ React.FC<Props> = ({
           <div
             className={[
               'mx-auto max-h-[calc(100svh-165px)] overflow-y-auto overflow-x-hidden rounded-[18px] border border-black/8 bg-white shadow-[0_22px_70px_rgba(0,0,0,0.12)]',
-              previewMobile
-                ? 'max-w-[430px]'
-                : 'max-w-[1000px]',
+              previewMobile ? 'max-w-[430px]' : 'max-w-[1000px]',
             ].join(' ')}
           >
             <VisualSceneExperience
               scenes={draft.scenes}
               initialSceneId={draft.initialSceneId}
-              mobileOverride={
-                previewMobile
-              }
+              mobileOverride={previewMobile}
             />
           </div>
         </section>

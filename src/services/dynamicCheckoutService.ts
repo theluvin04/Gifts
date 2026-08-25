@@ -10,28 +10,17 @@ import {
   ensureAuth,
 } from '../config/firebase';
 
-import type {
-  CheckoutCustomer,
-} from './giftService';
-
+import type { CheckoutCustomer } from './giftService';
 import {
   getEffectiveTemplatePrice,
   getRequiredPublicTemplateConfigById,
 } from './templateService';
-
-import type {
-  TemplateVisualEditorConfig,
-} from '../templates/visualEditor';
-
-import {
-  upsertPublicOrderLookup,
-} from './orderLookupService';
+import type { TemplateVisualEditorConfig } from '../templates/visualEditor';
+import { upsertPublicOrderLookup } from './orderLookupService';
 
 const SECURE_GIFT_ALPHABET =
   'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-
-const MAX_FIRESTORE_PAYLOAD_BYTES =
-  850_000;
+const MAX_FIRESTORE_PAYLOAD_BYTES = 850_000;
 
 export interface DynamicCheckoutResult {
   giftId: string;
@@ -43,259 +32,150 @@ export interface DynamicCheckoutResult {
   templateName: string;
 }
 
-const generateGiftId = (
-  length = 24
-) => {
-  const bytes =
-    new Uint8Array(length);
-
-  crypto.getRandomValues(
-    bytes
-  );
+const generateGiftId = (length = 24) => {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
 
   return Array.from(
     bytes,
     (byte) =>
       SECURE_GIFT_ALPHABET[
-        byte %
-        SECURE_GIFT_ALPHABET.length
+        byte % SECURE_GIFT_ALPHABET.length
       ]
   ).join('');
 };
 
 const generateOrderNumber = () => {
-  const bytes =
-    new Uint32Array(1);
-
-  crypto.getRandomValues(
-    bytes
-  );
-
-  return String(
-    1000 +
-      bytes[0] %
-        9000
-  );
+  const bytes = new Uint32Array(1);
+  crypto.getRandomValues(bytes);
+  return String(1000 + (bytes[0] % 9000));
 };
 
-const loadImage = (
-  src: string
-) =>
-  new Promise<HTMLImageElement>(
-    (resolve, reject) => {
-      const image =
-        new Image();
+const loadImage = (src: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () =>
+      reject(
+        new Error(
+          'Không thể tối ưu ảnh trước khi tạo đơn.'
+        )
+      );
+    image.src = src;
+  });
 
-      image.onload = () =>
-        resolve(image);
+const compressDataImage = async (
+  value: string,
+  maxSize = 1080,
+  quality = 0.72
+) => {
+  if (
+    !value.startsWith('data:image/') ||
+    value.length < 90_000
+  ) {
+    return value;
+  }
 
-      image.onerror = () =>
-        reject(
-          new Error(
-            'Không thể tối ưu ảnh trước khi tạo đơn.'
-          )
-        );
+  const image = await loadImage(value);
+  const scale = Math.min(
+    1,
+    maxSize / Math.max(image.width, image.height)
+  );
+  const width = Math.max(
+    1,
+    Math.round(image.width * scale)
+  );
+  const height = Math.max(
+    1,
+    Math.round(image.height * scale)
+  );
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
 
-      image.src = src;
-    }
+  const context = canvas.getContext('2d');
+  if (!context) return value;
+
+  context.drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL('image/jpeg', quality);
+};
+
+const prepareVisualConfig = async (
+  config: TemplateVisualEditorConfig
+): Promise<TemplateVisualEditorConfig> => {
+  const clean = JSON.parse(
+    JSON.stringify(config)
+  ) as TemplateVisualEditorConfig;
+
+  clean.scenes = await Promise.all(
+    clean.scenes.map(async (scene) => ({
+      ...scene,
+      elements: await Promise.all(
+        scene.elements.map(async (element) => {
+          if (
+            (
+              element.type === 'image' ||
+              element.type === 'decor' ||
+              element.type === 'photo-frame'
+            ) &&
+            element.src
+          ) {
+            return {
+              ...element,
+              src: await compressDataImage(element.src),
+            } as typeof element;
+          }
+
+          return element;
+        })
+      ),
+    }))
   );
 
-const compressDataImage =
-  async (
-    value: string,
-    maxSize = 1080,
-    quality = 0.72
-  ) => {
-    if (
-      !value.startsWith(
-        'data:image/'
-      ) ||
-      value.length <
-        90_000
-    ) {
-      return value;
-    }
+  const payloadBytes = new Blob([
+    JSON.stringify(clean),
+  ]).size;
 
-    const image =
-      await loadImage(value);
-
-    const scale =
-      Math.min(
-        1,
-        maxSize /
-          Math.max(
-            image.width,
-            image.height
-          )
-      );
-
-    const width =
-      Math.max(
-        1,
-        Math.round(
-          image.width *
-          scale
-        )
-      );
-
-    const height =
-      Math.max(
-        1,
-        Math.round(
-          image.height *
-          scale
-        )
-      );
-
-    const canvas =
-      document.createElement(
-        'canvas'
-      );
-
-    canvas.width = width;
-    canvas.height = height;
-
-    const context =
-      canvas.getContext('2d');
-
-    if (!context) {
-      return value;
-    }
-
-    context.drawImage(
-      image,
-      0,
-      0,
-      width,
-      height
+  if (payloadBytes > MAX_FIRESTORE_PAYLOAD_BYTES) {
+    throw new Error(
+      'Ảnh trong mẫu đang quá nặng. Hãy dùng ảnh nhỏ hơn rồi thử lại.'
     );
+  }
 
-    return canvas.toDataURL(
-      'image/jpeg',
-      quality
+  return clean;
+};
+
+const getAuthenticatedUser = async () => {
+  const current = auth.currentUser || (await ensureAuth());
+  const user = current || auth.currentUser;
+
+  if (!user) {
+    throw new Error(
+      'Không thể xác thực phiên thanh toán. Hãy tải lại trang và thử lại.'
     );
-  };
+  }
 
-const prepareVisualConfig =
-  async (
-    config:
-      TemplateVisualEditorConfig
-  ):
-    Promise<
-      TemplateVisualEditorConfig
-    > => {
-    const clean =
-      JSON.parse(
-        JSON.stringify(
-          config
-        )
-      ) as
-        TemplateVisualEditorConfig;
+  return user;
+};
 
-    clean.scenes =
-      await Promise.all(
-        clean.scenes.map(
-          async (scene) => ({
-            ...scene,
-            elements:
-              await Promise.all(
-                scene.elements.map(
-                  async (element) => {
-                    if (
-                      (
-                        element.type ===
-                          'image' ||
-                        element.type ===
-                          'decor' ||
-                        element.type ===
-                          'photo-frame'
-                      ) &&
-                      element.src
-                    ) {
-                      return {
-                        ...element,
-                        src:
-                          await compressDataImage(
-                            element.src
-                          ),
-                      } as typeof element;
-                    }
-
-                    return element;
-                  }
-                )
-              ),
-          })
-        )
-      );
-
-    const payloadBytes =
-      new Blob([
-        JSON.stringify(clean),
-      ]).size;
-
-    if (
-      payloadBytes >
-      MAX_FIRESTORE_PAYLOAD_BYTES
-    ) {
-      throw new Error(
-        'Ảnh trong mẫu đang quá nặng. Hãy dùng ảnh nhỏ hơn rồi thử lại.'
-      );
-    }
-
-    return clean;
-  };
-
-const getAuthenticatedUser =
-  async () => {
-    const current =
-      auth.currentUser ||
-      await ensureAuth();
-
-    const user =
-      current ||
-      auth.currentUser;
-
-    if (!user) {
-      throw new Error(
-        'Không thể xác thực phiên thanh toán. Hãy tải lại trang và thử lại.'
-      );
-    }
-
-    return user;
-  };
-
-const mapFirestoreError = (
-  error: any
-) => {
-  const code =
-    error?.code || '';
+const mapFirestoreError = (error: any) => {
+  const code = error?.code || '';
 
   if (
-    code ===
-      'permission-denied' ||
-    code ===
-      'firestore/permission-denied'
+    code === 'permission-denied' ||
+    code === 'firestore/permission-denied'
   ) {
     return new Error(
       'Firestore đang chặn tạo đơn. Hãy kiểm tra Anonymous Auth và firestore.rules.'
     );
   }
 
-  const message =
-    String(
-      error?.message ||
-      ''
-    ).toLowerCase();
+  const message = String(error?.message || '').toLowerCase();
 
   if (
-    code ===
-      'resource-exhausted' ||
-    code ===
-      'invalid-argument' ||
-    message.includes(
-      'too large'
-    )
+    code === 'resource-exhausted' ||
+    code === 'invalid-argument' ||
+    message.includes('too large')
   ) {
     return new Error(
       'Dữ liệu mẫu quá nặng để lưu. Hãy giảm dung lượng ảnh rồi thử lại.'
@@ -304,153 +184,97 @@ const mapFirestoreError = (
 
   return error instanceof Error
     ? error
-    : new Error(
-        'Không thể tạo đơn thanh toán.'
-      );
+    : new Error('Không thể tạo đơn thanh toán.');
 };
 
-export const createDynamicBankTransferOrder =
-  async (
-    templateId: string,
-    config:
-      TemplateVisualEditorConfig,
-    customer:
-      CheckoutCustomer
-  ):
-    Promise<
-      DynamicCheckoutResult
-    > => {
-    const giftId =
-      generateGiftId();
+export const createDynamicBankTransferOrder = async (
+  templateId: string,
+  config: TemplateVisualEditorConfig,
+  customer: CheckoutCustomer
+): Promise<DynamicCheckoutResult> => {
+  const giftId = generateGiftId();
+  const orderNumber = generateOrderNumber();
+  const orderCode = `Dearly${orderNumber}`;
 
-    const orderNumber =
-      generateOrderNumber();
+  try {
+    const [template, user, cleanConfig] = await Promise.all([
+      getRequiredPublicTemplateConfigById(templateId),
+      getAuthenticatedUser(),
+      prepareVisualConfig(config),
+    ]);
 
-    const orderCode =
-      `Dearly${orderNumber}`;
+    const hasScenes = Boolean(
+      template.visualEditor?.scenes?.length
+    );
 
-    try {
-      const [
-        template,
-        user,
-        cleanConfig,
-      ] =
-        await Promise.all([
-          getRequiredPublicTemplateConfigById(
-            templateId
-          ),
-          getAuthenticatedUser(),
-          prepareVisualConfig(
-            config
-          ),
-        ]);
+    if (
+      !template.visible ||
+      template.status !== 'available' ||
+      !hasScenes
+    ) {
+      throw new Error('Template này hiện chưa mở bán.');
+    }
 
-      if (
-        !template.visible ||
-        template.status !==
-          'available' ||
-        !template.visualEditor
-          ?.enabled
-      ) {
-        throw new Error(
-          'Template này hiện chưa mở bán.'
-        );
-      }
+    const price = getEffectiveTemplatePrice(template);
+    const currency = template.currency || 'VND';
+    const now = serverTimestamp();
 
-      const price =
-        getEffectiveTemplatePrice(
-          template
-        );
-
-      const currency =
-        template.currency ||
-        'VND';
-
-      const now =
-        serverTimestamp();
-
-      await setDoc(
-        doc(
-          db,
-          'gifts',
-          giftId
-        ),
-        {
-          id: giftId,
-          config:
-            cleanConfig,
-          senderName:
-            customer.fullName ||
-            'Anonymous',
-          receiverName:
-            'Someone Special',
-          creatorId:
-            user.uid,
-          status:
-            'draft',
-          isPublished:
-            false,
-          createdAt: now,
-          updatedAt: now,
-          viewCount: 0,
-          templateId,
-          templateName:
-            template.name,
-          price,
-          currency,
-          paymentStatus:
-            'waiting_bank_transfer',
-          paymentMethod:
-            'bank_transfer',
-          paymentReference:
-            orderCode,
-          orderNumber,
-          orderCode,
-          customer,
-        }
-      );
-
-      try {
-        await upsertPublicOrderLookup({
-          orderCode,
-          phone:
-            customer.phone,
-          templateId,
-          templateName:
-            template.name,
-          paymentStatus:
-            'waiting_bank_transfer',
-          status: 'draft',
-          price,
-          currency,
-          createdAtMs:
-            Date.now(),
-          updatedAtMs:
-            Date.now(),
-        });
-      } catch (
-        lookupError
-      ) {
-        console.warn(
-          'Public order lookup sync:',
-          lookupError
-        );
-      }
-
-      return {
-        giftId,
-        orderNumber,
-        orderCode,
+    await setDoc(
+      doc(db, 'gifts', giftId),
+      {
+        id: giftId,
+        config: cleanConfig,
+        senderName: customer.fullName || 'Anonymous',
+        receiverName: 'Someone Special',
+        creatorId: user.uid,
+        status: 'draft',
+        isPublished: false,
+        createdAt: now,
+        updatedAt: now,
+        viewCount: 0,
+        templateId,
+        templateName: template.name,
         price,
         currency,
-        templateName:
-          template.name,
-        url:
-          `${window.location.origin}/gift/${giftId}`,
-      };
-    } catch (error) {
-      throw mapFirestoreError(
-        error
+        paymentStatus: 'waiting_bank_transfer',
+        paymentMethod: 'bank_transfer',
+        paymentReference: orderCode,
+        orderNumber,
+        orderCode,
+        customer,
+      }
+    );
+
+    try {
+      await upsertPublicOrderLookup({
+        orderCode,
+        phone: customer.phone,
+        templateId,
+        templateName: template.name,
+        paymentStatus: 'waiting_bank_transfer',
+        status: 'draft',
+        price,
+        currency,
+        createdAtMs: Date.now(),
+        updatedAtMs: Date.now(),
+      });
+    } catch (lookupError) {
+      console.warn(
+        'Public order lookup sync:',
+        lookupError
       );
     }
-  };
+
+    return {
+      giftId,
+      orderNumber,
+      orderCode,
+      price,
+      currency,
+      templateName: template.name,
+      url: `${window.location.origin}/gift/${giftId}`,
+    };
+  } catch (error) {
+    throw mapFirestoreError(error);
+  }
+};

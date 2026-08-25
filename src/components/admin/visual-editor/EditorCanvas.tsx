@@ -411,14 +411,14 @@ React.FC<Props> = ({
       const activeIds =
         mode ===
         'drag'
-          ? new Set(
+          ? new Set<string>(
               nextSelection.length
                 ? nextSelection
                 : [
                     element.id,
                   ]
             )
-          : new Set([
+          : new Set<string>([
               element.id,
             ]);
 
@@ -451,7 +451,10 @@ React.FC<Props> = ({
         event.clientY;
 
       const initialFrames =
-        new Map(
+        new Map<
+          string,
+          SceneElementFrame
+        >(
           activeElements.map(
             (item) => [
               item.id,

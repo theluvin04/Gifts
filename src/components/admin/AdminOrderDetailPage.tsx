@@ -714,153 +714,243 @@ React.FC<Props> = ({
           </section>
 
           <section className="space-y-3">
-            <ContentDetails
-              title="Nội dung cơ bản"
-              open
-            >
-              <DetailRow
-                label="Câu hỏi"
-                value={
-                  config.proposal
-                    .question
-                }
-              />
-
-              <DetailRow
-                label="Nút YES"
-                value={
-                  config.proposal
-                    .yesBtnText
-                }
-              />
-
-              <DetailRow
-                label="Biệt danh"
-                value={
-                  config.couple
-                    .nickname ||
-                  '—'
-                }
-              />
-            </ContentDetails>
-
-            <ContentDetails
-              title={`Ảnh kỷ niệm (${config.gifts.gift1.photos.length})`}
-            >
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {config.gifts
-                  .gift1.photos
-                  .map(
-                    (
-                      photo,
-                      index
-                    ) => (
-                      <div
-                        key={
-                          photo.id ||
-                          index
-                        }
-                        className="overflow-hidden rounded-[10px] bg-[#f4f1f1]"
-                      >
-                        {photo.url ? (
-                          <img
-                            src={
-                              photo.url
-                            }
-                            alt=""
-                            className="aspect-square w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex aspect-square items-center justify-center text-[10px] text-black/25">
-                            Trống
+            {Array.isArray(config?.scenes) && config.scenes.length > 0 ? (
+              <>
+                <ContentDetails
+                  title={`Visual Editor Scenes (${config.scenes.length})`}
+                  open
+                >
+                  <div className="space-y-4">
+                    {config.scenes.map((scene: any, sIdx: number) => {
+                      const elements = Array.isArray(scene.elements) ? scene.elements : [];
+                      return (
+                        <div
+                          key={scene.id || sIdx}
+                          className="rounded-[12px] border border-black/8 bg-[#faf9f8] p-3.5"
+                        >
+                          <div className="flex items-center justify-between border-b border-black/6 pb-2">
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-black/30">
+                                Scene {sIdx + 1}
+                              </span>
+                              <h3 className="text-xs font-bold text-black/80">
+                                {scene.name || `Scene ${sIdx + 1}`}
+                              </h3>
+                            </div>
+                            <span className="rounded-md bg-white px-2 py-0.5 text-[10px] font-semibold text-black/50 border border-black/6">
+                              {elements.length} elements
+                            </span>
                           </div>
-                        )}
 
-                        <p className="px-2 py-1.5 text-[9px] font-bold text-black/35">
-                          Ảnh{' '}
-                          {index +
-                            1}
-                        </p>
-                      </div>
-                    )
-                  )}
-              </div>
-            </ContentDetails>
+                          <div className="mt-3 space-y-2">
+                            {elements.map((el: any, eIdx: number) => (
+                              <div
+                                key={el.id || eIdx}
+                                className="flex items-start gap-2.5 rounded-[8px] bg-white p-2.5 text-xs border border-black/4"
+                              >
+                                <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-rose-600">
+                                  {el.type}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  {el.type === 'text' && (
+                                    <p className="line-clamp-2 text-xs text-black/70">
+                                      {el.content || '—'}
+                                    </p>
+                                  )}
+                                  {el.type === 'image' && (
+                                    <div className="flex items-center gap-2">
+                                      {el.src ? (
+                                        <img
+                                          src={el.src}
+                                          alt=""
+                                          className="h-10 w-10 rounded object-cover border border-black/8"
+                                        />
+                                      ) : (
+                                        <span className="text-[10px] text-black/30">Không có ảnh</span>
+                                      )}
+                                      <span className="truncate text-[10px] text-black/40">
+                                        {el.alt || 'Image element'}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {el.type === 'button' && (
+                                    <div className="flex items-center gap-2 text-xs">
+                                      <span className="font-semibold text-black/80">
+                                        {el.label || 'Nút bấm'}
+                                      </span>
+                                      {el.action && (
+                                        <span className="text-[10px] text-black/40">
+                                          → {el.action.type}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {el.type !== 'text' && el.type !== 'image' && el.type !== 'button' && (
+                                    <p className="text-[11px] text-black/60">
+                                      {JSON.stringify(el)}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ContentDetails>
 
-            <ContentDetails
-              title={`Playlist (${config.gifts.gift2.playlist.length})`}
-            >
-              <div className="divide-y divide-black/6">
-                {config.gifts
-                  .gift2
-                  .playlist
-                  .map(
-                    (
-                      track,
-                      index
-                    ) => (
-                      <div
-                        key={
-                          track.id ||
-                          index
-                        }
-                        className="py-3 first:pt-0 last:pb-0"
-                      >
-                        <p className="text-xs font-bold">
-                          {track.title ||
-                            `Bài ${index + 1}`}
-                        </p>
+                {config.audio?.url && (
+                  <ContentDetails title="Nhạc nền" open>
+                    <DetailRow label="Audio URL" value={config.audio.url} />
+                    {config.audio.title && (
+                      <DetailRow label="Tên bài hát" value={config.audio.title} />
+                    )}
+                  </ContentDetails>
+                )}
+              </>
+            ) : (
+              <>
+                <ContentDetails
+                  title="Nội dung cơ bản"
+                  open
+                >
+                  <DetailRow
+                    label="Câu hỏi"
+                    value={
+                      config?.proposal?.question || '—'
+                    }
+                  />
 
-                        <p className="mt-1 text-[10px] text-black/35">
-                          {track.artist ||
-                            '—'}
-                        </p>
+                  <DetailRow
+                    label="Nút YES"
+                    value={
+                      config?.proposal?.yesBtnText || '—'
+                    }
+                  />
 
-                        {track.youtubeUrl && (
-                          <p className="mt-1 truncate text-[9px] text-black/25">
-                            {track.youtubeUrl}
+                  <DetailRow
+                    label="Biệt danh"
+                    value={
+                      config?.couple?.nickname ||
+                      '—'
+                    }
+                  />
+                </ContentDetails>
+
+                {config?.gifts?.gift1?.photos && (
+                  <ContentDetails
+                    title={`Ảnh kỷ niệm (${config.gifts.gift1.photos.length || 0})`}
+                  >
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {(config.gifts.gift1.photos || []).map(
+                        (
+                          photo: any,
+                          index: number
+                        ) => (
+                          <div
+                            key={
+                              photo?.id ||
+                              index
+                            }
+                            className="overflow-hidden rounded-[10px] bg-[#f4f1f1]"
+                          >
+                            {photo?.url ? (
+                              <img
+                                src={
+                                  photo.url
+                                }
+                                alt=""
+                                className="aspect-square w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex aspect-square items-center justify-center text-[10px] text-black/25">
+                                Trống
+                              </div>
+                            )}
+
+                            <p className="px-2 py-1.5 text-[9px] font-bold text-black/35">
+                              Ảnh{' '}
+                              {index +
+                                1}
+                            </p>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </ContentDetails>
+                )}
+
+                {config?.gifts?.gift2?.playlist && (
+                  <ContentDetails
+                    title={`Playlist (${config.gifts.gift2.playlist.length || 0})`}
+                  >
+                    <div className="divide-y divide-black/6">
+                      {(config.gifts.gift2.playlist || []).map(
+                        (
+                          track: any,
+                          index: number
+                        ) => (
+                          <div
+                            key={
+                              track?.id ||
+                              index
+                            }
+                            className="py-3 first:pt-0 last:pb-0"
+                          >
+                            <p className="text-xs font-bold">
+                              {track?.title ||
+                                `Bài ${index + 1}`}
+                            </p>
+
+                            <p className="mt-1 text-[10px] text-black/35">
+                              {track?.artist ||
+                                '—'}
+                            </p>
+
+                            {track?.youtubeUrl && (
+                              <p className="mt-1 truncate text-[9px] text-black/25">
+                                {track.youtubeUrl}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </ContentDetails>
+                )}
+
+                {config?.gifts?.gift3?.letter && (
+                  <ContentDetails
+                    title="Bức thư"
+                  >
+                    <p className="text-xs font-bold text-[#b83e57]">
+                      {
+                        config.gifts.gift3.letter.salutation || '—'
+                      }
+                    </p>
+
+                    <div className="mt-3 space-y-2">
+                      {(config.gifts.gift3.letter.paragraphs || []).map(
+                        (
+                          paragraph: string,
+                          index: number
+                        ) => (
+                          <p
+                            key={
+                              index
+                            }
+                            className="text-xs leading-5 text-black/55"
+                          >
+                            {paragraph}
                           </p>
-                        )}
-                      </div>
-                    )
-                  )}
-              </div>
-            </ContentDetails>
-
-            <ContentDetails
-              title="Bức thư"
-            >
-              <p className="text-xs font-bold text-[#b83e57]">
-                {
-                  config.gifts
-                    .gift3
-                    .letter
-                    .salutation
-                }
-              </p>
-
-              <div className="mt-3 space-y-2">
-                {config.gifts
-                  .gift3
-                  .letter
-                  .paragraphs
-                  .map(
-                    (
-                      paragraph,
-                      index
-                    ) => (
-                      <p
-                        key={
-                          index
-                        }
-                        className="text-xs leading-5 text-black/55"
-                      >
-                        {paragraph}
-                      </p>
-                    )
-                  )}
-              </div>
-            </ContentDetails>
+                        )
+                      )}
+                    </div>
+                  </ContentDetails>
+                )}
+              </>
+            )}
           </section>
         </div>
       </main>

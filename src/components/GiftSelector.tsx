@@ -99,18 +99,15 @@ React.FC<
         <h1
           style={{
             color:
-              design.gifts
-                .headingColor,
+              design?.gifts?.headingColor || '#c9435d',
             fontFamily:
-              design.fonts
-                .heading,
+              design?.fonts?.heading || 'sans-serif',
             fontSize:
-              `clamp(24px, 5vw, ${design.gifts.headingSize}px)`,
+              `clamp(24px, 5vw, ${design?.gifts?.headingSize || 28}px)`,
           }}
           className="mb-3 font-bold"
         >
-          {config.proposal
-            .successHeading ||
+          {config?.proposal?.successHeading ||
             "I knew you'd say yes 💕"}
         </h1>
       </AnimatedElement>
@@ -127,13 +124,11 @@ React.FC<
       >
         <img
           src={
-            config
-              .resolvedAssets?.[
-                LOVE_ASSET_SLOT_IDS
-                  .proposalSuccess
-              ] ||
-            config.proposal
-              .successGif ||
+            config?.resolvedAssets?.[
+              LOVE_ASSET_SLOT_IDS
+                .proposalSuccess
+            ] ||
+            config?.proposal?.successGif ||
             '/images/gifts/success.gif'
           }
           alt="Happy cat"

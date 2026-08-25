@@ -1080,15 +1080,15 @@ export const CheckoutPage: React.FC<
             <div className="p-5 sm:p-6">
               <div className="space-y-3 text-xs text-slate-500">
                 <SummaryLine
-                  text={`${config.gifts.gift1.photos.length} ảnh kỷ niệm`}
+                  text={`${config?.gifts?.gift1?.photos?.length || 0} ảnh kỷ niệm`}
                 />
 
                 <SummaryLine
-                  text={`${config.gifts.gift2.playlist.length} bài hát`}
+                  text={`${config?.gifts?.gift2?.playlist?.length || 0} bài hát`}
                 />
 
                 <SummaryLine
-                  text={`${config.gifts.gift3.letter.paragraphs.length} đoạn thư`}
+                  text={`${config?.gifts?.gift3?.letter?.paragraphs?.length || 0} đoạn thư`}
                 />
 
                 <SummaryLine
@@ -1126,13 +1126,13 @@ export const CheckoutPage: React.FC<
                 </p>
 
                 <p className="mt-1 text-sm font-bold text-slate-800">
-                  {config.couple.senderName}
+                  {config?.couple?.senderName || 'Bạn'}
                   {' → '}
-                  {config.couple.receiverName}
+                  {config?.couple?.receiverName || 'Người ấy'}
                 </p>
 
                 <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
-                  {config.proposal.question}
+                  {config?.proposal?.question || 'Em có yêu anh không?'}
                 </p>
               </div>
 

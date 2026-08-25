@@ -771,12 +771,12 @@ React.FC<Props> = ({
                 onChange={(
                   event
                 ) => {
-                  const files =
-                    Array.from(
-                      event.target
-                        .files ||
-                      []
-                    );
+                  const files: File[] =
+                    event.target.files
+                      ? Array.from(
+                          event.target.files
+                        )
+                      : [];
 
                   event.target.value =
                     '';

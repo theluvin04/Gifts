@@ -175,12 +175,12 @@ export const ShareGiftModal: React.FC<
             <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:text-sm">
               Món quà từ{' '}
               <span className="font-semibold text-rose-600">
-                {config.couple.senderName ||
+                {config?.couple?.senderName ||
                   'Bạn'}
               </span>{' '}
               gửi đến{' '}
               <span className="font-semibold text-rose-600">
-                {config.couple.receiverName ||
+                {config?.couple?.receiverName ||
                   'Người ấy'}
               </span>
               . Khi link được tạo, phiên bản hiện tại

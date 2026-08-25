@@ -68,7 +68,7 @@ React.FC<
 
     const loadPrices =
       async () => {
-        const uniqueIds =
+        const uniqueIds: string[] =
           Array.from(
             new Set(
               items.map(

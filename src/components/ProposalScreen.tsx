@@ -49,45 +49,48 @@ React.FC<
     setRejectCount,
   ] = useState(0);
 
-  const stages =
-    config.proposal
-      .noBtnStages;
+  const proposal = config?.proposal || {
+    question: 'Em có yêu anh không?',
+    yesBtnText: 'Yêu ơi là yêu 💕',
+    noBtnStages: [],
+    initialGif: '/images/gifts/proposal-initial.gif',
+    successHeading: "Anh biết em sẽ đồng ý mà 💕",
+    successGif: '/images/gifts/success.gif',
+  };
+
+  const stages = proposal.noBtnStages || [];
 
   const currentStage =
     stages[
       Math.min(
         rejectCount,
-        stages.length - 1
+        Math.max(0, stages.length - 1)
       )
-    ];
+    ] || { text: 'Không nha 😜', hint: proposal.question, gifUrl: proposal.initialGif };
 
   const currentHeading =
     rejectCount === 0
-      ? config.proposal
-          .question
+      ? proposal.question
       : currentStage.hint ||
         currentStage.text ||
-        config.proposal
-          .question;
+        proposal.question;
 
   const currentGif =
     rejectCount === 0
       ? (
-          config
-            .resolvedAssets?.[
-              LOVE_ASSET_SLOT_IDS
-                .proposalInitial
-            ] ||
-          config.proposal
-            .initialGif
+          config?.resolvedAssets?.[
+            LOVE_ASSET_SLOT_IDS
+              .proposalInitial
+          ] ||
+          proposal.initialGif
         )
       : (
-          config
-            .resolvedAssets?.[
-              LOVE_ASSET_SLOT_IDS
-                .proposalNo
-            ] ||
-          currentStage.gifUrl
+          config?.resolvedAssets?.[
+            LOVE_ASSET_SLOT_IDS
+              .proposalNo
+          ] ||
+          currentStage.gifUrl ||
+          proposal.initialGif
         );
 
   const handleNo = () => {
@@ -104,6 +107,12 @@ React.FC<
     onYesAccepted();
   };
 
+  const textColor = design?.colors?.text || '#191919';
+  const bodyFont = design?.fonts?.body || 'sans-serif';
+  const headingFont = design?.fonts?.heading || 'sans-serif';
+  const questionColor = design?.proposal?.questionColor || '#e11d48';
+  const questionSize = design?.proposal?.questionSize || 28;
+
   return (
     <motion.section
       initial={{
@@ -117,10 +126,8 @@ React.FC<
         scale: 1.04,
       }}
       style={{
-        color:
-          design.colors.text,
-        fontFamily:
-          design.fonts.body,
+        color: textColor,
+        fontFamily: bodyFont,
       }}
       className="relative flex min-h-[100svh] w-full items-center justify-center overflow-hidden px-4"
     >
@@ -140,14 +147,9 @@ React.FC<
             y: 0,
           }}
           style={{
-            color:
-              design.proposal
-                .questionColor,
-            fontFamily:
-              design.fonts
-                .heading,
-            fontSize:
-              `clamp(20px, 5vw, ${design.proposal.questionSize}px)`,
+            color: questionColor,
+            fontFamily: headingFont,
+            fontSize: `clamp(20px, 5vw, ${questionSize}px)`,
           }}
           className="mb-6 mt-5 max-w-[290px] text-center font-bold leading-[1.2] sm:max-w-[520px]"
         >
@@ -159,8 +161,7 @@ React.FC<
             rejectCount
           }
           yesText={
-            config.proposal
-              .yesBtnText
+            proposal.yesBtnText
           }
           noText={
             rejectCount === 0

@@ -280,7 +280,10 @@ React.FC<Props> = ({
     draggingRef.current = true;
 
     const initialFrames =
-      new Map(
+      new Map<
+        string,
+        SceneElementFrame
+      >(
         elements.map(
           (element) => [
             element.id,
@@ -350,7 +353,12 @@ React.FC<Props> = ({
         : selection.bottom;
 
     const initialBounds =
-      new Map(
+      new Map<
+        string,
+        ReturnType<
+          typeof getFrameBounds
+        >
+      >(
         elements.map(
           (element) => {
             const frame =
