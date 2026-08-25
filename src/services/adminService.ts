@@ -427,11 +427,18 @@ export const confirmAdminBankPayment =
       await sendOrderConfirmationEmail(
         giftId
       );
-    } catch (error) {
+    } catch (error: any) {
       console.warn(
         'Order confirmation email failed:',
         giftId,
         error
+      );
+
+      throw new Error(
+        `Đơn đã xác nhận nhưng gửi email thất bại: ${
+          error?.message ||
+          'Không rõ lỗi mail.'
+        }`
       );
     }
   };
@@ -472,14 +479,32 @@ export const setAdminGiftPublished =
         await sendOrderConfirmationEmail(
           giftId
         );
-      } catch (error) {
+      } catch (error: any) {
         console.warn(
           'Order confirmation email failed:',
           giftId,
           error
         );
+
+        throw new Error(
+          `Gift đã publish nhưng gửi email thất bại: ${
+            error?.message ||
+            'Không rõ lỗi mail.'
+          }`
+        );
       }
     }
+  };
+
+export const resendAdminOrderConfirmationEmail =
+  async (
+    giftId: string
+  ) => {
+    await assertAdminAccess();
+
+    return sendOrderConfirmationEmail(
+      giftId
+    );
   };
 
 export const deleteAdminOrder =

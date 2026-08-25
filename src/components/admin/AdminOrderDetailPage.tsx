@@ -23,6 +23,7 @@ import {
   loginAdminWithGoogle,
   logoutAdmin,
   markAdminOrderPaid,
+  resendAdminOrderConfirmationEmail,
   setAdminGiftPublished,
 } from '../../services/adminService';
 
@@ -119,12 +120,19 @@ React.FC<Props> = ({
       | 'paid'
       | 'publish'
       | 'unpublish'
+      | 'email'
       | 'delete'
     >('');
 
   const [
     error,
     setError,
+  ] =
+    useState('');
+
+  const [
+    notice,
+    setNotice,
   ] =
     useState('');
 
@@ -223,6 +231,7 @@ React.FC<Props> = ({
         name
       );
       setError('');
+      setNotice('');
 
       try {
         await callback();
@@ -524,6 +533,12 @@ React.FC<Props> = ({
           </section>
         )}
 
+        {notice && (
+          <div className="mb-4 rounded-[13px] border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+            {notice}
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 rounded-[13px] border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
             {error}
@@ -678,6 +693,45 @@ React.FC<Props> = ({
                         order.id,
                         true
                       )
+                  )
+                }
+              />
+            )}
+
+            {paid &&
+            published &&
+            order.customer?.email && (
+              <PrimaryAction
+                label={
+                  action ===
+                  'email'
+                    ? 'Đang gửi email...'
+                    : 'Gửi email xác nhận'
+                }
+                loading={
+                  action ===
+                  'email'
+                }
+                disabled={
+                  action !== ''
+                }
+                onClick={() =>
+                  void runAction(
+                    'email',
+                    async () => {
+                      const result =
+                        await resendAdminOrderConfirmationEmail(
+                          order.id
+                        );
+
+                      setNotice(
+                        result.alreadySent
+                          ? `Email đã được gửi trước đó tới ${result.to || order.customer!.email}.`
+                          : result.processing
+                            ? 'Email đang được xử lý, không gửi thêm để tránh trùng.'
+                            : `Đã gửi email xác nhận tới ${result.to || order.customer!.email}.`
+                      );
+                    }
                   )
                 }
               />

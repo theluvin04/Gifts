@@ -1208,12 +1208,60 @@ export default async function handler(
   response: any
 ) {
   if (
+    request.method ===
+    'GET'
+  ) {
+    const configuredUser =
+      Boolean(
+        String(
+          process.env
+            .GMAIL_USER ||
+            ''
+        ).trim()
+      );
+
+    const configuredPassword =
+      Boolean(
+        String(
+          process.env
+            .GMAIL_APP_PASSWORD ||
+            ''
+        ).trim()
+      );
+
+    const configuredAppUrl =
+      Boolean(
+        getAppUrl()
+      );
+
+    return sendJson(
+      response,
+      200,
+      {
+        ok: true,
+        route:
+          '/api/send-order-confirmation',
+        smtpHost:
+          'smtp.gmail.com:465',
+        configured: {
+          gmailUser:
+            configuredUser,
+          gmailAppPassword:
+            configuredPassword,
+          appUrl:
+            configuredAppUrl,
+        },
+      }
+    );
+  }
+
+  if (
     request.method !==
     'POST'
   ) {
     response.setHeader(
       'Allow',
-      'POST'
+      'GET, POST'
     );
 
     return sendJson(
@@ -1709,13 +1757,29 @@ export default async function handler(
       error
     );
 
+    const rawMessage =
+      String(
+        error?.message ||
+        'Không gửi được email xác nhận.'
+      );
+
+    const friendlyMessage =
+      rawMessage.includes(
+        'SMTP 535'
+      )
+        ? 'Gmail từ chối đăng nhập SMTP. Kiểm tra GMAIL_USER và App Password 16 ký tự.'
+        : rawMessage.includes(
+            'SMTP timeout'
+          )
+          ? 'Kết nối Gmail SMTP bị timeout. Thử lại và kiểm tra Vercel Function logs.'
+          : rawMessage;
+
     return sendJson(
       response,
       500,
       {
         error:
-          error?.message ||
-          'Không gửi được email xác nhận.',
+          friendlyMessage,
       }
     );
   }
