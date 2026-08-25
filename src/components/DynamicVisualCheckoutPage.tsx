@@ -196,12 +196,16 @@ React.FC<Props> = ({
       .then((next) => {
         if (!active) return;
 
+        const visualEditor =
+          next.visualEditor;
+
         if (
           !next.visible ||
           next.status !==
             'available' ||
-          !next.visualEditor
-            ?.enabled
+          !visualEditor ||
+          visualEditor.scenes.length ===
+            0
         ) {
           throw new Error(
             'Template này hiện chưa mở bán.'
@@ -217,7 +221,7 @@ React.FC<Props> = ({
         setDraft(
           readSavedDraft(
             templateId,
-            next.visualEditor
+            visualEditor
           )
         );
       })

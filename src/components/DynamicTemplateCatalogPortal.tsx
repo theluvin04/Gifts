@@ -261,19 +261,20 @@ React.FC<Props> = ({
             template
           );
 
-        const canPreview =
-          template.status !==
-            'paused' &&
+        const canOpen =
+          template.visible &&
+          template.status ===
+            'available' &&
           Boolean(
             template.visualEditor
-              ?.enabled
+              ?.scenes?.length
           );
 
         return (
           <button
             key={template.id}
             type="button"
-            disabled={!canPreview}
+            disabled={!canOpen}
             onClick={() =>
               onOpenTemplate(
                 template.id

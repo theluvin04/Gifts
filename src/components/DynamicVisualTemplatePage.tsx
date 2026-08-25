@@ -205,12 +205,19 @@ React.FC<Props> = ({
       .then((next) => {
         if (!active) return;
 
+        const visualEditor =
+          next.visualEditor;
+
+        // Template động chỉ cần đang bán + đang hiển thị + có scene thật.
+        // Không chặn bằng visualEditor.enabled vì template cũ có thể lưu cờ này = false
+        // dù Admin đã thiết kế đầy đủ và đã chuyển trạng thái sang Đang bán.
         if (
           !next.visible ||
           next.status !==
             'available' ||
-          !next.visualEditor
-            ?.enabled
+          !visualEditor ||
+          visualEditor.scenes.length ===
+            0
         ) {
           setError(
             'Template này hiện chưa mở bán.'
@@ -222,7 +229,7 @@ React.FC<Props> = ({
         setDraft(
           loadDraft(
             templateId,
-            next.visualEditor
+            visualEditor
           )
         );
       })

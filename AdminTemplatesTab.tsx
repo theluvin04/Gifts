@@ -424,21 +424,17 @@ React.FC<Props> = ({
 
                       <span className={[
                         'shrink-0 rounded-full px-2 py-1 text-[8px] font-black',
-                        item.visible &&
-                        item.status === 'available'
+                        item.status === 'available' && item.visible
                           ? 'bg-emerald-50 text-emerald-700'
-                          : item.visible
+                          : item.status === 'coming_soon'
                             ? 'bg-amber-50 text-amber-700'
                             : 'bg-black/[0.04] text-black/35',
                       ].join(' ')}>
-                        {item.visible &&
-                        item.status === 'available'
+                        {item.status === 'available' && item.visible
                           ? 'Đang bán'
-                          : item.visible &&
-                              item.status === 'coming_soon'
+                          : item.status === 'coming_soon'
                             ? 'Sắp ra mắt'
-                            : item.visible &&
-                                item.status === 'paused'
+                            : item.status === 'paused'
                               ? 'Tạm dừng'
                               : 'Đang ẩn'}
                       </span>
@@ -826,28 +822,26 @@ React.FC<{
         <select
           value={template.status}
           onChange={(event) => {
-            const status =
+            const nextStatus =
               event.target.value as
                 TemplateConfig['status'];
 
-            const visualEditor =
-              template.visualEditor ||
-              DEFAULT_LOVE_VISUAL_EDITOR_CONFIG;
+            const isSelling =
+              nextStatus === 'available';
 
             onChange({
               ...template,
-              status,
-              visible:
-                status === 'available'
+              status: nextStatus,
+              // Một nguồn trạng thái duy nhất:
+              // Đang bán = hiện storefront + bật visual template.
+              visible: isSelling,
+              visualEditor: {
+                ...(template.visualEditor ||
+                  DEFAULT_LOVE_VISUAL_EDITOR_CONFIG),
+                enabled: isSelling
                   ? true
-                  : template.visible,
-              visualEditor:
-                status === 'available'
-                  ? {
-                      ...visualEditor,
-                      enabled: true,
-                    }
-                  : template.visualEditor,
+                  : (template.visualEditor?.enabled ?? true),
+              },
             });
           }}
           className={inputClass}
@@ -937,17 +931,6 @@ React.FC<{
           }
         />
 
-        <ToggleRow
-          label="Hiển thị trên storefront"
-          description="Tắt để ẩn template khỏi khu vực bán hàng."
-          checked={template.visible}
-          onChange={(checked) =>
-            onChange({
-              ...template,
-              visible: checked,
-            })
-          }
-        />
       </div>
     </div>
   </section>
