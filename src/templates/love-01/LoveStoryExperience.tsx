@@ -9,10 +9,6 @@ import type {
 } from '../../types';
 
 import {
-  AudioPlayer,
-} from '../../components/AudioPlayer';
-
-import {
   ProposalScreen,
 } from '../../components/ProposalScreen';
 
@@ -224,17 +220,6 @@ React.FC<
           opacity: 0;
         }
       `}</style>
-
-      <AudioPlayer
-        musicUrl={
-          config.audio
-            .backgroundMusicUrl
-        }
-        musicTitle={
-          config.audio
-            .backgroundMusicTitle
-        }
-      />
 
       <div className="fixed left-3 top-3 z-40 sm:left-4 sm:top-4">
         <button
