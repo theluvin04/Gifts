@@ -264,6 +264,10 @@ extends BaseSceneElement {
 
   textStyle?:
     SceneTextStyle;
+
+  /** Typography override used only on phone layouts. */
+  mobileTextStyle?:
+    Partial<SceneTextStyle>;
 }
 
 export interface SceneImageElement
@@ -288,6 +292,10 @@ extends BaseSceneElement {
 
   buttonStyle?:
     SceneButtonStyle;
+
+  /** Button typography/style override used only on phone layouts. */
+  mobileButtonStyle?:
+    Partial<SceneButtonStyle>;
 }
 
 export interface SceneShapeElement

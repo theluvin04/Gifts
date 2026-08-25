@@ -3,6 +3,24 @@ import path from 'node:path';
 
 const root = process.cwd();
 
+// The repository ZIP already contains the integrated fix. Keep the old
+// Windows helper harmless if someone runs it again after extracting the ZIP.
+const integratedInspector = path.join(
+  root,
+  'src/components/admin/visual-editor/InspectorPanel.tsx'
+);
+
+if (
+  fs.existsSync(integratedInspector) &&
+  fs.readFileSync(integratedInspector, 'utf8')
+    .includes('mobileTextStyle')
+) {
+  console.log(
+    'OK: Responsive typography fix is already integrated; no changes needed.'
+  );
+  process.exit(0);
+}
+
 const files = {
   controls: path.join(
     root,

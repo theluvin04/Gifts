@@ -976,6 +976,9 @@ React.FC<{
             element={
               element
             }
+            device={
+              device
+            }
             onChange={
               onChange
             }
@@ -1031,6 +1034,9 @@ React.FC<{
           <ButtonControls
             element={
               element
+            }
+            device={
+              device
             }
             onChange={
               onChange
@@ -2036,6 +2042,9 @@ React.FC<{
       }
     >;
 
+  device:
+    DeviceMode;
+
   onChange: (
     updater: (
       element:
@@ -2045,11 +2054,26 @@ React.FC<{
   ) => void;
 }> = ({
   element,
+  device,
   onChange,
 }) => {
-  const style =
+  const desktopStyle =
     element.textStyle ||
     {};
+
+  const mobileStyle =
+    element.mobileTextStyle ||
+    (desktopStyle as any).mobile ||
+    {};
+
+  const style =
+    device ===
+    'mobile'
+      ? {
+          ...desktopStyle,
+          ...mobileStyle,
+        }
+      : desktopStyle;
 
   const patch = (
     next:
@@ -2059,20 +2083,48 @@ React.FC<{
       >
   ) =>
     onChange(
-      (current) => ({
-        ...current,
-        textStyle: {
-          ...(
-            current.type ===
-            'text'
-              ? current
-                  .textStyle
-              : {}
-          ),
-          ...next,
-        },
-      } as
-        SceneElement)
+      (
+        current
+      ) => {
+        if (
+          current.type !==
+          'text'
+        ) {
+          return current;
+        }
+
+        const currentStyle =
+          current.textStyle ||
+          {};
+
+        if (
+          device ===
+          'mobile'
+        ) {
+          const currentMobileStyle =
+            current.mobileTextStyle ||
+            (currentStyle as any).mobile ||
+            {};
+
+          return {
+            ...current,
+            mobileTextStyle: {
+              ...currentMobileStyle,
+              ...next,
+            },
+          } as
+            SceneElement;
+        }
+
+        return {
+          ...current,
+          textStyle: {
+            ...currentStyle,
+            ...next,
+          },
+        } as
+          SceneElement;
+      }
     );
 
   return (
@@ -2131,7 +2183,7 @@ React.FC<{
             style.fontSize ||
             24
           }
-          min={6}
+          min={1}
           max={240}
           step={1}
           suffix="px"
@@ -3124,6 +3176,9 @@ React.FC<{
       }
     >;
 
+  device:
+    DeviceMode;
+
   onChange: (
     updater: (
       element:
@@ -3133,11 +3188,26 @@ React.FC<{
   ) => void;
 }> = ({
   element,
+  device,
   onChange,
 }) => {
-  const style =
+  const desktopStyle =
     element.buttonStyle ||
     {};
+
+  const mobileStyle =
+    element.mobileButtonStyle ||
+    (desktopStyle as any).mobile ||
+    {};
+
+  const style =
+    device ===
+    'mobile'
+      ? {
+          ...desktopStyle,
+          ...mobileStyle,
+        }
+      : desktopStyle;
 
   const patch = (
     next:
@@ -3147,20 +3217,48 @@ React.FC<{
       >
   ) =>
     onChange(
-      (current) => ({
-        ...current,
-        buttonStyle: {
-          ...(
-            current.type ===
-            'button'
-              ? current
-                  .buttonStyle
-              : {}
-          ),
-          ...next,
-        },
-      } as
-        SceneElement)
+      (
+        current
+      ) => {
+        if (
+          current.type !==
+          'button'
+        ) {
+          return current;
+        }
+
+        const currentStyle =
+          current.buttonStyle ||
+          {};
+
+        if (
+          device ===
+          'mobile'
+        ) {
+          const currentMobileStyle =
+            current.mobileButtonStyle ||
+            (currentStyle as any).mobile ||
+            {};
+
+          return {
+            ...current,
+            mobileButtonStyle: {
+              ...currentMobileStyle,
+              ...next,
+            },
+          } as
+            SceneElement;
+        }
+
+        return {
+          ...current,
+          buttonStyle: {
+            ...currentStyle,
+            ...next,
+          },
+        } as
+          SceneElement;
+      }
     );
 
   return (
@@ -3237,7 +3335,7 @@ React.FC<{
             style.fontSize ||
             16
           }
-          min={6}
+          min={1}
           max={120}
           step={1}
           suffix="px"

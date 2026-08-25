@@ -210,9 +210,22 @@ React.FC<
         element.type ===
         'text'
       ) {
-        const style =
+        const desktopStyle =
           element.textStyle ||
           {};
+
+        const mobileStyle =
+          element.mobileTextStyle ||
+          (desktopStyle as any).mobile ||
+          {};
+
+        const style =
+          mobile
+            ? {
+                ...desktopStyle,
+                ...mobileStyle,
+              }
+            : desktopStyle;
 
         return (
           <div
@@ -536,9 +549,22 @@ React.FC<
         element.type ===
         'button'
       ) {
-        const style =
+        const desktopStyle =
           element.buttonStyle ||
           {};
+
+        const mobileStyle =
+          element.mobileButtonStyle ||
+          (desktopStyle as any).mobile ||
+          {};
+
+        const style =
+          mobile
+            ? {
+                ...desktopStyle,
+                ...mobileStyle,
+              }
+            : desktopStyle;
 
         return (
           <motion.button

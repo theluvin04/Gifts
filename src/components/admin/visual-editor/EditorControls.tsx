@@ -1,4 +1,8 @@
-import React from 'react';
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   clamp,
@@ -256,51 +260,205 @@ React.FC<{
   step,
   suffix = '',
   onChange,
-}) => (
-  <label className="block">
-    <span className="mb-1 block text-[9px] font-bold text-black/40">
-      {label}
-    </span>
+}) => {
+  const focusedRef =
+    useRef(false);
 
-    <div className="flex items-center rounded-[8px] border border-black/10 bg-[#faf9f8]">
-      <input
-        type="number"
-        value={
-          Number.isFinite(
-            value
-          )
-            ? value
-            : 0
-        }
-        min={min}
-        max={max}
-        step={step}
-        onChange={(
-          event
-        ) =>
-          onChange(
-            clamp(
-              Number(
-                event.target
-                  .value
-              ) ||
-              0,
-              min,
-              max
+  const formatValue = (
+    nextValue: number
+  ) =>
+    Number.isFinite(
+      nextValue
+    )
+      ? String(
+          nextValue
+        )
+      : '';
+
+  const [
+    draft,
+    setDraft,
+  ] = useState(
+    () =>
+      formatValue(
+        value
+      )
+  );
+
+  useEffect(() => {
+    if (
+      !focusedRef.current
+    ) {
+      setDraft(
+        formatValue(
+          value
+        )
+      );
+    }
+  }, [
+    value,
+  ]);
+
+  const commit = () => {
+    focusedRef.current =
+      false;
+
+    const trimmed =
+      draft.trim();
+
+    const parsed =
+      Number(
+        trimmed
+      );
+
+    if (
+      !trimmed ||
+      !Number.isFinite(
+        parsed
+      )
+    ) {
+      setDraft(
+        formatValue(
+          value
+        )
+      );
+
+      return;
+    }
+
+    const next =
+      clamp(
+        parsed,
+        min,
+        max
+      );
+
+    setDraft(
+      String(
+        next
+      )
+    );
+
+    if (
+      next !== value
+    ) {
+      onChange(
+        next
+      );
+    }
+  };
+
+  const handleDraftChange = (
+    raw: string
+  ) => {
+    setDraft(
+      raw
+    );
+
+    const trimmed =
+      raw.trim();
+
+    // Cho phép trạng thái trung gian khi đang gõ:
+    // rỗng, dấu âm, "1."...
+    if (
+      !trimmed ||
+      trimmed === '-' ||
+      trimmed === '+' ||
+      trimmed.endsWith(
+        '.'
+      )
+    ) {
+      return;
+    }
+
+    const parsed =
+      Number(
+        trimmed
+      );
+
+    if (
+      Number.isFinite(
+        parsed
+      ) &&
+      parsed >= min &&
+      parsed <= max
+    ) {
+      onChange(
+        parsed
+      );
+    }
+  };
+
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[9px] font-bold text-black/40">
+        {label}
+      </span>
+
+      <div className="flex items-center rounded-[8px] border border-black/10 bg-[#faf9f8]">
+        <input
+          type="number"
+          inputMode="decimal"
+          value={
+            draft
+          }
+          min={min}
+          max={max}
+          step={step}
+          onFocus={() => {
+            focusedRef.current =
+              true;
+          }}
+          onChange={(
+            event
+          ) =>
+            handleDraftChange(
+              event.target
+                .value
             )
-          )
-        }
-        className="min-w-0 flex-1 bg-transparent px-2.5 py-2 text-[10px] font-bold outline-none"
-      />
+          }
+          onBlur={
+            commit
+          }
+          onKeyDown={(
+            event
+          ) => {
+            if (
+              event.key ===
+              'Enter'
+            ) {
+              event.currentTarget
+                .blur();
 
-      {suffix && (
-        <span className="pr-2 text-[8px] font-bold text-black/25">
-          {suffix}
-        </span>
-      )}
-    </div>
-  </label>
-);
+              return;
+            }
+
+            if (
+              event.key ===
+              'Escape'
+            ) {
+              setDraft(
+                formatValue(
+                  value
+                )
+              );
+
+              event.currentTarget
+                .blur();
+            }
+          }}
+          className="min-w-0 flex-1 bg-transparent px-2.5 py-2 text-[10px] font-bold outline-none"
+        />
+
+        {suffix && (
+          <span className="pr-2 text-[8px] font-bold text-black/25">
+            {suffix}
+          </span>
+        )}
+      </div>
+    </label>
+  );
+};
 
 export const ColorInput:
 React.FC<{

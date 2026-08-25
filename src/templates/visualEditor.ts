@@ -1265,6 +1265,23 @@ const normalizeElement = (
               ...data.textStyle,
             }
           : {},
+
+      mobileTextStyle:
+        data.mobileTextStyle &&
+        typeof data
+          .mobileTextStyle ===
+          'object'
+          ? {
+              ...data.mobileTextStyle,
+            }
+          : data.textStyle?.mobile &&
+              typeof data.textStyle
+                .mobile ===
+                'object'
+            ? {
+                ...data.textStyle.mobile,
+              }
+            : undefined,
     };
   }
 
@@ -1408,6 +1425,23 @@ const normalizeElement = (
             ...data.buttonStyle,
           }
         : {},
+
+    mobileButtonStyle:
+      data.mobileButtonStyle &&
+      typeof data
+        .mobileButtonStyle ===
+        'object'
+        ? {
+            ...data.mobileButtonStyle,
+          }
+        : data.buttonStyle?.mobile &&
+            typeof data.buttonStyle
+              .mobile ===
+              'object'
+          ? {
+              ...data.buttonStyle.mobile,
+            }
+          : undefined,
   };
 };
 
