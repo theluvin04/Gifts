@@ -359,6 +359,10 @@ export interface SceneCanvasDefinition {
 
   title?: string;
 
+  pageMode?:
+    'screen' |
+    'long-page';
+
   transition?:
     SceneTransitionConfig;
 

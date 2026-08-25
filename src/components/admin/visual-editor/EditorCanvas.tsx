@@ -134,10 +134,16 @@ React.FC<Props> = ({
 
   const longPage =
     Boolean(
-      (scene.minHeight || 0) >=
-        1200 &&
-      (scene.maxWidth || 0) >=
-        1000
+      scene.pageMode ===
+        'long-page' ||
+      (
+        scene.pageMode !==
+          'screen' &&
+        (scene.minHeight || 0) >=
+          1200 &&
+        (scene.maxWidth || 0) >=
+          1000
+      )
     );
 
   const longPageHeight =

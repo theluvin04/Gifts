@@ -1483,6 +1483,14 @@ const normalizeScene = (
         120
       ),
 
+    pageMode:
+      data.pageMode ===
+        'long-page' ||
+      data.pageMode ===
+        'screen'
+        ? data.pageMode
+        : undefined,
+
     title:
       safeString(
         data.title,

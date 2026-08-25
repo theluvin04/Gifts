@@ -114,10 +114,16 @@ React.FC<
 
   const longPage =
     Boolean(
-      (scene.minHeight || 0) >=
-        1200 &&
-      (scene.maxWidth || 0) >=
-        1000
+      scene.pageMode ===
+        'long-page' ||
+      (
+        scene.pageMode !==
+          'screen' &&
+        (scene.minHeight || 0) >=
+          1200 &&
+        (scene.maxWidth || 0) >=
+          1000
+      )
     );
 
   const mobile =
@@ -205,11 +211,13 @@ React.FC<
       style={{
         maxWidth:
           longPage
-            ? mobile
-              ? 390
-              : longPageDesktopWidth
+            ? 'none'
             : scene.maxWidth ||
               1280,
+        backgroundColor:
+          longPage
+            ? background.color
+            : undefined,
       }}
       data-scene-device={
         mobile
@@ -228,6 +236,21 @@ React.FC<
     >
       <div
         style={{
+          maxWidth:
+            longPage &&
+            !mobile
+              ? longPageDesktopWidth
+              : undefined,
+          marginLeft:
+            longPage &&
+            !mobile
+              ? 'auto'
+              : undefined,
+          marginRight:
+            longPage &&
+            !mobile
+              ? 'auto'
+              : undefined,
           aspectRatio:
             String(
               aspectRatio

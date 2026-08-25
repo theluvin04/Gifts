@@ -29,6 +29,7 @@ import {
 
 import {
   AddElementButton,
+  NumberInput,
   TogglePill,
 } from './visual-editor/EditorControls';
 
@@ -154,10 +155,16 @@ const isLongPageScene = (
     SceneCanvasDefinition
 ) =>
   Boolean(
-    (scene.minHeight || 0) >=
-      1200 &&
-    (scene.maxWidth || 0) >=
-      1000
+    scene.pageMode ===
+      'long-page' ||
+    (
+      scene.pageMode !==
+        'screen' &&
+      (scene.minHeight || 0) >=
+        1200 &&
+      (scene.maxWidth || 0) >=
+        1000
+    )
   );
 
 const hasMobileFrame = (
@@ -2546,6 +2553,8 @@ React.FC<Props> = ({
           ...scene,
           aspectRatio:
             16 / 9,
+          pageMode:
+            'screen',
           minHeight:
             undefined,
           maxWidth:
@@ -2558,6 +2567,8 @@ React.FC<Props> = ({
 
       updateScene({
         ...scene,
+        pageMode:
+          'long-page',
         minHeight:
           LONG_PAGE_DEFAULT_HEIGHT,
         maxWidth:
@@ -2582,8 +2593,8 @@ React.FC<Props> = ({
       const safeHeight =
         clamp(
           height,
-          1800,
-          4000
+          1200,
+          10000
         );
 
       updateScene({
@@ -2698,29 +2709,48 @@ React.FC<Props> = ({
             />
 
             {longPage && (
-              <select
-                value={
-                  String(
-                    scene.minHeight ||
+              <div className="flex min-w-[280px] flex-1 items-end gap-2 rounded-[9px] border border-black/7 bg-[#faf9f8] px-2.5 py-1.5 xl:max-w-[460px]">
+                <label className="min-w-0 flex-1 pb-1">
+                  <span className="mb-1 block text-[8px] font-black uppercase tracking-[0.08em] text-black/30">
+                    Kéo chiều dài
+                  </span>
+                  <input
+                    type="range"
+                    value={
+                      scene.minHeight ||
                       LONG_PAGE_DEFAULT_HEIGHT
-                  )
-                }
-                onChange={(event) =>
-                  setLongPageHeight(
-                    Number(
-                      event.target.value
-                    )
-                  )
-                }
-                className="rounded-[8px] border border-black/8 bg-white px-2 py-2 text-[9px] font-black text-black/50 outline-none"
-                title="Chiều cao trang dài"
-              >
-                <option value="2000">Ngắn · 2000 (≈ 1.5 màn hình)</option>
-                <option value="2600">Vừa · 2600 (≈ 1.8 màn hình)</option>
-                <option value="3200">Chuẩn · 3200 (≈ 2 màn hình)</option>
-                <option value="3500">Canva · 3500 (≈ 2.1 màn hình)</option>
-                <option value="4000">Rất dài · 4000 (≈ 2.4 màn hình)</option>
-              </select>
+                    }
+                    min={1200}
+                    max={10000}
+                    step={100}
+                    onChange={(event) =>
+                      setLongPageHeight(
+                        Number(
+                          event.target.value
+                        )
+                      )
+                    }
+                    className="h-1.5 w-full cursor-ew-resize accent-[#cf5068]"
+                  />
+                </label>
+
+                <div className="w-[116px] shrink-0">
+                  <NumberInput
+                    label="Chiều dài"
+                    value={
+                      scene.minHeight ||
+                      LONG_PAGE_DEFAULT_HEIGHT
+                    }
+                    min={1200}
+                    max={10000}
+                    step={100}
+                    suffix="px"
+                    onChange={
+                      setLongPageHeight
+                    }
+                  />
+                </div>
+              </div>
             )}
 
             {device ===
