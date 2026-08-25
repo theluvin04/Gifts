@@ -40,8 +40,8 @@ import {
 } from './visual-editor/CanvasQuickBar';
 
 import {
-  AssetLibraryModal,
-} from './visual-editor/AssetLibraryModal';
+  QuickAssetPickerModal,
+} from './visual-editor/QuickAssetPickerModal';
 
 import {
   EditorToolbar,
@@ -67,6 +67,7 @@ import {
   AlignAction,
   CanvasAlignAction,
   cloneValue,
+  clamp,
   DeviceMode,
   getEffectiveFrame,
   getElementLabel,
@@ -116,6 +117,693 @@ type AssetPickerTarget =
       elementId:
         string;
     };
+
+const MOBILE_ASPECT_RATIO =
+  9 / 16;
+
+const MOBILE_MARGIN_X =
+  5;
+
+const MOBILE_MARGIN_Y =
+  4;
+
+const hasMobileFrame = (
+  element:
+    SceneElement
+) =>
+  Boolean(
+    element.mobileFrame &&
+    Object.keys(
+      element.mobileFrame
+    ).length >
+      0
+  );
+
+const isLayoutContentElement = (
+  element:
+    SceneElement
+) =>
+  element.type ===
+    'text' ||
+  element.type ===
+    'button' ||
+  element.type ===
+    'image' ||
+  element.type ===
+    'photo-frame' ||
+  element.type ===
+    'custom';
+
+const getSmartWidthMultiplier = (
+  element:
+    SceneElement
+) => {
+  if (
+    element.groupId
+  ) {
+    return 1.45;
+  }
+
+  if (
+    element.type ===
+    'text'
+  ) {
+    return 1.55;
+  }
+
+  if (
+    element.type ===
+    'button'
+  ) {
+    return 1.5;
+  }
+
+  if (
+    element.type ===
+      'image' ||
+    element.type ===
+      'photo-frame'
+  ) {
+    return 1.65;
+  }
+
+  if (
+    element.type ===
+    'decor'
+  ) {
+    return 1.3;
+  }
+
+  return 1.4;
+};
+
+const getSmartMinWidth = (
+  element:
+    SceneElement
+) => {
+  if (
+    element.type ===
+    'text'
+  ) {
+    return 28;
+  }
+
+  if (
+    element.type ===
+    'button'
+  ) {
+    return 32;
+  }
+
+  if (
+    element.type ===
+      'image' ||
+    element.type ===
+      'photo-frame'
+  ) {
+    return 20;
+  }
+
+  if (
+    element.type ===
+    'decor'
+  ) {
+    return 8;
+  }
+
+  return 12;
+};
+
+const getSmartMaxVisualWidth = (
+  element:
+    SceneElement
+) => {
+  if (
+    element.type ===
+    'decor'
+  ) {
+    return 58;
+  }
+
+  if (
+    element.type ===
+      'image' ||
+    element.type ===
+      'photo-frame'
+  ) {
+    return 88;
+  }
+
+  return 90;
+};
+
+const clampMobileFrameToCanvas = (
+  frame:
+    SceneElementFrame
+) => {
+  let next = {
+    ...frame,
+  };
+
+  let bounds =
+    getFrameBounds(
+      next
+    );
+
+  if (
+    bounds.left <
+    MOBILE_MARGIN_X
+  ) {
+    next =
+      moveFrameToBounds(
+        next,
+        {
+          left:
+            MOBILE_MARGIN_X,
+        }
+      );
+
+    bounds =
+      getFrameBounds(
+        next
+      );
+  }
+
+  if (
+    bounds.right >
+    100 -
+      MOBILE_MARGIN_X
+  ) {
+    next =
+      moveFrameToBounds(
+        next,
+        {
+          right:
+            100 -
+            MOBILE_MARGIN_X,
+        }
+      );
+
+    bounds =
+      getFrameBounds(
+        next
+      );
+  }
+
+  if (
+    bounds.top <
+    MOBILE_MARGIN_Y
+  ) {
+    next =
+      moveFrameToBounds(
+        next,
+        {
+          top:
+            MOBILE_MARGIN_Y,
+        }
+      );
+
+    bounds =
+      getFrameBounds(
+        next
+      );
+  }
+
+  if (
+    bounds.bottom >
+    100 -
+      MOBILE_MARGIN_Y
+  ) {
+    next =
+      moveFrameToBounds(
+        next,
+        {
+          bottom:
+            100 -
+            MOBILE_MARGIN_Y,
+        }
+      );
+  }
+
+  return next;
+};
+
+const getBoundsOverlapRatio = (
+  left:
+    ReturnType<
+      typeof getFrameBounds
+    >,
+  right:
+    ReturnType<
+      typeof getFrameBounds
+    >
+) => {
+  const overlapWidth =
+    Math.max(
+      0,
+      Math.min(
+        left.right,
+        right.right
+      ) -
+      Math.max(
+        left.left,
+        right.left
+      )
+    );
+
+  const overlapHeight =
+    Math.max(
+      0,
+      Math.min(
+        left.bottom,
+        right.bottom
+      ) -
+      Math.max(
+        left.top,
+        right.top
+      )
+    );
+
+  const overlapArea =
+    overlapWidth *
+    overlapHeight;
+
+  if (
+    overlapArea <=
+    0
+  ) {
+    return 0;
+  }
+
+  const leftArea =
+    Math.max(
+      0.001,
+      left.width *
+      left.height
+    );
+
+  const rightArea =
+    Math.max(
+      0.001,
+      right.width *
+      right.height
+    );
+
+  return overlapArea /
+    Math.min(
+      leftArea,
+      rightArea
+    );
+};
+
+const toMobileFramePatch = (
+  frame:
+    SceneElementFrame
+): Partial<
+  SceneElementFrame
+> => ({
+  x:
+    frame.x,
+  y:
+    frame.y,
+  width:
+    frame.width,
+  ...(typeof frame.height ===
+  'number'
+    ? {
+        height:
+          frame.height,
+      }
+    : {}),
+});
+
+const buildSmartMobileFrames = (
+  scene:
+    SceneCanvasDefinition,
+  overwrite =
+    false
+) => {
+  const desktopAspect =
+    scene.aspectRatio ||
+    16 / 9;
+
+  const aspectCorrection =
+    MOBILE_ASPECT_RATIO /
+    Math.max(
+      0.1,
+      desktopAspect
+    );
+
+  const result:
+    Record<
+      string,
+      SceneElementFrame
+    > = {};
+
+  const workingFrames =
+    new Map<
+      string,
+      SceneElementFrame
+    >();
+
+  const desktopBounds =
+    new Map(
+      scene.elements.map(
+        (element) => [
+          element.id,
+          getFrameBounds(
+            element.frame
+          ),
+        ]
+      )
+    );
+
+  scene.elements.forEach(
+    (element) => {
+      if (
+        !overwrite &&
+        hasMobileFrame(
+          element
+        )
+      ) {
+        workingFrames.set(
+          element.id,
+          {
+            ...element.frame,
+            ...element.mobileFrame,
+          }
+        );
+        return;
+      }
+
+      const source =
+        element.frame;
+
+      let multiplier =
+        getSmartWidthMultiplier(
+          element
+        );
+
+      if (
+        source.width >=
+        68
+      ) {
+        multiplier =
+          Math.min(
+            multiplier,
+            1.1
+          );
+      } else if (
+        source.width >=
+        46
+      ) {
+        multiplier =
+          Math.min(
+            multiplier,
+            1.28
+          );
+      }
+
+      const visualScale =
+        Math.max(
+          0.2,
+          source.scale ??
+            1
+        );
+
+      const maxFrameWidth =
+        getSmartMaxVisualWidth(
+          element
+        ) /
+        visualScale;
+
+      const targetWidth =
+        clamp(
+          Math.max(
+            getSmartMinWidth(
+              element
+            ),
+            source.width *
+              multiplier
+          ),
+          1,
+          maxFrameWidth
+        );
+
+      const widthRatio =
+        targetWidth /
+        Math.max(
+          0.1,
+          source.width
+        );
+
+      const targetHeight =
+        typeof source.height ===
+        'number'
+          ? clamp(
+              source.height *
+                widthRatio *
+                aspectCorrection,
+              1,
+              90
+            )
+          : source.height;
+
+      const sourceBounds =
+        desktopBounds.get(
+          element.id
+        )!;
+
+      const targetCenterX =
+        50 +
+        (
+          sourceBounds.centerX -
+          50
+        ) *
+          0.82;
+
+      const targetCenterY =
+        MOBILE_MARGIN_Y +
+        sourceBounds.centerY *
+          (
+            1 -
+            MOBILE_MARGIN_Y /
+              50
+          );
+
+      let frame:
+        SceneElementFrame = {
+        ...source,
+        width:
+          targetWidth,
+        height:
+          targetHeight,
+      };
+
+      frame =
+        moveFrameToBounds(
+          frame,
+          {
+            centerX:
+              targetCenterX,
+            centerY:
+              targetCenterY,
+          }
+        );
+
+      frame =
+        clampMobileFrameToCanvas(
+          frame
+        );
+
+      result[
+        element.id
+      ] =
+        frame;
+
+      workingFrames.set(
+        element.id,
+        frame
+      );
+    }
+  );
+
+  const ordered =
+    scene.elements
+      .filter(
+        isLayoutContentElement
+      )
+      .sort(
+        (
+          left,
+          right
+        ) => {
+          const leftBounds =
+            getFrameBounds(
+              workingFrames.get(
+                left.id
+              ) ||
+              left.frame
+            );
+
+          const rightBounds =
+            getFrameBounds(
+              workingFrames.get(
+                right.id
+              ) ||
+              right.frame
+            );
+
+          return (
+            leftBounds.top -
+            rightBounds.top ||
+            leftBounds.left -
+            rightBounds.left
+          );
+        }
+      );
+
+  const placed:
+    SceneElement[] = [];
+
+  ordered.forEach(
+    (element) => {
+      const generated =
+        Boolean(
+          result[
+            element.id
+          ]
+        );
+
+      let currentFrame =
+        workingFrames.get(
+          element.id
+        ) ||
+        element.frame;
+
+      if (
+        generated
+      ) {
+        let currentBounds =
+          getFrameBounds(
+            currentFrame
+          );
+
+        let pushDown =
+          0;
+
+        placed.forEach(
+          (previous) => {
+            if (
+              element.groupId &&
+              previous.groupId ===
+                element.groupId
+            ) {
+              return;
+            }
+
+            const sourceCurrent =
+              desktopBounds.get(
+                element.id
+              );
+
+            const sourcePrevious =
+              desktopBounds.get(
+                previous.id
+              );
+
+            if (
+              sourceCurrent &&
+              sourcePrevious &&
+              getBoundsOverlapRatio(
+                sourceCurrent,
+                sourcePrevious
+              ) >=
+                0.16
+            ) {
+              return;
+            }
+
+            const previousFrame =
+              workingFrames.get(
+                previous.id
+              ) ||
+              previous.frame;
+
+            const previousBounds =
+              getFrameBounds(
+                previousFrame
+              );
+
+            const horizontalOverlap =
+              currentBounds.left <
+                previousBounds.right +
+                  1.5 &&
+              currentBounds.right >
+                previousBounds.left -
+                  1.5;
+
+            const verticalOverlap =
+              currentBounds.top <
+                previousBounds.bottom +
+                  2 &&
+              currentBounds.bottom >
+                previousBounds.top -
+                  2;
+
+            if (
+              !horizontalOverlap ||
+              !verticalOverlap
+            ) {
+              return;
+            }
+
+            pushDown =
+              Math.max(
+                pushDown,
+                previousBounds.bottom +
+                  2.5 -
+                  currentBounds.top
+              );
+          }
+        );
+
+        if (
+          pushDown >
+          0
+        ) {
+          currentFrame = {
+            ...currentFrame,
+            y:
+              currentFrame.y +
+              pushDown,
+          };
+
+          currentFrame =
+            clampMobileFrameToCanvas(
+              currentFrame
+            );
+
+          result[
+            element.id
+          ] =
+            currentFrame;
+
+          workingFrames.set(
+            element.id,
+            currentFrame
+          );
+        }
+      }
+
+      placed.push(
+        element
+      );
+    }
+  );
+
+  return result;
+};
 
 export const AdminVisualTemplateEditor:
 React.FC<Props> = ({
@@ -546,6 +1234,155 @@ React.FC<Props> = ({
     );
   };
 
+  const hydrateMissingMobileFrames = (
+    elements:
+      SceneElement[]
+  ) => {
+    if (
+      !scene ||
+      device !==
+      'mobile'
+    ) {
+      return elements;
+    }
+
+    const smartFrames =
+      buildSmartMobileFrames(
+        {
+          ...scene,
+          elements,
+        },
+        false
+      );
+
+    if (
+      Object.keys(
+        smartFrames
+      ).length ===
+      0
+    ) {
+      return elements;
+    }
+
+    return elements.map(
+      (element) =>
+        smartFrames[
+          element.id
+        ]
+          ? ({
+              ...element,
+              mobileFrame:
+                toMobileFramePatch(
+                  smartFrames[
+                    element.id
+                  ]
+                ),
+            } as
+              SceneElement)
+          : element
+    );
+  };
+
+  const applySmartMobileLayout = (
+    overwrite =
+      false
+  ) => {
+    if (!scene) {
+      return false;
+    }
+
+    const smartFrames =
+      buildSmartMobileFrames(
+        scene,
+        overwrite
+      );
+
+    if (
+      Object.keys(
+        smartFrames
+      ).length ===
+      0
+    ) {
+      return false;
+    }
+
+    updateScene({
+      ...scene,
+      elements:
+        scene.elements.map(
+          (element) =>
+            smartFrames[
+              element.id
+            ]
+              ? ({
+                  ...element,
+                  mobileFrame:
+                    toMobileFramePatch(
+                      smartFrames[
+                        element.id
+                      ]
+                    ),
+                } as
+                  SceneElement)
+              : element
+        ),
+    });
+
+    return true;
+  };
+
+  const openMobileDevice =
+    () => {
+      applySmartMobileLayout(
+        false
+      );
+
+      setDevice(
+        'mobile'
+      );
+
+      setSelectedElementIds(
+        []
+      );
+    };
+
+  const regenerateMobileLayout =
+    () => {
+      if (!scene) {
+        return;
+      }
+
+      const hasExisting =
+        scene.elements.some(
+          hasMobileFrame
+        );
+
+      if (
+        hasExisting
+      ) {
+        const confirmed =
+          window.confirm(
+            'Tự căn lại mobile từ Desktop sẽ ghi đè vị trí mobile hiện tại. Tiếp tục?'
+          );
+
+        if (!confirmed) {
+          return;
+        }
+      }
+
+      applySmartMobileLayout(
+        true
+      );
+
+      setDevice(
+        'mobile'
+      );
+
+      setSelectedElementIds(
+        []
+      );
+    };
+
   const addScene =
     () => {
       const next =
@@ -719,13 +1556,16 @@ React.FC<Props> = ({
         1,
     };
 
-    updateScene({
-      ...scene,
-
-      elements: [
+    const nextElements =
+      hydrateMissingMobileFrames([
         ...scene.elements,
         element,
-      ],
+      ]);
+
+    updateScene({
+      ...scene,
+      elements:
+        nextElements,
     });
 
     setSelectedElementIds([
@@ -737,20 +1577,9 @@ React.FC<Props> = ({
 
   const addPolaroid =
     () => {
-      const elementId =
-        addElement(
-          'photo-frame'
-        );
-
-      if (
-        elementId
-      ) {
-        setAssetPickerTarget({
-          kind:
-            'element',
-          elementId,
-        });
-      }
+      addElement(
+        'photo-frame'
+      );
     };
 
   const addAssetElement =
@@ -812,12 +1641,16 @@ React.FC<Props> = ({
           1,
       };
 
-      updateScene({
-        ...scene,
-        elements: [
+      const nextElements =
+        hydrateMissingMobileFrames([
           ...scene.elements,
           element,
-        ],
+        ]);
+
+      updateScene({
+        ...scene,
+        elements:
+          nextElements,
       });
 
       setSelectedElementIds([
@@ -2267,17 +3100,24 @@ React.FC<Props> = ({
                 device ===
                 'mobile'
               }
-              label="Điện thoại"
-              onClick={() => {
-                setDevice(
-                  'mobile'
-                );
-
-                setSelectedElementIds(
-                  []
-                );
-              }}
+              label="Điện thoại ✨"
+              onClick={
+                openMobileDevice
+              }
             />
+
+            {device ===
+              'mobile' && (
+              <button
+                type="button"
+                onClick={
+                  regenerateMobileLayout
+                }
+                className="rounded-[8px] border border-[#cf5068]/20 bg-[#fff7f9] px-2.5 py-2 text-[9px] font-black text-[#a63550] transition hover:bg-[#f9eef1]"
+              >
+                ✨ Tự căn lại
+              </button>
+            )}
 
             <button
               type="button"
@@ -2574,10 +3414,9 @@ React.FC<Props> = ({
           <AddElementButton
             label="+ Ảnh"
             onClick={() =>
-              setAssetPickerTarget({
-                kind:
-                  'insert',
-              })
+              addElement(
+                'image'
+              )
             }
           />
 
@@ -2786,15 +3625,15 @@ React.FC<Props> = ({
       </div>
 
       {assetPickerTarget && (
-        <AssetLibraryModal
+        <QuickAssetPickerModal
           title={
             assetPickerTarget.kind ===
               'insert'
-              ? 'Chọn tài nguyên để thêm vào khung vẽ'
+              ? 'Chọn nhanh tài nguyên'
               : assetPickerTarget.kind ===
                   'background'
-                ? 'Chọn ảnh nền'
-                : 'Thay ảnh từ kho tài nguyên'
+                ? 'Chọn nhanh ảnh nền'
+                : 'Chọn nhanh ảnh thay thế'
           }
           onClose={() =>
             setAssetPickerTarget(

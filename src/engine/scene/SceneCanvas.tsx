@@ -168,8 +168,10 @@ React.FC<
     );
 
   const aspectRatio =
-    scene.aspectRatio ||
-    9 / 16;
+    mobile
+      ? 9 / 16
+      : scene.aspectRatio ||
+        16 / 9;
 
   return (
     <div
