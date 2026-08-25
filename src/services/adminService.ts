@@ -38,6 +38,10 @@ import {
   createBlankVisualEditorConfig,
 } from '../templates/visualEditor';
 
+import {
+  sendOrderConfirmationEmail,
+} from './orderEmailService';
+
 export interface AdminSession {
   uid: string;
   email: string;
@@ -416,6 +420,20 @@ export const confirmAdminBankPayment =
     await syncPublicLookupByGiftId(
       giftId
     );
+
+    // Thanh toán là source of truth.
+    // Mail lỗi không được rollback trạng thái đơn.
+    try {
+      await sendOrderConfirmationEmail(
+        giftId
+      );
+    } catch (error) {
+      console.warn(
+        'Order confirmation email failed:',
+        giftId,
+        error
+      );
+    }
   };
 
 export const setAdminGiftPublished =
@@ -448,6 +466,20 @@ export const setAdminGiftPublished =
     await syncPublicLookupByGiftId(
       giftId
     );
+
+    if (published) {
+      try {
+        await sendOrderConfirmationEmail(
+          giftId
+        );
+      } catch (error) {
+        console.warn(
+          'Order confirmation email failed:',
+          giftId,
+          error
+        );
+      }
+    }
   };
 
 export const deleteAdminOrder =

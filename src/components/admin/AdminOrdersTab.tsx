@@ -42,6 +42,10 @@ interface Props {
   onOpenOrder: (
     id: string
   ) => void;
+  linkBusyOrderId: string;
+  onToggleLink: (
+    order: AdminOrderRecord
+  ) => void;
 }
 
 export const AdminOrdersTab:
@@ -63,6 +67,8 @@ React.FC<Props> = ({
   onDeleteOne,
   onDeleteSelected,
   onOpenOrder,
+  linkBusyOrderId,
+  onToggleLink,
 }) => {
   const selectedSet =
     new Set(
@@ -437,6 +443,49 @@ React.FC<Props> = ({
                       }
                     >
                       <div className="flex justify-end gap-1.5">
+                        {(
+                          order.status ===
+                            'published' ||
+                          order.isPublished ===
+                            true ||
+                          isPaidOrder(
+                            order
+                          )
+                        ) && (
+                          <button
+                            type="button"
+                            disabled={
+                              deleting ||
+                              linkBusyOrderId ===
+                                order.id
+                            }
+                            onClick={() =>
+                              onToggleLink(
+                                order
+                              )
+                            }
+                            className={[
+                              'min-h-9 rounded-[9px] px-2.5 text-[10px] font-black disabled:opacity-40',
+                              order.status ===
+                                'published' ||
+                              order.isPublished ===
+                                true
+                                ? 'border border-black/10 bg-white text-black/45'
+                                : 'bg-emerald-600 text-white',
+                            ].join(' ')}
+                          >
+                            {linkBusyOrderId ===
+                            order.id
+                              ? '...'
+                              : order.status ===
+                                    'published' ||
+                                  order.isPublished ===
+                                    true
+                                ? 'Tắt link'
+                                : 'Bật link'}
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() =>
@@ -624,10 +673,61 @@ React.FC<Props> = ({
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between gap-3 border-t border-black/6 bg-[#fcfbfa] px-4 py-2.5">
-                  <p className="text-[9px] text-black/28">
-                    Xóa đơn chỉ khi chắc chắn không còn cần dữ liệu.
-                  </p>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-black/6 bg-[#fcfbfa] px-4 py-2.5">
+                  <div className="flex items-center gap-2">
+                    {(
+                      paid ||
+                      order.status ===
+                        'published' ||
+                      order.isPublished ===
+                        true
+                    ) && (
+                      <button
+                        type="button"
+                        disabled={
+                          deleting ||
+                          linkBusyOrderId ===
+                            order.id
+                        }
+                        onClick={() =>
+                          onToggleLink(
+                            order
+                          )
+                        }
+                        className={[
+                          'min-h-9 rounded-[9px] px-3 text-[10px] font-black disabled:opacity-40',
+                          order.status ===
+                            'published' ||
+                          order.isPublished ===
+                            true
+                            ? 'border border-black/10 bg-white text-black/45'
+                            : 'bg-emerald-600 text-white',
+                        ].join(' ')}
+                      >
+                        {linkBusyOrderId ===
+                        order.id
+                          ? 'Đang lưu...'
+                          : order.status ===
+                                'published' ||
+                              order.isPublished ===
+                                true
+                            ? 'Tắt link'
+                            : 'Bật link'}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenOrder(
+                          order.id
+                        )
+                      }
+                      className="min-h-9 rounded-[9px] bg-[#191919] px-3 text-[10px] font-black text-white"
+                    >
+                      Mở
+                    </button>
+                  </div>
 
                   <button
                     type="button"

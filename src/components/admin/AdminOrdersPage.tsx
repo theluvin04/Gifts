@@ -21,6 +21,7 @@ import {
   loginAdminWithGoogle,
   logoutAdmin,
   saveAdminTemplateConfig,
+  setAdminGiftPublished,
 } from '../../services/adminService';
 
 import {
@@ -324,6 +325,24 @@ React.FC<Props> = ({
     isDeletingOrders,
     setIsDeletingOrders,
   ] = useState(false);
+
+  const [
+    deleteDialog,
+    setDeleteDialog,
+  ] = useState<{
+    orders:
+      AdminOrderRecord[];
+  } | null>(null);
+
+  const [
+    deleteDialogError,
+    setDeleteDialogError,
+  ] = useState('');
+
+  const [
+    linkBusyOrderId,
+    setLinkBusyOrderId,
+  ] = useState('');
 
   const [
     error,
@@ -988,55 +1007,92 @@ React.FC<Props> = ({
     );
   };
 
-  const handleDeleteOne =
+  const handleToggleGiftLink =
     async (
       order: AdminOrderRecord
     ) => {
-      const extraWarning =
-        isPaidOrder(order)
-          ? '\n\nĐơn này ĐÃ THANH TOÁN.'
-          : order.status ===
-              'published'
-            ? '\n\nGift này đang được publish.'
-            : '';
+      const published =
+        order.status ===
+          'published' ||
+        order.isPublished ===
+          true;
 
-      const confirmed =
-        window.confirm(
-          `Xóa vĩnh viễn ${getOrderCode(order)}?${extraWarning}\n\nHành động này không thể hoàn tác.`
+      if (
+        !published &&
+        !isPaidOrder(order)
+      ) {
+        setError(
+          'Chỉ bật link sau khi đơn đã thanh toán.'
         );
-
-      if (!confirmed) {
         return;
       }
 
-      setIsDeletingOrders(true);
+      setLinkBusyOrderId(
+        order.id
+      );
       setError('');
 
       try {
-        await deleteAdminOrder(
-          order.id
-        );
-        removeDeletedOrders([
+        await setAdminGiftPublished(
           order.id,
-        ]);
+          !published
+        );
+
+        const now =
+          Date.now();
+
+        setOrders(
+          (current) =>
+            current.map(
+              (item) =>
+                item.id ===
+                order.id
+                  ? {
+                      ...item,
+                      status:
+                        published
+                          ? 'draft'
+                          : 'published',
+                      isPublished:
+                        !published,
+                      updatedAtMs:
+                        now,
+                    }
+                  : item
+            )
+        );
+
         showNotice(
-          `Đã xóa ${getOrderCode(order)}.`
+          published
+            ? `Đã tắt link ${getOrderCode(order)}.`
+            : `Đã bật link ${getOrderCode(order)}.`
         );
       } catch (
-        deleteError: any
+        toggleError: any
       ) {
         setError(
           getAuthErrorMessage(
-            deleteError
+            toggleError
           )
         );
       } finally {
-        setIsDeletingOrders(false);
+        setLinkBusyOrderId('');
       }
     };
 
-  const handleDeleteSelected =
-    async () => {
+  const requestDeleteOne = (
+    order: AdminOrderRecord
+  ) => {
+    setDeleteDialogError('');
+    setDeleteDialog({
+      orders: [
+        order,
+      ],
+    });
+  };
+
+  const requestDeleteSelected =
+    () => {
       const selectedSet =
         new Set(
           selectedOrderIds
@@ -1051,28 +1107,63 @@ React.FC<Props> = ({
         );
 
       if (
-        selectedOrders.length === 0
+        selectedOrders.length ===
+        0
       ) {
-        setSelectedOrderIds([]);
-        return;
-      }
-
-      const confirmed =
-        window.confirm(
-          `Xóa vĩnh viễn ${selectedOrders.length} đơn?\n\nHành động này không thể hoàn tác.`
+        setSelectedOrderIds(
+          []
         );
-
-      if (!confirmed) {
         return;
       }
 
-      setIsDeletingOrders(true);
+      setDeleteDialogError('');
+      setDeleteDialog({
+        orders:
+          selectedOrders,
+      });
+    };
+
+  const closeDeleteDialog =
+    () => {
+      if (
+        isDeletingOrders
+      ) {
+        return;
+      }
+
+      setDeleteDialog(
+        null
+      );
+      setDeleteDialogError(
+        ''
+      );
+    };
+
+  const confirmDeleteOrders =
+    async () => {
+      if (
+        !deleteDialog ||
+        deleteDialog.orders
+          .length === 0
+      ) {
+        return;
+      }
+
+      const targets =
+        deleteDialog.orders;
+
+      setIsDeletingOrders(
+        true
+      );
+      setDeleteDialogError(
+        ''
+      );
       setError('');
 
       try {
         const results =
           await Promise.allSettled(
-            selectedOrders.map(
+            targets.map(
               (order) =>
                 deleteAdminOrder(
                   order.id
@@ -1082,34 +1173,97 @@ React.FC<Props> = ({
 
         const deletedIds =
           results
-            .map((result, index) =>
-              result.status ===
-              'fulfilled'
-                ? selectedOrders[
-                    index
-                  ].id
-                : ''
+            .map(
+              (
+                result,
+                index
+              ) =>
+                result.status ===
+                'fulfilled'
+                  ? targets[
+                      index
+                    ].id
+                  : ''
             )
             .filter(Boolean);
+
+        const failedOrders =
+          targets.filter(
+            (
+              _order,
+              index
+            ) =>
+              results[index]
+                .status ===
+              'rejected'
+          );
 
         removeDeletedOrders(
           deletedIds
         );
 
         if (
-          deletedIds.length !==
-          selectedOrders.length
+          failedOrders.length ===
+          0
         ) {
-          setError(
-            `Đã xóa ${deletedIds.length}/${selectedOrders.length} đơn. Một số đơn xóa lỗi, hãy thử lại.`
+          setDeleteDialog(
+            null
           );
-        } else {
+
+          setDeleteDialogError(
+            ''
+          );
+
           showNotice(
-            `Đã xóa ${deletedIds.length} đơn.`
+            targets.length ===
+              1
+              ? `Đã xóa ${getOrderCode(targets[0])}.`
+              : `Đã xóa ${targets.length} đơn.`
           );
+
+          return;
         }
+
+        const firstRejected =
+          results.find(
+            (result) =>
+              result.status ===
+              'rejected'
+          );
+
+        const reason =
+          firstRejected &&
+          firstRejected.status ===
+            'rejected'
+            ? getAuthErrorMessage(
+                firstRejected.reason
+              )
+            : 'Không thể xóa đơn.';
+
+        // Giữ modal mở và chỉ giữ lại những đơn xóa thất bại.
+        setDeleteDialog({
+          orders:
+            failedOrders,
+        });
+
+        setDeleteDialogError(
+          deletedIds.length >
+            0
+            ? `Đã xóa ${deletedIds.length}/${targets.length} đơn. ${failedOrders.length} đơn còn lại chưa xóa được. ${reason}`
+            : reason
+        );
+      } catch (
+        deleteError: any
+      ) {
+        setDeleteDialogError(
+          getAuthErrorMessage(
+            deleteError
+          )
+        );
       } finally {
-        setIsDeletingOrders(false);
+        setIsDeletingOrders(
+          false
+        );
       }
     };
 
@@ -1296,6 +1450,12 @@ React.FC<Props> = ({
                 openTab('templates')
               }
               onOpenOrder={onOpenOrder}
+              linkBusyOrderId={linkBusyOrderId}
+              onToggleLink={(order) =>
+                void handleToggleGiftLink(
+                  order
+                )
+              }
             />
           )}
 
@@ -1317,13 +1477,19 @@ React.FC<Props> = ({
               onClearSelection={() =>
                 setSelectedOrderIds([])
               }
-              onDeleteOne={(order) =>
-                void handleDeleteOne(order)
+              onDeleteOne={
+                requestDeleteOne
               }
-              onDeleteSelected={() =>
-                void handleDeleteSelected()
+              onDeleteSelected={
+                requestDeleteSelected
               }
               onOpenOrder={onOpenOrder}
+              linkBusyOrderId={linkBusyOrderId}
+              onToggleLink={(order) =>
+                void handleToggleGiftLink(
+                  order
+                )
+              }
             />
           )}
 
@@ -1367,6 +1533,259 @@ React.FC<Props> = ({
           )}
         </div>
       </main>
+
+      {deleteDialog && (
+        <DeleteOrdersDialog
+          orders={
+            deleteDialog.orders
+          }
+          deleting={
+            isDeletingOrders
+          }
+          error={
+            deleteDialogError
+          }
+          onCancel={
+            closeDeleteDialog
+          }
+          onConfirm={() =>
+            void confirmDeleteOrders()
+          }
+        />
+      )}
+    </div>
+  );
+};
+
+const DeleteOrdersDialog:
+React.FC<{
+  orders:
+    AdminOrderRecord[];
+  deleting: boolean;
+  error: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}> = ({
+  orders,
+  deleting,
+  error,
+  onCancel,
+  onConfirm,
+}) => {
+  const single =
+    orders.length === 1;
+
+  const paidCount =
+    orders.filter(
+      isPaidOrder
+    ).length;
+
+  const publishedCount =
+    orders.filter(
+      (order) =>
+        order.status ===
+          'published' ||
+        order.isPublished ===
+          true
+    ).length;
+
+  const totalValue =
+    orders.reduce(
+      (
+        sum,
+        order
+      ) =>
+        sum +
+        (
+          typeof order.price ===
+            'number'
+            ? order.price
+            : 0
+        ),
+      0
+    );
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/35 p-4 backdrop-blur-[2px]"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-order-title"
+      onMouseDown={(
+        event
+      ) => {
+        if (
+          event.target ===
+            event.currentTarget &&
+          !deleting
+        ) {
+          onCancel();
+        }
+      }}
+    >
+      <div className="w-full max-w-[460px] overflow-hidden rounded-[20px] border border-black/8 bg-white shadow-[0_28px_90px_rgba(0,0,0,0.22)]">
+        <div className="border-b border-black/7 px-5 py-5 sm:px-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-lg font-black text-red-600">
+              !
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-red-500">
+                Xác nhận xóa
+              </p>
+
+              <h2
+                id="delete-order-title"
+                className="mt-1 text-xl font-black tracking-[-0.035em] text-[#191919]"
+              >
+                {single
+                  ? `Xóa ${getOrderCode(orders[0])}?`
+                  : `Xóa ${orders.length} đơn đã chọn?`}
+              </h2>
+
+              <p className="mt-2 text-xs leading-5 text-black/42">
+                Dữ liệu đơn và gift sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-h-[52svh] overflow-y-auto px-5 py-4 sm:px-6">
+          {(paidCount >
+            0 ||
+            publishedCount >
+              0) && (
+            <div className="mb-4 rounded-[12px] border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs leading-5 text-amber-900">
+              {paidCount >
+                0 && (
+                <p className="font-black">
+                  {paidCount} đơn đã thanh toán.
+                </p>
+              )}
+
+              {publishedCount >
+                0 && (
+                <p className={paidCount > 0 ? 'mt-1' : 'font-black'}>
+                  {publishedCount} gift đang bật link.
+                </p>
+              )}
+
+              <p className="mt-1 text-amber-800/75">
+                Chỉ tiếp tục nếu chắc chắn không cần giữ lại dữ liệu này.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {orders
+              .slice(
+                0,
+                5
+              )
+              .map(
+                (order) => (
+                  <div
+                    key={
+                      order.id
+                    }
+                    className="flex items-center justify-between gap-4 rounded-[12px] border border-black/7 bg-[#faf9f8] px-3.5 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-xs font-black text-[#b83e57]">
+                        {getOrderCode(
+                          order
+                        )}
+                      </p>
+
+                      <p className="mt-1 truncate text-[11px] font-semibold text-black/48">
+                        {order.customer
+                          ?.fullName ||
+                          order.customer
+                            ?.phone ||
+                          'Không có tên khách'}
+                      </p>
+                    </div>
+
+                    <p className="shrink-0 text-xs font-black text-black/65">
+                      {typeof order.price ===
+                      'number'
+                        ? new Intl.NumberFormat(
+                            'vi-VN'
+                          ).format(
+                            order.price
+                          ) +
+                          ' đ'
+                        : '—'}
+                    </p>
+                  </div>
+                )
+              )}
+
+            {orders.length >
+              5 && (
+              <p className="px-1 pt-1 text-[10px] font-semibold text-black/35">
+                + {orders.length - 5} đơn khác
+              </p>
+            )}
+          </div>
+
+          {!single && (
+            <div className="mt-4 flex items-center justify-between border-t border-black/7 pt-4">
+              <span className="text-xs font-bold text-black/40">
+                Tổng giá trị
+              </span>
+
+              <span className="text-sm font-black text-black/70">
+                {new Intl.NumberFormat(
+                  'vi-VN'
+                ).format(
+                  totalValue
+                )}{' '}
+                đ
+              </span>
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-4 rounded-[12px] border border-red-200 bg-red-50 px-3.5 py-3 text-xs font-semibold leading-5 text-red-700">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 border-t border-black/7 bg-[#fcfbfa] p-4 sm:px-6">
+          <button
+            type="button"
+            disabled={
+              deleting
+            }
+            onClick={
+              onCancel
+            }
+            className="min-h-11 rounded-[11px] border border-black/10 bg-white px-4 text-xs font-black text-black/48 transition hover:bg-black/[0.025] disabled:opacity-40"
+          >
+            Hủy
+          </button>
+
+          <button
+            type="button"
+            disabled={
+              deleting
+            }
+            onClick={
+              onConfirm
+            }
+            className="min-h-11 rounded-[11px] bg-red-500 px-4 text-xs font-black text-white transition hover:bg-red-600 disabled:cursor-wait disabled:opacity-55"
+          >
+            {deleting
+              ? 'Đang xóa...'
+              : single
+                ? 'Xóa vĩnh viễn'
+                : `Xóa ${orders.length} đơn`}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

@@ -159,9 +159,13 @@ service cloud.firestore {
           && request.resource.data.status == 'draft'
         );
 
-      // Status changes / deletion are Admin-only.
-      allow update, delete: if isAdmin()
+      // Status changes are Admin-only and must keep a valid public shape.
+      allow update: if isAdmin()
         && validPublicLookup();
+
+      // On delete, request.resource does not exist.
+      // Calling validPublicLookup() here would reject every Admin delete.
+      allow delete: if isAdmin();
     }
 
     match /gifts/{giftId} {

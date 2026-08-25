@@ -28,6 +28,10 @@ interface Props {
   onOpenOrder: (
     id: string
   ) => void;
+  linkBusyOrderId: string;
+  onToggleLink: (
+    order: AdminOrderRecord
+  ) => void;
 }
 
 export const AdminDashboardTab:
@@ -41,6 +45,8 @@ React.FC<Props> = ({
   onOpenOrders,
   onOpenTemplates,
   onOpenOrder,
+  linkBusyOrderId,
+  onToggleLink,
 }) => {
   const recent =
     orders.slice(0, 5);
@@ -109,64 +115,141 @@ React.FC<Props> = ({
           ) : (
             <div className="divide-y divide-black/6">
               {recent.map(
-                (order) => (
-                  <button
-                    key={
-                      order.id
-                    }
-                    type="button"
-                    onClick={() =>
-                      onOpenOrder(
+                (order) => {
+                  const published =
+                    order.status ===
+                      'published' ||
+                    order.isPublished ===
+                      true;
+
+                  const canToggleLink =
+                    published ||
+                    order.paymentStatus ===
+                      'paid' ||
+                    order.paymentStatus ===
+                      'paid_test';
+
+                  const busy =
+                    linkBusyOrderId ===
+                    order.id;
+
+                  return (
+                    <div
+                      key={
                         order.id
-                      )
-                    }
-                    className="grid w-full gap-2 px-4 py-3.5 text-left transition hover:bg-[#fff9fa] sm:grid-cols-[120px_minmax(0,1fr)_135px] sm:items-center sm:px-5"
-                  >
-                    <div>
-                      <p className="font-mono text-xs font-black text-[#b83e57]">
-                        {getOrderCode(
-                          order
-                        )}
-                      </p>
-                      <p className="mt-1 text-[10px] text-black/28">
-                        {formatDateTime(
-                          order.createdAtMs
-                        )}
-                      </p>
-                    </div>
+                      }
+                      className="grid gap-2 px-4 py-3.5 transition hover:bg-[#fff9fa] sm:grid-cols-[120px_minmax(0,1fr)_120px_150px] sm:items-center sm:px-5"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenOrder(
+                            order.id
+                          )
+                        }
+                        className="text-left"
+                      >
+                        <p className="font-mono text-xs font-black text-[#b83e57]">
+                          {getOrderCode(
+                            order
+                          )}
+                        </p>
+                        <p className="mt-1 text-[10px] text-black/28">
+                          {formatDateTime(
+                            order.createdAtMs
+                          )}
+                        </p>
+                      </button>
 
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-black/70">
-                        {order.customer
-                          ?.fullName ||
-                          'Chưa có tên'}
-                      </p>
-                      <p className="mt-1 truncate text-[10px] text-black/32">
-                        {order.customer
-                          ?.phone ||
-                          order.customer
-                            ?.email ||
-                          '—'}
-                      </p>
-                    </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenOrder(
+                            order.id
+                          )
+                        }
+                        className="min-w-0 text-left"
+                      >
+                        <p className="truncate text-xs font-bold text-black/70">
+                          {order.customer
+                            ?.fullName ||
+                            'Chưa có tên'}
+                        </p>
+                        <p className="mt-1 truncate text-[10px] text-black/32">
+                          {order.customer
+                            ?.phone ||
+                            order.customer
+                              ?.email ||
+                            '—'}
+                        </p>
+                      </button>
 
-                    <div className="sm:text-right">
-                      <p className="text-xs font-black text-black/65">
-                        {typeof order.price ===
-                        'number'
-                          ? formatVnd(
-                              order.price
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenOrder(
+                            order.id
+                          )
+                        }
+                        className="text-left sm:text-right"
+                      >
+                        <p className="text-xs font-black text-black/65">
+                          {typeof order.price ===
+                          'number'
+                            ? formatVnd(
+                                order.price
+                              )
+                            : '—'}
+                        </p>
+                        <p className="mt-1 text-[9px] font-bold text-black/30">
+                          {getPaymentLabel(
+                            order
+                          )}
+                        </p>
+                      </button>
+
+                      <div className="flex items-center gap-1.5 sm:justify-end">
+                        {canToggleLink && (
+                          <button
+                            type="button"
+                            disabled={
+                              busy
+                            }
+                            onClick={() =>
+                              onToggleLink(
+                                order
+                              )
+                            }
+                            className={[
+                              'min-h-9 rounded-[9px] px-3 text-[10px] font-black transition disabled:opacity-45',
+                              published
+                                ? 'border border-black/10 bg-white text-black/45 hover:bg-black/[0.03]'
+                                : 'bg-emerald-600 text-white hover:bg-emerald-700',
+                            ].join(' ')}
+                          >
+                            {busy
+                              ? 'Đang lưu...'
+                              : published
+                                ? 'Tắt link'
+                                : 'Bật link'}
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenOrder(
+                              order.id
                             )
-                          : '—'}
-                      </p>
-                      <p className="mt-1 text-[9px] font-bold text-black/30">
-                        {getPaymentLabel(
-                          order
-                        )}
-                      </p>
+                          }
+                          className="min-h-9 rounded-[9px] border border-black/9 bg-white px-3 text-[10px] font-black text-black/45 hover:text-[#b83e57]"
+                        >
+                          Mở
+                        </button>
+                      </div>
                     </div>
-                  </button>
-                )
+                  );
+                }
               )}
             </div>
           )}

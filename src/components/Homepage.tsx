@@ -43,6 +43,86 @@ const formatVnd = (
     'vi-VN'
   ).format(amount) + 'đ';
 
+const HOME_TEMPLATE_CATALOG_CACHE_KEY =
+  'dearly:home-template-catalog:v1';
+
+const normalizeDynamicTemplateList = (
+  items: unknown[]
+) =>
+  items
+    .map((item) =>
+      normalizeTemplateConfig(
+        item as Record<
+          string,
+          any
+        >
+      )
+    )
+    .filter(
+      (item) =>
+        item.id !==
+          'love-01' &&
+        item.status ===
+          'available' &&
+        Boolean(
+          item.visualEditor
+            ?.scenes
+            ?.length
+        )
+    )
+    .sort((left, right) =>
+      left.name.localeCompare(
+        right.name,
+        'vi'
+      )
+    );
+
+const readCachedDynamicTemplates =
+  (): TemplateConfig[] => {
+    try {
+      const raw =
+        window.localStorage.getItem(
+          HOME_TEMPLATE_CATALOG_CACHE_KEY
+        );
+
+      if (!raw) {
+        return [];
+      }
+
+      const parsed =
+        JSON.parse(raw);
+
+      if (
+        !Array.isArray(
+          parsed
+        )
+      ) {
+        return [];
+      }
+
+      return normalizeDynamicTemplateList(
+        parsed
+      );
+    } catch {
+      return [];
+    }
+  };
+
+const writeCachedDynamicTemplates = (
+  templates: TemplateConfig[]
+) => {
+  try {
+    window.localStorage.setItem(
+      HOME_TEMPLATE_CATALOG_CACHE_KEY,
+      JSON.stringify(
+        templates
+      )
+    );
+  } catch {
+    // Cache chỉ để tránh layout shift khi vào Home.
+  }
+};
+
 const findPreviewImage = (
   template: TemplateConfig
 ) => {
@@ -158,6 +238,33 @@ React.FC<{
   );
 };
 
+const TemplateCardSkeleton =
+  () => (
+    <div
+      aria-hidden="true"
+      className="overflow-hidden rounded-[22px] border border-black/[0.06] bg-white"
+    >
+      <div className="aspect-[4/3] bg-[#f8edef]">
+        <div className="h-full w-full animate-pulse bg-gradient-to-br from-white/10 via-white/55 to-white/10" />
+      </div>
+
+      <div className="p-5">
+        <div className="h-2.5 w-16 rounded-full bg-black/[0.06]" />
+
+        <div className="mt-3 h-6 w-2/3 rounded-[8px] bg-black/[0.07]" />
+
+        <div className="mt-3 space-y-2">
+          <div className="h-3 w-full rounded-full bg-black/[0.045]" />
+          <div className="h-3 w-3/4 rounded-full bg-black/[0.045]" />
+        </div>
+
+        <div className="mt-4 border-t border-black/[0.06] pt-4">
+          <div className="h-5 w-20 rounded-[7px] bg-black/[0.07]" />
+        </div>
+      </div>
+    </div>
+  );
+
 export const HomePage:
 React.FC<HomePageProps> = ({
   onOpenLoveTemplate,
@@ -175,8 +282,14 @@ React.FC<HomePageProps> = ({
     dynamicTemplates,
     setDynamicTemplates,
   ] = useState<TemplateConfig[]>(
-    []
+    () =>
+      readCachedDynamicTemplates()
   );
+
+  const [
+    isCatalogLoading,
+    setIsCatalogLoading,
+  ] = useState(true);
 
   useEffect(() => {
     void getPublicTemplateConfig()
@@ -206,40 +319,38 @@ React.FC<HomePageProps> = ({
 
         if (!active) return;
 
-        const list = snapshot.docs
-          .map((item) => {
-            const normalized = normalizeTemplateConfig({
-              ...item.data(),
-              id: item.id,
-            });
-            writeTemplateCache(normalized);
-            return normalized;
-          })
-          .filter(
-            (item) =>
-              item.id !==
-                'love-01' &&
-              item.status ===
-                'available' &&
-              Boolean(
-                item.visualEditor
-                  ?.scenes
-                  ?.length
-              )
-          )
-          .sort((left, right) =>
-            left.name.localeCompare(
-              right.name,
-              'vi'
+        const list =
+          normalizeDynamicTemplateList(
+            snapshot.docs.map(
+              (item) => ({
+                ...item.data(),
+                id: item.id,
+              })
             )
           );
 
-        setDynamicTemplates(list);
+        list.forEach(
+          writeTemplateCache
+        );
+
+        writeCachedDynamicTemplates(
+          list
+        );
+
+        setDynamicTemplates(
+          list
+        );
       } catch (error) {
         console.warn(
           'Public template catalog:',
           error
         );
+      } finally {
+        if (active) {
+          setIsCatalogLoading(
+            false
+          );
+        }
       }
     };
 
@@ -446,6 +557,12 @@ React.FC<HomePageProps> = ({
                   );
                 }
               )}
+
+              {isCatalogLoading &&
+                dynamicTemplates.length ===
+                  0 && (
+                  <TemplateCardSkeleton />
+                )}
             </div>
           </div>
         </section>
