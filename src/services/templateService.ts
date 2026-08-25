@@ -64,6 +64,8 @@ export interface TemplateConfig {
 const TEMPLATE_CACHE_PREFIX =
   'dearly:template-config:';
 
+const memoryTemplateCache = new Map<string, TemplateConfig>();
+
 const getTemplateCacheKey = (
   templateId: string
 ) => {
@@ -73,11 +75,12 @@ const getTemplateCacheKey = (
   );
 };
 
-const writeTemplateCache = (
+export const writeTemplateCache = (
   template:
     TemplateConfig
 ) => {
   try {
+    memoryTemplateCache.set(template.id, template);
     window.localStorage.setItem(
       getTemplateCacheKey(
         template.id
@@ -376,6 +379,11 @@ export const getCachedTemplateConfigById =
   ):
     TemplateConfig |
     null => {
+    const fromMemory = memoryTemplateCache.get(templateId);
+    if (fromMemory) {
+      return fromMemory;
+    }
+
     try {
       const raw =
         window.localStorage.getItem(
@@ -402,12 +410,15 @@ export const getCachedTemplateConfigById =
         return null;
       }
 
-      return normalizeTemplateConfig(
+      const normalized = normalizeTemplateConfig(
         parsed.template,
         getFallbackForTemplate(
           templateId
         )
       );
+
+      memoryTemplateCache.set(templateId, normalized);
+      return normalized;
     } catch {
       return null;
     }

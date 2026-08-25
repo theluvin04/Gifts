@@ -756,50 +756,34 @@ React.FC<{
               </label>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col justify-center">
               <PersonalizeInput
-                label={`Tên bài ${index + 1}`}
-                value={track.title}
-                onChange={(title) =>
-                  updateTrack(index, { title })
-                }
+                label={`Link YouTube (bài ${index + 1})`}
+                value={track.youtubeUrl ?? ''}
+                placeholder="https://youtu.be/..."
+                onChange={(youtubeUrl) => {
+                  const thumbnail =
+                    getYouTubeThumbnailUrl(
+                      youtubeUrl
+                    );
+                  updateTrack(index, {
+                    youtubeUrl,
+                    ...(getYouTubeVideoId(
+                      youtubeUrl
+                    ) && thumbnail
+                      ? { coverUrl: thumbnail }
+                      : {}),
+                  });
+                }}
               />
-              <PersonalizeInput
-                label="Ca sĩ"
-                value={track.artist}
-                onChange={(artist) =>
-                  updateTrack(index, { artist })
-                }
-              />
-              <div className="sm:col-span-2">
-                <PersonalizeInput
-                  label="Link YouTube"
-                  value={track.youtubeUrl ?? ''}
-                  placeholder="https://youtu.be/..."
-                  onChange={(youtubeUrl) => {
-                    const thumbnail =
-                      getYouTubeThumbnailUrl(
-                        youtubeUrl
-                      );
-                    updateTrack(index, {
-                      youtubeUrl,
-                      ...(getYouTubeVideoId(
-                        youtubeUrl
-                      ) && thumbnail
-                        ? { coverUrl: thumbnail }
-                        : {}),
-                    });
-                  }}
-                />
-                {track.youtubeUrl &&
-                  !getYouTubeVideoId(
-                    track.youtubeUrl
-                  ) && (
-                  <p className="mt-1.5 text-[11px] font-semibold text-red-500">
-                    Link YouTube chưa đúng.
-                  </p>
-                )}
-              </div>
+              {track.youtubeUrl &&
+                !getYouTubeVideoId(
+                  track.youtubeUrl
+                ) && (
+                <p className="mt-1.5 text-[11px] font-semibold text-red-500">
+                  Link YouTube chưa đúng.
+                </p>
+              )}
             </div>
           </div>
         )

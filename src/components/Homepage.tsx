@@ -21,6 +21,7 @@ import {
   getPublicTemplateConfig,
   getTemplateDiscountPercent,
   normalizeTemplateConfig,
+  writeTemplateCache,
 } from '../services/templateService';
 
 import {
@@ -205,33 +206,35 @@ React.FC<HomePageProps> = ({
 
         if (!active) return;
 
-        setDynamicTemplates(
-          snapshot.docs
-            .map((item) =>
-              normalizeTemplateConfig({
-                ...item.data(),
-                id: item.id,
-              })
-            )
-            .filter(
-              (item) =>
-                item.id !==
-                  'love-01' &&
-                item.status ===
-                  'available' &&
-                Boolean(
-                  item.visualEditor
-                    ?.scenes
-                    ?.length
-                )
-            )
-            .sort((left, right) =>
-              left.name.localeCompare(
-                right.name,
-                'vi'
+        const list = snapshot.docs
+          .map((item) => {
+            const normalized = normalizeTemplateConfig({
+              ...item.data(),
+              id: item.id,
+            });
+            writeTemplateCache(normalized);
+            return normalized;
+          })
+          .filter(
+            (item) =>
+              item.id !==
+                'love-01' &&
+              item.status ===
+                'available' &&
+              Boolean(
+                item.visualEditor
+                  ?.scenes
+                  ?.length
               )
+          )
+          .sort((left, right) =>
+            left.name.localeCompare(
+              right.name,
+              'vi'
             )
-        );
+          );
+
+        setDynamicTemplates(list);
       } catch (error) {
         console.warn(
           'Public template catalog:',

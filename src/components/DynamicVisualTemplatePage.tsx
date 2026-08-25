@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { VisualSceneExperience } from '../engine';
 import type { SceneElement } from '../engine';
 import {
+  getCachedTemplateConfigById,
   getEffectiveTemplatePrice,
   getPublicTemplateConfigById,
   type TemplateConfig,
@@ -204,16 +205,35 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
   onBackProduct,
   onCheckout,
 }) => {
-  const [template, setTemplate] = useState<TemplateConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [template, setTemplate] = useState<TemplateConfig | null>(
+    () => getCachedTemplateConfigById(templateId)
+  );
+  const [draft, setDraft] = useState<TemplateVisualEditorConfig | null>(() => {
+    const cached = getCachedTemplateConfigById(templateId);
+    if (cached?.visualEditor) {
+      return loadDraft(templateId, cached.visualEditor);
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(
+    () => !getCachedTemplateConfigById(templateId)
+  );
   const [error, setError] = useState('');
-  const [draft, setDraft] = useState<TemplateVisualEditorConfig | null>(null);
   const [activeSceneId, setActiveSceneId] = useState('');
 
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
+    const cached = getCachedTemplateConfigById(templateId);
+    if (cached) {
+      setTemplate(cached);
+      if (cached.visualEditor) {
+        setDraft((curr) => curr || loadDraft(templateId, cached.visualEditor!));
+      }
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     setError('');
 
     void getPublicTemplateConfigById(templateId)
@@ -230,19 +250,16 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
         }
 
         setTemplate(next);
-        setDraft(
-          loadDraft(
-            templateId,
-            next.visualEditor
-          )
-        );
+        setDraft((curr) => curr || loadDraft(templateId, next.visualEditor!));
       })
       .catch((loadError: any) => {
         if (!active) return;
-        setError(
-          loadError?.message ||
-          'Không tải được template.'
-        );
+        if (!cached) {
+          setError(
+            loadError?.message ||
+            'Không tải được template.'
+          );
+        }
       })
       .finally(() => {
         if (active) setLoading(false);

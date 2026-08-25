@@ -4,6 +4,7 @@ import { Check, Copy, Loader2 } from 'lucide-react';
 import { VisualSceneExperience } from '../engine';
 import type { TemplateVisualEditorConfig } from '../templates/visualEditor';
 import {
+  getCachedTemplateConfigById,
   getEffectiveTemplatePrice,
   getPublicTemplateConfigById,
   getTemplateDiscountPercent,
@@ -82,9 +83,15 @@ export const DynamicVisualCheckoutPage: React.FC<Props> = ({
   templateId,
   onBack,
 }) => {
-  const [template, setTemplate] = useState<TemplateConfig | null>(null);
-  const [draft, setDraft] = useState<TemplateVisualEditorConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedInitial = useMemo(() => getCachedTemplateConfigById(templateId), [templateId]);
+  const [template, setTemplate] = useState<TemplateConfig | null>(cachedInitial);
+  const [draft, setDraft] = useState<TemplateVisualEditorConfig | null>(() => {
+    if (cachedInitial?.visualEditor) {
+      return readSavedDraft(templateId, cachedInitial.visualEditor);
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(!cachedInitial);
   const [error, setError] = useState('');
   const [customer, setCustomer] = useState<CheckoutCustomer>({
     fullName: '',
@@ -95,7 +102,9 @@ export const DynamicVisualCheckoutPage: React.FC<Props> = ({
   const [giftId, setGiftId] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
   const [orderCode, setOrderCode] = useState('');
-  const [checkoutPrice, setCheckoutPrice] = useState(0);
+  const [checkoutPrice, setCheckoutPrice] = useState(() =>
+    cachedInitial ? getEffectiveTemplatePrice(cachedInitial) : 0
+  );
   const [paymentReady, setPaymentReady] = useState(false);
   const [paidAndPublished, setPaidAndPublished] = useState(false);
   const [copied, setCopied] = useState('');
@@ -103,6 +112,14 @@ export const DynamicVisualCheckoutPage: React.FC<Props> = ({
 
   useEffect(() => {
     let active = true;
+
+    const cached = getCachedTemplateConfigById(templateId);
+    if (cached && hasUsableVisualEditor(cached)) {
+      setTemplate(cached);
+      setCheckoutPrice(getEffectiveTemplatePrice(cached));
+      setDraft((curr) => curr || readSavedDraft(templateId, cached.visualEditor!));
+      setLoading(false);
+    }
 
     void getPublicTemplateConfigById(templateId)
       .then((next) => {
@@ -118,11 +135,13 @@ export const DynamicVisualCheckoutPage: React.FC<Props> = ({
 
         setTemplate(next);
         setCheckoutPrice(getEffectiveTemplatePrice(next));
-        setDraft(readSavedDraft(templateId, next.visualEditor!));
+        setDraft((curr) => curr || readSavedDraft(templateId, next.visualEditor!));
       })
       .catch((loadError: any) => {
         if (!active) return;
-        setError(loadError?.message || 'Không tải được trang thanh toán.');
+        if (!cached) {
+          setError(loadError?.message || 'Không tải được trang thanh toán.');
+        }
       })
       .finally(() => {
         if (active) setLoading(false);

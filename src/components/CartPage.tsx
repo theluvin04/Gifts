@@ -56,7 +56,7 @@ React.FC<CartPageProps> = ({
 
     const loadPrices = async () => {
       const uniqueIds =
-        Array.from(
+        Array.from<string>(
           new Set(
             items.map(
               (item) =>
