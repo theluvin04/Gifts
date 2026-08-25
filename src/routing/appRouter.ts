@@ -1,6 +1,9 @@
 export type AdminSection =
+  | 'dashboard'
   | 'orders'
-  | 'templates';
+  | 'templates'
+  | 'customers'
+  | 'settings';
 
 export type AppLocation =
   | {
@@ -89,18 +92,13 @@ export const resolveAppLocation = (
     );
 
   const legacyGift =
-    query.get(
-      'gift'
-    ) ||
-    query.get(
-      'g'
-    );
+    query.get('gift') ||
+    query.get('g');
 
   if (legacyGift) {
     return {
       kind: 'gift',
-      giftId:
-        legacyGift,
+      giftId: legacyGift,
     };
   }
 
@@ -117,12 +115,10 @@ export const resolveAppLocation = (
   }
 
   if (
-    path ===
-    '/track-order'
+    path === '/track-order'
   ) {
     return {
-      kind:
-        'track-order',
+      kind: 'track-order',
     };
   }
 
@@ -136,8 +132,7 @@ export const resolveAppLocation = (
   if (giftMatch) {
     return {
       kind: 'gift',
-      giftId:
-        giftMatch[1],
+      giftId: giftMatch[1],
     };
   }
 
@@ -150,43 +145,40 @@ export const resolveAppLocation = (
 
   if (adminOrder) {
     return {
-      kind:
-        'admin-order',
-      giftId:
-        adminOrder[1],
+      kind: 'admin-order',
+      giftId: adminOrder[1],
     };
   }
 
-  if (
-    path ===
-    '/admin/templates'
-  ) {
-    return {
-      kind: 'admin',
-      section:
+  const adminSectionMap:
+    Record<string, AdminSection> = {
+      '/admin': 'dashboard',
+      '/admin/dashboard':
+        'dashboard',
+      '/admin/orders': 'orders',
+      '/admin/templates':
         'templates',
+      '/admin/customers':
+        'customers',
+      '/admin/settings':
+        'settings',
     };
-  }
 
-  const oldAdminPaths =
-    [
-      '/admin',
-      '/admin/orders',
-      '/admin/dashboard',
-      '/admin/customers',
-      '/admin/discounts',
-      '/admin/settings',
-    ];
-
-  if (
-    oldAdminPaths.includes(
-      path
-    )
-  ) {
+  if (adminSectionMap[path]) {
     return {
       kind: 'admin',
       section:
-        'orders',
+        adminSectionMap[path],
+    };
+  }
+
+  // Giữ tương thích với route Admin cũ đã bỏ.
+  if (
+    path === '/admin/discounts'
+  ) {
+    return {
+      kind: 'admin',
+      section: 'dashboard',
     };
   }
 
@@ -199,10 +191,8 @@ export const resolveAppLocation = (
 
   if (product) {
     return {
-      kind:
-        'template-product',
-      templateId:
-        product[1],
+      kind: 'template-product',
+      templateId: product[1],
     };
   }
 
@@ -215,10 +205,8 @@ export const resolveAppLocation = (
 
   if (create) {
     return {
-      kind:
-        'template-create',
-      templateId:
-        create[1],
+      kind: 'template-create',
+      templateId: create[1],
     };
   }
 
@@ -231,10 +219,8 @@ export const resolveAppLocation = (
 
   if (checkout) {
     return {
-      kind:
-        'template-checkout',
-      templateId:
-        checkout[1],
+      kind: 'template-checkout',
+      templateId: checkout[1],
     };
   }
 
@@ -247,15 +233,12 @@ export const resolveAppLocation = (
 
   if (oldTemplate) {
     return {
-      kind:
-        'legacy-template',
-      templateId:
-        oldTemplate[1],
+      kind: 'legacy-template',
+      templateId: oldTemplate[1],
     };
   }
 
   return {
-    kind:
-      'not-found',
+    kind: 'not-found',
   };
 };

@@ -14,67 +14,46 @@ import {
 } from '../../services/templateService';
 
 import {
-  formatVnd,
-} from './adminUi';
+  DEFAULT_LOVE_VISUAL_EDITOR_CONFIG,
+} from '../../templates/visualEditor';
 
 import {
-  AdminTemplateDesignEditor,
-} from './AdminTemplateDesignEditor';
+  formatVnd,
+} from './adminUi';
 
 import {
   AdminTemplateAssetEditor,
 } from './AdminTemplateAssetEditor';
 
 import {
+  AdminTemplateDesignEditor,
+} from './AdminTemplateDesignEditor';
+
+import {
   AdminVisualTemplateEditor,
 } from './AdminVisualTemplateEditor';
 
-import {
-  DEFAULT_LOVE_VISUAL_EDITOR_CONFIG,
-} from '../../templates/visualEditor';
-
 interface Props {
-  templates:
-    TemplateConfig[];
-
-  template:
-    TemplateConfig;
-
+  templates: TemplateConfig[];
+  template: TemplateConfig;
   dirty: boolean;
-
   saved: boolean;
-
   saving: boolean;
-
-  catalogBusy:
-    boolean;
-
+  catalogBusy: boolean;
   onSelectTemplate: (
-    templateId:
-      string
+    templateId: string
   ) => void;
-
   onCreateTemplate: (
-    input:
-      AdminTemplateCreateInput
-  ) =>
-    Promise<
-      TemplateConfig
-    >;
-
+    input: AdminTemplateCreateInput
+  ) => Promise<TemplateConfig>;
   onDeleteTemplate: (
-    templateId:
-      string
-  ) =>
-    Promise<void>;
-
+    templateId: string
+  ) => Promise<void>;
   onChange: (
-    template:
-      TemplateConfig
+    template: TemplateConfig
   ) => void;
-
-  onSave:
-    () => void;
+  onSave: () => void;
+  onDiscardChanges: () => void;
 }
 
 type TemplateSection =
@@ -87,23 +66,45 @@ type CreateMode =
   | 'blank'
   | 'duplicate';
 
+const SECTIONS: Array<{
+  key: TemplateSection;
+  label: string;
+  description: string;
+}> = [
+  {
+    key: 'selling',
+    label: 'Thông tin',
+    description: 'Tên, giá và trạng thái bán',
+  },
+  {
+    key: 'visual',
+    label: 'Thiết kế trang',
+    description: 'Bố cục kéo thả và hiệu ứng',
+  },
+  {
+    key: 'design',
+    label: 'Style',
+    description: 'Màu sắc và style chung',
+  },
+  {
+    key: 'assets',
+    label: 'Tài nguyên',
+    description: 'Ảnh và asset của template',
+  },
+];
+
 const slugify = (
   value: string
 ) => {
   return value
     .trim()
     .toLowerCase()
-    .normalize(
-      'NFD'
-    )
+    .normalize('NFD')
     .replace(
       /[\u0300-\u036f]/g,
       ''
     )
-    .replace(
-      /đ/g,
-      'd'
-    )
+    .replace(/đ/g, 'd')
     .replace(
       /[^a-z0-9]+/g,
       '-'
@@ -112,10 +113,7 @@ const slugify = (
       /^-+|-+$/g,
       ''
     )
-    .slice(
-      0,
-      60
-    );
+    .slice(0, 60);
 };
 
 export const AdminTemplatesTab:
@@ -131,82 +129,67 @@ React.FC<Props> = ({
   onDeleteTemplate,
   onChange,
   onSave,
+  onDiscardChanges,
 }) => {
   const [
     section,
     setSection,
   ] =
-    useState<
-      TemplateSection
-    >(
+    useState<TemplateSection>(
       'selling'
     );
 
   const [
     createOpen,
     setCreateOpen,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
     createMode,
     setCreateMode,
   ] =
-    useState<
-      CreateMode
-    >(
+    useState<CreateMode>(
       'blank'
     );
 
   const [
     createName,
     setCreateName,
-  ] =
-    useState('');
+  ] = useState('');
 
   const [
     createId,
     setCreateId,
-  ] =
-    useState('');
+  ] = useState('');
 
   const [
     createError,
     setCreateError,
-  ] =
-    useState('');
+  ] = useState('');
 
   const [
     creating,
     setCreating,
-  ] =
-    useState(false);
+  ] = useState(false);
 
-  const discount =
-    getTemplateDiscountPercent(
-      template
-    );
+  const [
+    editorOpen,
+    setEditorOpen,
+  ] = useState(false);
 
   const sortedTemplates =
     useMemo(
       () =>
-        [
-          ...templates,
-        ].sort(
-          (
-            left,
-            right
-          ) => {
+        [...templates].sort(
+          (left, right) => {
             if (
-              left.id ===
-              'love-01'
+              left.id === 'love-01'
             ) {
               return -1;
             }
 
             if (
-              right.id ===
-              'love-01'
+              right.id === 'love-01'
             ) {
               return 1;
             }
@@ -217,76 +200,60 @@ React.FC<Props> = ({
             );
           }
         ),
-      [
-        templates,
-      ]
+      [templates]
+    );
+
+  const discount =
+    getTemplateDiscountPercent(
+      template
     );
 
   const openCreate = (
-    mode:
-      CreateMode
+    mode: CreateMode
   ) => {
-    setCreateMode(
-      mode
-    );
-
-    setCreateError(
-      ''
-    );
+    setCreateMode(mode);
+    setCreateError('');
 
     if (
-      mode ===
-      'duplicate'
+      mode === 'duplicate'
     ) {
       const nextName =
         `${template.name} Copy`;
 
-      setCreateName(
-        nextName
-      );
-
+      setCreateName(nextName);
       setCreateId(
         slugify(
           `${template.id}-copy`
         )
       );
     } else {
-      setCreateName(
-        ''
-      );
-
-      setCreateId(
-        ''
-      );
+      setCreateName('');
+      setCreateId('');
     }
 
-    setCreateOpen(
-      true
-    );
+    setCreateOpen(true);
   };
 
   const handleCreate =
     async () => {
       const name =
-        createName
-          .trim();
+        createName.trim();
 
       const id =
         slugify(
-          createId ||
-          name
+          createId || name
         );
 
       if (!name) {
         setCreateError(
-          'Nhập tên sản phẩm.'
+          'Nhập tên template.'
         );
         return;
       }
 
       if (!id) {
         setCreateError(
-          'ID sản phẩm chưa hợp lệ.'
+          'ID template chưa hợp lệ.'
         );
         return;
       }
@@ -294,8 +261,7 @@ React.FC<Props> = ({
       if (
         sortedTemplates.some(
           (item) =>
-            item.id ===
-            id
+            item.id === id
         )
       ) {
         setCreateError(
@@ -304,225 +270,345 @@ React.FC<Props> = ({
         return;
       }
 
-      setCreating(
-        true
-      );
-
-      setCreateError(
-        ''
-      );
+      setCreating(true);
+      setCreateError('');
 
       try {
         await onCreateTemplate({
           id,
           name,
-          mode:
-            createMode,
+          mode: createMode,
           source:
             createMode ===
-              'duplicate'
+            'duplicate'
               ? template
               : undefined,
         });
 
-        setCreateOpen(
-          false
-        );
-
+        setCreateOpen(false);
         setSection(
-          createMode ===
-            'blank'
+          createMode === 'blank'
             ? 'visual'
             : section
         );
+        setEditorOpen(true);
       } catch (
         error: any
       ) {
         setCreateError(
           error?.message ||
-          'Không tạo được sản phẩm.'
+          'Không tạo được template.'
         );
       } finally {
-        setCreating(
-          false
-        );
+        setCreating(false);
       }
     };
 
   const handleDelete =
     async () => {
       if (
-        template.id ===
-        'love-01'
+        template.id === 'love-01'
       ) {
-        window.alert(
-          'love-01 là template mặc định nên không thể xóa.'
-        );
         return;
       }
 
       const confirmed =
         window.confirm(
-          `Xóa sản phẩm "${template.name}" (${template.id})?\n\nTemplate và bố cục trong Firestore sẽ bị xóa.`
+          `Xóa template "${template.name}"?\n\nBố cục đã lưu trong Firestore cũng sẽ bị xóa.`
         );
 
       if (!confirmed) {
         return;
       }
 
-      try {
-        await onDeleteTemplate(
-          template.id
-        );
-      } catch (
-        error: any
-      ) {
-        window.alert(
-          error?.message ||
-          'Không xóa được sản phẩm.'
-        );
-      }
+      await onDeleteTemplate(
+        template.id
+      );
+      setEditorOpen(false);
     };
 
-  const isVisual =
-    section ===
-    'visual';
+  const openTemplateEditor = (
+    templateId: string
+  ) => {
+    onSelectTemplate(templateId);
+    setSection('selling');
+    setEditorOpen(true);
+  };
 
-  return (
-    <div
-      className={
-        isVisual
-          ? 'pb-4'
-          : 'pb-24'
+  const backToTemplateList = () => {
+    if (dirty) {
+      const discard =
+        window.confirm(
+          'Template đang có thay đổi chưa lưu. Bỏ các thay đổi này và quay lại danh sách?'
+        );
+
+      if (!discard) {
+        return;
       }
-    >
-      <section className="rounded-[14px] border border-black/8 bg-white p-3 sm:p-4">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="min-w-0 flex-1">
-              <div className="mb-1 flex items-center justify-between gap-2 sm:max-w-[360px]">
-                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-black/28">
-                  Template đang chỉnh
-                </p>
 
-                <span className="text-[8px] font-bold text-black/25">
-                  {sortedTemplates.length}{' '}
-                  template
-                </span>
-              </div>
+      onDiscardChanges();
+    }
 
-              <select
-                value={
-                  template.id
-                }
-                disabled={
-                  catalogBusy ||
-                  saving
-                }
-                onChange={(
-                  event
-                ) =>
-                  onSelectTemplate(
-                    event.target
-                      .value
-                  )
-                }
-                className="w-full min-w-0 rounded-[10px] border border-black/10 bg-[#faf9f8] px-3 py-2.5 text-xs font-black outline-none focus:border-[#cf5068] disabled:opacity-50 sm:max-w-[360px]"
-              >
-                {sortedTemplates.map(
-                  (
-                    item
-                  ) => (
-                    <option
-                      key={
-                        item.id
-                      }
-                      value={
-                        item.id
-                      }
-                    >
-                      {item.name}
-                      {' · '}
-                      {item.id}
-                    </option>
-                  )
-                )}
-              </select>
+    setEditorOpen(false);
+  };
 
-              {sortedTemplates.length <=
-                1 && (
-                <p className="mt-1.5 max-w-[360px] text-[8px] leading-4 text-amber-600">
-                  Firestore hiện chỉ có 1 template. Bấm “+ Sản phẩm” để tạo template thứ 2 rồi mới có thể chuyển qua lại.
-                </p>
-              )}
+  if (!editorOpen) {
+    return (
+      <div className="space-y-4">
+        <section className="rounded-[20px] border border-black/8 bg-white p-5 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#b83e57]">
+                Templates
+              </p>
+              <h2 className="mt-1.5 text-xl font-black tracking-[-0.035em] sm:text-2xl">
+                Chọn template để chỉnh sửa
+              </h2>
+              <p className="mt-2 max-w-[560px] text-xs leading-5 text-black/42">
+                Chọn một template có sẵn hoặc tạo template mới. Editor chỉ mở sau khi bạn chọn, tránh chỉnh nhầm sản phẩm.
+              </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 sm:self-end">
-              <CompactButton
-                label="+ Sản phẩm"
-                primary
-                disabled={
-                  catalogBusy
-                }
-                onClick={() =>
-                  openCreate(
-                    'blank'
-                  )
-                }
-              />
+            <button
+              type="button"
+              disabled={catalogBusy}
+              onClick={() =>
+                openCreate('blank')
+              }
+              className="shrink-0 rounded-[11px] bg-[#191919] px-4 py-3 text-xs font-black text-white transition hover:bg-[#b83e57] disabled:opacity-40"
+            >
+              + Tạo template mới
+            </button>
+          </div>
+        </section>
 
-              <CompactButton
-                label="Nhân bản"
-                disabled={
-                  catalogBusy
-                }
-                onClick={() =>
-                  openCreate(
-                    'duplicate'
-                  )
-                }
-              />
+        <section className="rounded-[20px] border border-black/8 bg-white p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="text-xs font-black text-black/70">
+              Template hiện có
+            </p>
+            <span className="text-[10px] font-semibold text-black/30">
+              {sortedTemplates.length} template
+            </span>
+          </div>
 
-              <CompactButton
-                label="Xóa"
-                danger
-                disabled={
-                  catalogBusy ||
-                  template.id ===
-                  'love-01'
-                }
-                onClick={() =>
-                  void handleDelete()
-                }
-              />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {sortedTemplates.map(
+              (item) => {
+                const itemDiscount =
+                  getTemplateDiscountPercent(
+                    item
+                  );
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    disabled={catalogBusy}
+                    onClick={() =>
+                      openTemplateEditor(
+                        item.id
+                      )
+                    }
+                    className="group rounded-[16px] border border-black/8 bg-[#fcfbfa] p-4 text-left transition hover:border-[#cf5068]/30 hover:bg-[#fff8fa] hover:shadow-[0_10px_30px_rgba(80,30,40,0.06)] disabled:opacity-50"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-black/80">
+                          {item.name}
+                        </p>
+                        <p className="mt-1 truncate font-mono text-[9px] text-black/30">
+                          {item.id}
+                        </p>
+                      </div>
+
+                      <span className={[
+                        'shrink-0 rounded-full px-2 py-1 text-[8px] font-black',
+                        item.visible
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-black/[0.04] text-black/35',
+                      ].join(' ')}>
+                        {item.visible
+                          ? 'Đang bán'
+                          : 'Đang ẩn'}
+                      </span>
+                    </div>
+
+                    <div className="mt-5 flex items-end justify-between gap-3 border-t border-black/6 pt-3">
+                      <div>
+                        <p className="text-[9px] font-semibold text-black/30">
+                          Giá hiện tại
+                        </p>
+                        <p className="mt-1 text-sm font-black text-black/70">
+                          {formatVnd(
+                            getEffectiveTemplatePrice(
+                              item
+                            )
+                          )}
+                        </p>
+                        {itemDiscount > 0 && (
+                          <p className="mt-0.5 text-[9px] font-bold text-[#b83e57]">
+                            Giảm {itemDiscount}%
+                          </p>
+                        )}
+                      </div>
+
+                      <span className="rounded-[9px] bg-white px-3 py-2 text-[10px] font-black text-[#b83e57] shadow-[inset_0_0_0_1px_rgba(184,62,87,0.12)] transition group-hover:bg-[#b83e57] group-hover:text-white">
+                        Chỉnh sửa →
+                      </span>
+                    </div>
+                  </button>
+                );
+              }
+            )}
+          </div>
+        </section>
+
+        {createOpen && (
+          <CreateTemplateModal
+            mode={createMode}
+            name={createName}
+            id={createId}
+            error={createError}
+            creating={creating}
+            onNameChange={(value) => {
+              setCreateName(value);
+              setCreateId(
+                slugify(value)
+              );
+            }}
+            onIdChange={setCreateId}
+            onClose={() =>
+              setCreateOpen(false)
+            }
+            onCreate={() =>
+              void handleCreate()
+            }
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-[18px] border border-black/8 bg-white p-4 sm:p-5">
+        <button
+          type="button"
+          disabled={saving || catalogBusy}
+          onClick={backToTemplateList}
+          className="mb-4 text-[10px] font-black text-black/38 transition hover:text-[#b83e57] disabled:opacity-40"
+        >
+          ← Tất cả template
+        </button>
+
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
+          <div className="min-w-0 flex-1">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/35">
+                Template đang chỉnh
+              </label>
+              <span className="text-[10px] font-semibold text-black/30">
+                {sortedTemplates.length} template
+              </span>
+            </div>
+
+            <select
+              value={
+                template.id
+              }
+              disabled={
+                catalogBusy ||
+                saving
+              }
+              onChange={(
+                event
+              ) =>
+                onSelectTemplate(
+                  event.target.value
+                )
+              }
+              className="w-full rounded-[11px] border border-black/10 bg-[#faf9f8] px-3.5 py-3 text-sm font-bold outline-none focus:border-[#cf5068] disabled:opacity-50 xl:max-w-[520px]"
+            >
+              {sortedTemplates.map(
+                (item) => (
+                  <option
+                    key={item.id}
+                    value={item.id}
+                  >
+                    {item.name}
+                  </option>
+                )
+              )}
+            </select>
+
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-black/35">
+              <span className="font-mono">
+                {template.id}
+              </span>
+              <span>•</span>
+              <span className="font-bold text-black/55">
+                {formatVnd(
+                  getEffectiveTemplatePrice(
+                    template
+                  )
+                )}
+              </span>
+              {discount > 0 && (
+                <>
+                  <span>•</span>
+                  <span className="font-bold text-[#b83e57]">
+                    Giảm {discount}%
+                  </span>
+                </>
+              )}
+              <span>•</span>
+              <span>
+                {template.visible
+                  ? 'Đang hiển thị'
+                  : 'Đang ẩn'}
+              </span>
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-black/6 pt-3 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
-            <StatusPill
-              status={
-                template.status
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={catalogBusy}
+              onClick={() =>
+                openCreate('blank')
               }
-            />
+              className="rounded-[10px] border border-black/10 bg-white px-3.5 py-2.5 text-[10px] font-bold text-black/55 disabled:opacity-40"
+            >
+              + Template mới
+            </button>
 
-            <span className="text-[10px] font-black text-[#b83e57]">
-              {formatVnd(
-                getEffectiveTemplatePrice(
-                  template
+            <button
+              type="button"
+              disabled={catalogBusy}
+              onClick={() =>
+                openCreate(
+                  'duplicate'
                 )
-              )}
-            </span>
+              }
+              className="rounded-[10px] border border-black/10 bg-white px-3.5 py-2.5 text-[10px] font-bold text-black/55 disabled:opacity-40"
+            >
+              Nhân bản
+            </button>
 
-            {discount >
-              0 && (
-              <span className="text-[9px] font-bold text-black/30">
-                −{discount}%
-              </span>
+            {template.id !==
+              'love-01' && (
+              <button
+                type="button"
+                disabled={catalogBusy}
+                onClick={() =>
+                  void handleDelete()
+                }
+                className="rounded-[10px] border border-red-100 bg-white px-3 py-2.5 text-[10px] font-bold text-red-500 disabled:opacity-40"
+              >
+                Xóa
+              </button>
             )}
-
-            <span className="hidden max-w-[190px] truncate font-mono text-[9px] text-black/25 sm:inline">
-              {template.id}
-            </span>
 
             <button
               type="button"
@@ -530,23 +616,20 @@ React.FC<Props> = ({
                 saving ||
                 !dirty
               }
-              onClick={
-                onSave
-              }
+              onClick={onSave}
               className={[
-                'ml-auto rounded-[10px] px-3.5 py-2.5 text-[10px] font-black transition',
+                'min-w-[105px] rounded-[10px] px-4 py-2.5 text-[10px] font-black transition disabled:cursor-default',
                 dirty
                   ? 'bg-[#191919] text-white hover:bg-[#b83e57]'
                   : saved
                     ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-[#f4f1f1] text-black/30',
-                'disabled:cursor-default',
+                    : 'bg-[#f1efee] text-black/30',
               ].join(' ')}
             >
               {saving
                 ? 'Đang lưu...'
                 : dirty
-                  ? 'Lưu'
+                  ? 'Lưu thay đổi'
                   : saved
                     ? 'Đã lưu ✓'
                     : 'Đã lưu'}
@@ -554,267 +637,116 @@ React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="mt-3 flex gap-1 overflow-x-auto rounded-[10px] bg-[#f4f1f1] p-1">
-          <SectionButton
-            active={
-              section ===
-              'selling'
-            }
-            label="Thông tin"
-            onClick={() =>
-              setSection(
-                'selling'
-              )
-            }
-          />
+        {dirty && (
+          <p className="mt-3 text-[10px] font-bold text-amber-600">
+            Có thay đổi chưa lưu.
+          </p>
+        )}
+      </section>
 
-          <SectionButton
-            active={
-              section ===
-              'visual'
-            }
-            label="Bố cục"
-            onClick={() =>
-              setSection(
-                'visual'
-              )
-            }
-          />
-
-          <SectionButton
-            active={
-              section ===
-              'design'
-            }
-            label="Style"
-            onClick={() =>
-              setSection(
-                'design'
-              )
-            }
-          />
-
-          <SectionButton
-            active={
-              section ===
-              'assets'
-            }
-            label="Asset"
-            onClick={() =>
-              setSection(
-                'assets'
-              )
-            }
-          />
+      <section className="rounded-[18px] border border-black/8 bg-white p-2">
+        <div className="grid gap-1 sm:grid-cols-4">
+          {SECTIONS.map(
+            (item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() =>
+                  setSection(item.key)
+                }
+                className={[
+                  'rounded-[12px] px-3 py-3 text-left transition',
+                  section === item.key
+                    ? 'bg-[#f7ecef] text-[#a93650]'
+                    : 'text-black/45 hover:bg-black/[0.025] hover:text-black/70',
+                ].join(' ')}
+              >
+                <p className="text-[11px] font-black">
+                  {item.label}
+                </p>
+                <p className="mt-1 hidden text-[9px] leading-4 opacity-65 lg:block">
+                  {item.description}
+                </p>
+              </button>
+            )
+          )}
         </div>
       </section>
 
-      {section ===
-        'visual' ? (
-        <div className="mt-3 min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2 rounded-[10px] border border-[#cf5068]/12 bg-[#fff8fa] px-3 py-2">
-            <span className="text-[8px] font-black uppercase tracking-[0.1em] text-black/30">
-              Đang chỉnh
-            </span>
+      {section === 'selling' && (
+        <SellingEditor
+          template={template}
+          onChange={onChange}
+        />
+      )}
 
-            <span className="text-[10px] font-black text-[#a73551]">
-              {template.name}
-            </span>
+      {section === 'visual' && (
+        <AdminVisualTemplateEditor
+          key={template.id}
+          config={
+            template.visualEditor ||
+            DEFAULT_LOVE_VISUAL_EDITOR_CONFIG
+          }
+          onChange={(
+            visualEditor
+          ) =>
+            onChange({
+              ...template,
+              visualEditor,
+            })
+          }
+        />
+      )}
 
-            <code className="rounded bg-white px-1.5 py-1 text-[8px] font-bold text-black/35">
-              {template.id}
-            </code>
-
-            <span className="ml-auto text-[8px] font-bold text-black/30">
-              {dirty
-                ? '● Chưa lưu'
-                : '✓ Đã đồng bộ'}
-            </span>
-          </div>
-
-          <AdminVisualTemplateEditor
-            key={
-              template.id
-            }
-            config={
-              template.visualEditor ||
-              DEFAULT_LOVE_VISUAL_EDITOR_CONFIG
-            }
-            onChange={(
-              visualEditor
-            ) =>
+      {section === 'design' && (
+        <section className="rounded-[18px] border border-black/8 bg-white p-4 sm:p-5">
+          <AdminTemplateDesignEditor
+            design={template.design}
+            onChange={(design) =>
               onChange({
                 ...template,
-                visualEditor,
+                design,
               })
             }
           />
-        </div>
-      ) : (
-        <section className="mt-3 rounded-[14px] border border-black/8 bg-white p-4 sm:p-5">
-          {section ===
-            'selling' && (
-            <SellingEditor
-              template={
-                template
-              }
-              discount={
-                discount
-              }
-              onChange={
-                onChange
-              }
-            />
-          )}
-
-          {section ===
-            'design' && (
-            <AdminTemplateDesignEditor
-              design={
-                template.design
-              }
-              onChange={(
-                design
-              ) =>
-                onChange({
-                  ...template,
-                  design,
-                })
-              }
-            />
-          )}
-
-          {section ===
-            'assets' && (
-            <AdminTemplateAssetEditor
-              assets={
-                template.assets
-              }
-              onChange={(
-                assets
-              ) =>
-                onChange({
-                  ...template,
-                  assets,
-                })
-              }
-            />
-          )}
         </section>
       )}
 
-      {(dirty ||
-        saving ||
-        saved) && (
-        <div className="sticky bottom-3 z-40 mx-auto mt-3 max-w-[620px]">
-          <div className="flex items-center justify-between gap-3 rounded-[13px] border border-black/10 bg-white/95 px-3 py-2.5 shadow-[0_12px_38px_rgba(0,0,0,0.13)] backdrop-blur-xl">
-            <div className="min-w-0">
-              <p
-                className={[
-                  'truncate text-[10px] font-black',
-                  dirty
-                    ? 'text-[#b83e57]'
-                    : 'text-emerald-700',
-                ].join(' ')}
-              >
-                {saving
-                  ? 'Đang lưu...'
-                  : dirty
-                    ? 'Có thay đổi chưa lưu'
-                    : 'Đã lưu ✓'}
-              </p>
-
-              <p className="mt-0.5 hidden truncate text-[9px] text-black/30 sm:block">
-                {template.name}
-                {' · '}
-                {template.id}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              disabled={
-                saving ||
-                !dirty
-              }
-              onClick={
-                onSave
-              }
-              className={[
-                'shrink-0 rounded-[9px] px-3.5 py-2 text-[10px] font-black',
-                dirty
-                  ? 'bg-[#191919] text-white'
-                  : 'bg-emerald-50 text-emerald-700',
-              ].join(' ')}
-            >
-              {saving
-                ? 'Đang lưu'
-                : dirty
-                  ? 'Lưu thay đổi'
-                  : 'Đã lưu'}
-            </button>
-          </div>
-        </div>
+      {section === 'assets' && (
+        <section className="rounded-[18px] border border-black/8 bg-white p-4 sm:p-5">
+          <AdminTemplateAssetEditor
+            assets={template.assets}
+            onChange={(assets) =>
+              onChange({
+                ...template,
+                assets,
+              })
+            }
+          />
+        </section>
       )}
 
       {createOpen && (
-        <CreateProductModal
-          mode={
-            createMode
-          }
-          name={
-            createName
-          }
-          id={
-            createId
-          }
-          error={
-            createError
-          }
-          creating={
-            creating
-          }
-          sourceName={
-            template.name
-          }
-          onNameChange={(
-            value
-          ) => {
-            const previousAuto =
-              slugify(
-                createName
-              );
-
-            setCreateName(
-              value
-            );
+        <CreateTemplateModal
+          mode={createMode}
+          name={createName}
+          id={createId}
+          error={createError}
+          creating={creating}
+          onNameChange={(value) => {
+            setCreateName(value);
 
             if (
-              !createId ||
-              createId ===
-              previousAuto
+              createMode === 'blank'
             ) {
               setCreateId(
-                slugify(
-                  value
-                )
+                slugify(value)
               );
             }
           }}
-          onIdChange={(
-            value
-          ) =>
-            setCreateId(
-              slugify(
-                value
-              )
-            )
-          }
+          onIdChange={setCreateId}
           onClose={() =>
-            !creating &&
-            setCreateOpen(
-              false
-            )
+            setCreateOpen(false)
           }
           onCreate={() =>
             void handleCreate()
@@ -827,603 +759,320 @@ React.FC<Props> = ({
 
 const SellingEditor:
 React.FC<{
-  template:
-    TemplateConfig;
-
-  discount:
-    number;
-
+  template: TemplateConfig;
   onChange: (
-    template:
-      TemplateConfig
+    template: TemplateConfig
   ) => void;
 }> = ({
   template,
-  discount,
   onChange,
 }) => (
-  <div>
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h3 className="text-sm font-black">
-          Thông tin & bán
-        </h3>
-
-        <p className="mt-1 text-[10px] leading-5 text-black/35">
-          Tên, giá và trạng thái của sản phẩm.
-        </p>
-      </div>
-
-      <span className="font-mono text-[9px] text-black/25">
-        ID: {template.id}
-      </span>
+  <section className="rounded-[18px] border border-black/8 bg-white p-5 sm:p-6">
+    <div className="mb-6">
+      <h2 className="text-sm font-black">
+        Thông tin bán hàng
+      </h2>
+      <p className="mt-1 text-[11px] leading-5 text-black/38">
+        Chỉ giữ các trường cần dùng thường xuyên khi quản lý template.
+      </p>
     </div>
 
-    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-      <TextField
-        label="Tên sản phẩm"
-        value={
-          template.name
-        }
-        onChange={(
-          name
-        ) =>
-          onChange({
-            ...template,
-            name,
-          })
-        }
-      />
+    <div className="grid gap-5 lg:grid-cols-2">
+      <Field
+        label="Tên template"
+      >
+        <input
+          value={template.name}
+          onChange={(event) =>
+            onChange({
+              ...template,
+              name: event.target.value,
+            })
+          }
+          className={inputClass}
+        />
+      </Field>
 
-      <SelectField
+      <Field
         label="Trạng thái"
-        value={
-          template.status
-        }
-        onChange={(
-          status
-        ) =>
-          onChange({
-            ...template,
-            status:
-              status as
-                TemplateConfig[
-                  'status'
-                ],
-          })
-        }
-      />
+      >
+        <select
+          value={template.status}
+          onChange={(event) =>
+            onChange({
+              ...template,
+              status:
+                event.target.value as
+                  TemplateConfig['status'],
+            })
+          }
+          className={inputClass}
+        >
+          <option value="available">
+            Đang bán
+          </option>
+          <option value="coming_soon">
+            Sắp ra mắt
+          </option>
+          <option value="paused">
+            Tạm dừng
+          </option>
+        </select>
+      </Field>
 
-      <NumberField
+      <Field
         label="Giá gốc"
-        value={
-          template.basePrice
-        }
-        onChange={(
-          basePrice
-        ) =>
-          onChange({
-            ...template,
-            basePrice,
-          })
-        }
-      />
+        hint="VND"
+      >
+        <input
+          type="number"
+          min="0"
+          value={template.basePrice}
+          onChange={(event) =>
+            onChange({
+              ...template,
+              basePrice:
+                Number(
+                  event.target.value
+                ) || 0,
+            })
+          }
+          className={inputClass}
+        />
+      </Field>
 
-      <NumberField
-        label="Giá sale"
-        value={
-          template.salePrice
-        }
-        onChange={(
-          salePrice
-        ) =>
-          onChange({
-            ...template,
-            salePrice,
-          })
-        }
-      />
-    </div>
+      <Field
+        label="Giá khuyến mãi"
+        hint="Chỉ dùng khi bật sale"
+      >
+        <input
+          type="number"
+          min="0"
+          value={template.salePrice}
+          disabled={!template.saleEnabled}
+          onChange={(event) =>
+            onChange({
+              ...template,
+              salePrice:
+                Number(
+                  event.target.value
+                ) || 0,
+            })
+          }
+          className={`${inputClass} disabled:opacity-45`}
+        />
+      </Field>
 
-    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-      <ToggleRow
-        title="Bật giá sale"
-        description={
-          discount >
-          0
-            ? `Đang giảm ${discount}%`
-            : 'Chưa có giảm giá.'
-        }
-        checked={
-          template.saleEnabled
-        }
-        onChange={(
-          saleEnabled
-        ) =>
-          onChange({
-            ...template,
-            saleEnabled,
-          })
-        }
-      />
-
-      <ToggleRow
-        title="Hiển thị"
-        description="Ẩn sản phẩm nếu đang thiết kế."
-        checked={
-          template.visible
-        }
-        onChange={(
-          visible
-        ) =>
-          onChange({
-            ...template,
-            visible,
-          })
-        }
-      />
-    </div>
-
-    <div className="mt-3">
-      <TextField
+      <Field
         label="Nhãn khuyến mãi"
-        value={
-          template
-            .promotionLabel
-        }
-        placeholder="VD: Launch offer"
-        onChange={(
-          promotionLabel
-        ) =>
-          onChange({
-            ...template,
-            promotionLabel,
-          })
-        }
-      />
+      >
+        <input
+          value={template.promotionLabel}
+          onChange={(event) =>
+            onChange({
+              ...template,
+              promotionLabel:
+                event.target.value,
+            })
+          }
+          placeholder="Ví dụ: Launch offer"
+          className={inputClass}
+        />
+      </Field>
+
+      <div className="space-y-3 rounded-[14px] bg-[#faf9f8] p-4">
+        <ToggleRow
+          label="Bật giá khuyến mãi"
+          description="Storefront sẽ dùng salePrice nếu hợp lệ."
+          checked={template.saleEnabled}
+          onChange={(checked) =>
+            onChange({
+              ...template,
+              saleEnabled: checked,
+            })
+          }
+        />
+
+        <ToggleRow
+          label="Hiển thị trên storefront"
+          description="Tắt để ẩn template khỏi khu vực bán hàng."
+          checked={template.visible}
+          onChange={(checked) =>
+            onChange({
+              ...template,
+              visible: checked,
+            })
+          }
+        />
+      </div>
     </div>
-  </div>
+  </section>
 );
 
-const CreateProductModal:
+const inputClass =
+  'w-full rounded-[11px] border border-black/10 bg-[#faf9f8] px-3.5 py-3 text-sm font-semibold outline-none focus:border-[#cf5068]';
+
+const Field:
 React.FC<{
-  mode:
-    CreateMode;
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}> = ({
+  label,
+  hint,
+  children,
+}) => (
+  <label className="block">
+    <div className="mb-2 flex items-center justify-between gap-3">
+      <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-black/38">
+        {label}
+      </span>
+      {hint && (
+        <span className="text-[9px] text-black/28">
+          {hint}
+        </span>
+      )}
+    </div>
+    {children}
+  </label>
+);
 
+const ToggleRow:
+React.FC<{
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (
+    checked: boolean
+  ) => void;
+}> = ({
+  label,
+  description,
+  checked,
+  onChange,
+}) => (
+  <label className="flex cursor-pointer items-start justify-between gap-4 rounded-[11px] bg-white p-3">
+    <span>
+      <span className="block text-xs font-bold text-black/70">
+        {label}
+      </span>
+      <span className="mt-1 block text-[10px] leading-4 text-black/35">
+        {description}
+      </span>
+    </span>
+
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(event) =>
+        onChange(
+          event.target.checked
+        )
+      }
+      className="mt-0.5 h-4 w-4 shrink-0 accent-[#b83e57]"
+    />
+  </label>
+);
+
+const CreateTemplateModal:
+React.FC<{
+  mode: CreateMode;
   name: string;
-
   id: string;
-
   error: string;
-
-  creating:
-    boolean;
-
-  sourceName:
-    string;
-
+  creating: boolean;
   onNameChange: (
     value: string
   ) => void;
-
   onIdChange: (
     value: string
   ) => void;
-
-  onClose:
-    () => void;
-
-  onCreate:
-    () => void;
+  onClose: () => void;
+  onCreate: () => void;
 }> = ({
   mode,
   name,
   id,
   error,
   creating,
-  sourceName,
   onNameChange,
   onIdChange,
   onClose,
   onCreate,
 }) => (
-  <div
-    className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 p-4"
-    onMouseDown={(
-      event
-    ) => {
-      if (
-        event.target ===
-        event.currentTarget
-      ) {
-        onClose();
-      }
-    }}
-  >
-    <section className="w-full max-w-[460px] rounded-[18px] bg-white p-5 shadow-[0_30px_90px_rgba(0,0,0,0.24)]">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-base font-black">
-            {mode ===
-            'duplicate'
-              ? 'Nhân bản sản phẩm'
-              : 'Tạo sản phẩm mới'}
-          </h3>
+  <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm">
+    <div className="w-full max-w-md rounded-[20px] bg-white p-5 shadow-2xl sm:p-6">
+      <h2 className="text-lg font-black tracking-[-0.03em]">
+        {mode === 'duplicate'
+          ? 'Nhân bản template'
+          : 'Template mới'}
+      </h2>
 
-          <p className="mt-1 text-[10px] leading-5 text-black/35">
-            {mode ===
-            'duplicate'
-              ? `Copy toàn bộ bố cục từ "${sourceName}".`
-              : 'Tạo canvas trắng với một scene đầu tiên.'}
-          </p>
-        </div>
+      <p className="mt-2 text-xs leading-5 text-black/40">
+        {mode === 'duplicate'
+          ? 'Sao chép toàn bộ cấu hình hiện tại sang một ID mới.'
+          : 'Tạo template trống để bắt đầu thiết kế.'}
+      </p>
 
-        <button
-          type="button"
-          disabled={
-            creating
-          }
-          onClick={
-            onClose
-          }
-          className="rounded-full bg-[#f4f1f1] px-2.5 py-1.5 text-[10px] font-black text-black/45"
+      <div className="mt-5 space-y-4">
+        <Field label="Tên template">
+          <input
+            autoFocus
+            value={name}
+            onChange={(event) =>
+              onNameChange(
+                event.target.value
+              )
+            }
+            className={inputClass}
+          />
+        </Field>
+
+        <Field
+          label="ID"
+          hint="chữ thường, số, dấu -"
         >
-          ✕
-        </button>
+          <input
+            value={id}
+            onChange={(event) =>
+              onIdChange(
+                slugify(
+                  event.target.value
+                )
+              )
+            }
+            className={`${inputClass} font-mono`}
+          />
+        </Field>
       </div>
 
-      <div className="mt-5 space-y-3">
-        <TextField
-          label="Tên sản phẩm"
-          value={
-            name
-          }
-          placeholder="VD: Birthday Story 01"
-          onChange={
-            onNameChange
-          }
-        />
+      {error && (
+        <p className="mt-4 rounded-[10px] bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-600">
+          {error}
+        </p>
+      )}
 
-        <TextField
-          label="ID / slug"
-          value={
-            id
-          }
-          placeholder="birthday-story-01"
-          onChange={
-            onIdChange
-          }
-        />
-
-        <div className="rounded-[10px] bg-[#faf8f6] px-3 py-2.5 text-[9px] leading-4 text-black/35">
-          ID dùng làm document Firestore và đường dẫn sản phẩm. Sau khi tạo nên giữ nguyên ID.
-        </div>
-
-        {error && (
-          <p className="rounded-[10px] bg-red-50 px-3 py-2.5 text-[10px] font-bold text-red-600">
-            {error}
-          </p>
-        )}
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-2">
+      <div className="mt-6 flex justify-end gap-2">
         <button
           type="button"
-          disabled={
-            creating
-          }
-          onClick={
-            onClose
-          }
-          className="rounded-[11px] border border-black/10 px-4 py-3 text-xs font-black text-black/50"
+          disabled={creating}
+          onClick={onClose}
+          className="rounded-[10px] border border-black/10 px-4 py-2.5 text-xs font-bold text-black/45 disabled:opacity-40"
         >
           Hủy
         </button>
 
         <button
           type="button"
-          disabled={
-            creating
-          }
-          onClick={
-            onCreate
-          }
-          className="rounded-[11px] bg-[#191919] px-4 py-3 text-xs font-black text-white disabled:opacity-50"
+          disabled={creating}
+          onClick={onCreate}
+          className="rounded-[10px] bg-[#191919] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"
         >
           {creating
             ? 'Đang tạo...'
-            : mode ===
-                'duplicate'
-              ? 'Nhân bản'
-              : 'Tạo sản phẩm'}
+            : 'Tạo template'}
         </button>
       </div>
-    </section>
-  </div>
-);
-
-const SectionButton:
-React.FC<{
-  active: boolean;
-
-  label: string;
-
-  onClick:
-    () => void;
-}> = ({
-  active,
-  label,
-  onClick,
-}) => (
-  <button
-    type="button"
-    onClick={
-      onClick
-    }
-    className={[
-      'min-w-[88px] flex-1 whitespace-nowrap rounded-[8px] px-3 py-2 text-[10px] font-black transition',
-      active
-        ? 'bg-white text-[#b83e57] shadow-sm'
-        : 'text-black/38 hover:text-black/65',
-    ].join(' ')}
-  >
-    {label}
-  </button>
-);
-
-const CompactButton:
-React.FC<{
-  label: string;
-
-  primary?: boolean;
-
-  danger?: boolean;
-
-  disabled?: boolean;
-
-  onClick:
-    () => void;
-}> = ({
-  label,
-  primary = false,
-  danger = false,
-  disabled = false,
-  onClick,
-}) => (
-  <button
-    type="button"
-    disabled={
-      disabled
-    }
-    onClick={
-      onClick
-    }
-    className={[
-      'rounded-[9px] border px-3 py-2.5 text-[9px] font-black transition disabled:cursor-not-allowed disabled:opacity-35',
-      primary
-        ? 'border-[#191919] bg-[#191919] text-white'
-        : danger
-          ? 'border-red-100 bg-white text-red-500 hover:bg-red-50'
-          : 'border-black/9 bg-white text-black/45 hover:border-[#cf5068]/25 hover:text-[#b83e57]',
-    ].join(' ')}
-  >
-    {label}
-  </button>
-);
-
-const StatusPill:
-React.FC<{
-  status:
-    TemplateConfig[
-      'status'
-    ];
-}> = ({
-  status,
-}) => {
-  const label =
-    status ===
-    'available'
-      ? 'Đang bán'
-      : status ===
-          'paused'
-        ? 'Tạm dừng'
-        : 'Đang làm';
-
-  return (
-    <span
-      className={[
-        'rounded-full px-2.5 py-1 text-[9px] font-black',
-        status ===
-        'available'
-          ? 'bg-emerald-50 text-emerald-700'
-          : status ===
-              'paused'
-            ? 'bg-amber-50 text-amber-700'
-            : 'bg-[#f4f1f1] text-black/40',
-      ].join(' ')}
-    >
-      {label}
-    </span>
-  );
-};
-
-const TextField:
-React.FC<{
-  label: string;
-
-  value: string;
-
-  placeholder?: string;
-
-  onChange: (
-    value: string
-  ) => void;
-}> = ({
-  label,
-  value,
-  placeholder,
-  onChange,
-}) => (
-  <label className="block">
-    <span className="mb-1 block text-[9px] font-bold text-black/40">
-      {label}
-    </span>
-
-    <input
-      value={
-        value
-      }
-      placeholder={
-        placeholder
-      }
-      onChange={(
-        event
-      ) =>
-        onChange(
-          event.target
-            .value
-        )
-      }
-      className="w-full rounded-[9px] border border-black/10 bg-[#faf9f8] px-3 py-2.5 text-xs outline-none focus:border-[#cf5068]"
-    />
-  </label>
-);
-
-const NumberField:
-React.FC<{
-  label: string;
-
-  value: number;
-
-  onChange: (
-    value: number
-  ) => void;
-}> = ({
-  label,
-  value,
-  onChange,
-}) => (
-  <label className="block">
-    <span className="mb-1 block text-[9px] font-bold text-black/40">
-      {label}
-    </span>
-
-    <input
-      type="number"
-      min="0"
-      step="1000"
-      value={
-        value
-      }
-      onChange={(
-        event
-      ) =>
-        onChange(
-          Math.max(
-            0,
-            Number(
-              event.target
-                .value
-            ) ||
-            0
-          )
-        )
-      }
-      className="w-full rounded-[9px] border border-black/10 bg-[#faf9f8] px-3 py-2.5 text-xs font-bold outline-none focus:border-[#cf5068]"
-    />
-  </label>
-);
-
-const SelectField:
-React.FC<{
-  label: string;
-
-  value: string;
-
-  onChange: (
-    value: string
-  ) => void;
-}> = ({
-  label,
-  value,
-  onChange,
-}) => (
-  <label className="block">
-    <span className="mb-1 block text-[9px] font-bold text-black/40">
-      {label}
-    </span>
-
-    <select
-      value={
-        value
-      }
-      onChange={(
-        event
-      ) =>
-        onChange(
-          event.target
-            .value
-        )
-      }
-      className="w-full rounded-[9px] border border-black/10 bg-[#faf9f8] px-3 py-2.5 text-xs font-bold outline-none"
-    >
-      <option value="available">
-        Đang bán
-      </option>
-
-      <option value="paused">
-        Tạm dừng
-      </option>
-
-      <option value="coming_soon">
-        Đang làm
-      </option>
-    </select>
-  </label>
-);
-
-const ToggleRow:
-React.FC<{
-  title: string;
-
-  description: string;
-
-  checked: boolean;
-
-  onChange: (
-    checked: boolean
-  ) => void;
-}> = ({
-  title,
-  description,
-  checked,
-  onChange,
-}) => (
-  <label className="flex cursor-pointer items-center justify-between gap-3 rounded-[11px] border border-black/7 bg-[#faf9f8] p-3">
-    <div className="min-w-0">
-      <p className="text-[10px] font-black">
-        {title}
-      </p>
-
-      <p className="mt-0.5 text-[9px] leading-4 text-black/32">
-        {description}
-      </p>
     </div>
-
-    <input
-      type="checkbox"
-      checked={
-        checked
-      }
-      onChange={(
-        event
-      ) =>
-        onChange(
-          event.target
-            .checked
-        )
-      }
-      className="h-4 w-4 shrink-0 accent-[#b83e57]"
-    />
-  </label>
+  </div>
 );

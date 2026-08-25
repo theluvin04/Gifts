@@ -16,6 +16,7 @@ import {
 
 import {
   getFirestore,
+  initializeFirestore,
 } from 'firebase/firestore';
 
 import {
@@ -24,8 +25,11 @@ import {
 
 import firebaseConfig from '../../firebase-applet-config.json';
 
+const hasExistingApp =
+  getApps().length > 0;
+
 const app =
-  getApps().length > 0
+  hasExistingApp
     ? getApp()
     : initializeApp({
         apiKey: firebaseConfig.apiKey,
@@ -40,22 +44,52 @@ const app =
         appId: firebaseConfig.appId,
       });
 
-export const db =
+const firestoreDatabaseId =
   firebaseConfig.firestoreDatabaseId &&
   firebaseConfig.firestoreDatabaseId.trim() !==
     ''
-    ? getFirestore(
-        app,
-        firebaseConfig.firestoreDatabaseId
-      )
-    : getFirestore(app);
+    ? firebaseConfig.firestoreDatabaseId.trim()
+    : '';
 
-export const auth = getAuth(app);
+/**
+ * Visual Editor có nhiều field optional. Firestore mặc định
+ * reject `undefined`, vì vậy một field optional cũng có thể làm
+ * hỏng toàn bộ thao tác Lưu template.
+ */
+export const db =
+  hasExistingApp
+    ? (
+        firestoreDatabaseId
+          ? getFirestore(
+              app,
+              firestoreDatabaseId
+            )
+          : getFirestore(app)
+      )
+    : (
+        firestoreDatabaseId
+          ? initializeFirestore(
+              app,
+              {
+                ignoreUndefinedProperties:
+                  true,
+              },
+              firestoreDatabaseId
+            )
+          : initializeFirestore(
+              app,
+              {
+                ignoreUndefinedProperties:
+                  true,
+              }
+            )
+      );
+
+export const auth =
+  getAuth(app);
 
 export const storage =
-  getStorage(
-    app
-  );
+  getStorage(app);
 
 const googleProvider =
   new GoogleAuthProvider();

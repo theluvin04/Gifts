@@ -32,13 +32,28 @@ import {
   ADMIN_TABS,
   AdminTab,
   PaymentFilter,
+  buildCustomerSummaries,
+  getAdminPath,
+  getAdminTabFromPath,
   getOrderCode,
   isPaidOrder,
 } from './adminUi';
 
 import {
+  AdminCustomersTab,
+} from './AdminCustomersTab';
+
+import {
+  AdminDashboardTab,
+} from './AdminDashboardTab';
+
+import {
   AdminOrdersTab,
 } from './AdminOrdersTab';
+
+import {
+  AdminSettingsTab,
+} from './AdminSettingsTab';
 
 import {
   AdminTemplatesTab,
@@ -62,67 +77,78 @@ AdminSession = {
   isAdmin: false,
 };
 
-const getInitialTab =
-  (): AdminTab => {
-    return window.location
-      .pathname ===
-      '/admin/templates'
-      ? 'templates'
-      : 'orders';
-  };
+const sortTemplates = (
+  templates: TemplateConfig[]
+) => {
+  return [...templates].sort(
+    (left, right) => {
+      if (left.id === 'love-01') {
+        return -1;
+      }
+
+      if (right.id === 'love-01') {
+        return 1;
+      }
+
+      return left.name.localeCompare(
+        right.name,
+        'vi'
+      );
+    }
+  );
+};
 
 const getTemplateIdFromUrl =
   () => {
     if (
-      window.location
-        .pathname !==
+      window.location.pathname !==
       '/admin/templates'
     ) {
       return '';
     }
 
-    return new URLSearchParams(
-      window.location
-        .search
-    ).get(
-      'template'
-    ) || '';
+    return (
+      new URLSearchParams(
+        window.location.search
+      ).get('template') || ''
+    );
   };
 
-const replaceTemplateUrl =
-  (
-    templateId:
-      string
-  ) => {
-    const url =
-      new URL(
-        window.location
-          .href
-      );
+const setAdminUrl = (
+  tab: AdminTab,
+  templateId = '',
+  replace = false
+) => {
+  const url =
+    new URL(
+      window.location.href
+    );
 
-    url.pathname =
-      '/admin/templates';
+  url.pathname =
+    getAdminPath(tab);
+  url.search = '';
 
-    if (
+  if (
+    tab === 'templates' &&
+    templateId
+  ) {
+    url.searchParams.set(
+      'template',
       templateId
-    ) {
-      url.searchParams.set(
-        'template',
-        templateId
-      );
-    } else {
-      url.searchParams.delete(
-        'template'
-      );
-    }
+    );
+  }
 
-    window.history
-      .replaceState(
-        {},
-        '',
-        `${url.pathname}${url.search}`
-      );
-  };
+  const method =
+    replace
+      ? 'replaceState'
+      : 'pushState';
+
+  window.history[method](
+    {},
+    '',
+    `${url.pathname}${url.search}`
+  );
+};
 
 const getAuthErrorMessage = (
   error: any
@@ -152,10 +178,8 @@ const getAuthErrorMessage = (
   }
 
   if (
-    code ===
-      'permission-denied' ||
-    code ===
-      'firestore/permission-denied'
+    code === 'permission-denied' ||
+    code === 'firestore/permission-denied'
   ) {
     return 'Firestore đang chặn quyền Admin. Kiểm tra lại firestore.rules.';
   }
@@ -164,6 +188,40 @@ const getAuthErrorMessage = (
     error?.message ||
     'Không thể mở Admin.'
   );
+};
+
+const TAB_COPY: Record<
+  AdminTab,
+  {
+    title: string;
+    description: string;
+  }
+> = {
+  dashboard: {
+    title: 'Tổng quan',
+    description:
+      'Những số liệu và việc cần xử lý trước.',
+  },
+  orders: {
+    title: 'Đơn hàng',
+    description:
+      'Tìm, kiểm tra và xử lý đơn checkout.',
+  },
+  templates: {
+    title: 'Templates',
+    description:
+      'Quản lý sản phẩm và thiết kế trải nghiệm.',
+  },
+  customers: {
+    title: 'Khách hàng',
+    description:
+      'Tổng hợp khách hàng từ dữ liệu checkout.',
+  },
+  settings: {
+    title: 'Cài đặt',
+    description:
+      'Kiểm tra tài khoản và cấu hình đang chạy.',
+  },
 };
 
 export const AdminOrdersPage:
@@ -183,9 +241,17 @@ React.FC<Props> = ({
     orders,
     setOrders,
   ] =
-    useState<
-      AdminOrderRecord[]
-    >([]);
+    useState<AdminOrderRecord[]>(
+      []
+    );
+
+  const [
+    templateCatalog,
+    setTemplateCatalog,
+  ] =
+    useState<TemplateConfig[]>([
+      DEFAULT_LOVE_TEMPLATE_CONFIG,
+    ]);
 
   const [
     templateDraft,
@@ -196,70 +262,50 @@ React.FC<Props> = ({
     );
 
   const [
-    templateCatalog,
-    setTemplateCatalog,
-  ] =
-    useState<
-      TemplateConfig[]
-    >([
-      DEFAULT_LOVE_TEMPLATE_CONFIG,
-    ]);
-
-  const [
-    isTemplateCatalogBusy,
-    setIsTemplateCatalogBusy,
-  ] =
-    useState(false);
-
-  const [
     tab,
     setTab,
   ] =
     useState<AdminTab>(
-      getInitialTab
+      () =>
+        getAdminTabFromPath(
+          window.location.pathname
+        )
     );
 
   const [
     isLoading,
     setIsLoading,
-  ] =
-    useState(true);
+  ] = useState(true);
 
   const [
     isSigningIn,
     setIsSigningIn,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
     isSavingTemplate,
     setIsSavingTemplate,
-  ] =
-    useState(false);
-
-  const [
-    templateSaved,
-    setTemplateSaved,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
     isTemplateDirty,
     setIsTemplateDirty,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
-    error,
-    setError,
-  ] =
-    useState('');
+    templateSaved,
+    setTemplateSaved,
+  ] = useState(false);
+
+  const [
+    isTemplateCatalogBusy,
+    setIsTemplateCatalogBusy,
+  ] = useState(false);
 
   const [
     search,
     setSearch,
-  ] =
-    useState('');
+  ] = useState('');
 
   const [
     paymentFilter,
@@ -272,20 +318,34 @@ React.FC<Props> = ({
   const [
     selectedOrderIds,
     setSelectedOrderIds,
-  ] =
-    useState<string[]>([]);
+  ] = useState<string[]>([]);
 
   const [
     isDeletingOrders,
     setIsDeletingOrders,
-  ] =
-    useState(false);
+  ] = useState(false);
+
+  const [
+    error,
+    setError,
+  ] = useState('');
 
   const [
     notice,
     setNotice,
-  ] =
-    useState('');
+  ] = useState('');
+
+  const showNotice = (
+    message: string
+  ) => {
+    setNotice(message);
+
+    window.setTimeout(
+      () =>
+        setNotice(''),
+      2200
+    );
+  };
 
   const loadAdmin =
     async () => {
@@ -296,14 +356,9 @@ React.FC<Props> = ({
         const nextSession =
           await getAdminSession();
 
-        setSession(
-          nextSession
-        );
+        setSession(nextSession);
 
-        if (
-          !nextSession
-            .isAdmin
-        ) {
+        if (!nextSession.isAdmin) {
           setOrders([]);
           return;
         }
@@ -317,20 +372,17 @@ React.FC<Props> = ({
             listAdminTemplateConfigs(),
           ]);
 
-        setOrders(
-          nextOrders
-        );
-
-        setSelectedOrderIds(
-          []
-        );
+        setOrders(nextOrders);
+        setSelectedOrderIds([]);
 
         const normalizedTemplates =
-          nextTemplates.length
-            ? nextTemplates
-            : [
-                DEFAULT_LOVE_TEMPLATE_CONFIG,
-              ];
+          sortTemplates(
+            nextTemplates.length
+              ? nextTemplates
+              : [
+                  DEFAULT_LOVE_TEMPLATE_CONFIG,
+                ]
+          );
 
         setTemplateCatalog(
           normalizedTemplates
@@ -354,77 +406,37 @@ React.FC<Props> = ({
               item.id ===
               templateDraft.id
           ) ||
-          normalizedTemplates.find(
-            (item) =>
-              item.id ===
-              'love-01'
-          ) ||
           normalizedTemplates[0];
 
-        setTemplateDraft(
-          preferred
-        );
+        setTemplateDraft(preferred);
+        setIsTemplateDirty(false);
+        setTemplateSaved(false);
 
         if (
-          window.location
-            .pathname ===
+          window.location.pathname ===
           '/admin/templates'
         ) {
-          replaceTemplateUrl(
-            preferred.id
+          setAdminUrl(
+            'templates',
+            preferred.id,
+            true
           );
         }
-
-        setIsTemplateDirty(
-          false
-        );
-
-        setTemplateSaved(
-          false
-        );
       } catch (
         loadError: any
       ) {
-        console.error(
-          loadError
-        );
-
+        console.error(loadError);
         setError(
           getAuthErrorMessage(
             loadError
           )
         );
       } finally {
-        setIsLoading(
-          false
-        );
+        setIsLoading(false);
       }
     };
 
   useEffect(() => {
-    const path =
-      window.location
-        .pathname;
-
-    const allowed = [
-      '/admin',
-      '/admin/orders',
-      '/admin/templates',
-    ];
-
-    if (
-      !allowed.includes(
-        path
-      )
-    ) {
-      window.history
-        .replaceState(
-          {},
-          '',
-          '/admin/orders'
-        );
-    }
-
     void loadAdmin();
   }, []);
 
@@ -432,15 +444,14 @@ React.FC<Props> = ({
     const onPopState =
       () => {
         const nextTab =
-          getInitialTab();
+          getAdminTabFromPath(
+            window.location.pathname
+          );
 
-        setTab(
-          nextTab
-        );
+        setTab(nextTab);
 
         if (
-          nextTab !==
-          'templates'
+          nextTab !== 'templates'
         ) {
           return;
         }
@@ -451,24 +462,15 @@ React.FC<Props> = ({
         const nextTemplate =
           templateCatalog.find(
             (item) =>
-              item.id ===
-              requestedId
+              item.id === requestedId
           );
 
-        if (
-          nextTemplate
-        ) {
+        if (nextTemplate) {
           setTemplateDraft(
             nextTemplate
           );
-
-          setIsTemplateDirty(
-            false
-          );
-
-          setTemplateSaved(
-            false
-          );
+          setIsTemplateDirty(false);
+          setTemplateSaved(false);
         }
       };
 
@@ -482,17 +484,13 @@ React.FC<Props> = ({
         'popstate',
         onPopState
       );
-  }, [
-    templateCatalog,
-  ]);
+  }, [templateCatalog]);
 
   useEffect(() => {
     const handleBeforeUnload = (
       event: BeforeUnloadEvent
     ) => {
-      if (
-        !isTemplateDirty
-      ) {
+      if (!isTemplateDirty) {
         return;
       }
 
@@ -510,24 +508,19 @@ React.FC<Props> = ({
         'beforeunload',
         handleBeforeUnload
       );
-  }, [
-    isTemplateDirty,
-  ]);
+  }, [isTemplateDirty]);
 
   const openTab = (
-    next:
-      AdminTab
+    next: AdminTab
   ) => {
     if (
-      tab ===
-        'templates' &&
-      next !==
-        'templates' &&
+      tab === 'templates' &&
+      next !== 'templates' &&
       isTemplateDirty
     ) {
       const leave =
         window.confirm(
-          'Template đang có thay đổi chưa lưu. Rời trang và bỏ thay đổi?'
+          'Template có thay đổi chưa lưu. Bỏ thay đổi và rời trang?'
         );
 
       if (!leave) {
@@ -536,34 +529,16 @@ React.FC<Props> = ({
     }
 
     setTab(next);
-
-    const path =
-      next ===
-      'templates'
-        ? `/admin/templates?template=${encodeURIComponent(
-            templateDraft.id
-          )}`
-        : '/admin/orders';
-
-    const currentPath =
-      `${window.location.pathname}${window.location.search}`;
-
-    if (
-      currentPath !==
-      path
-    ) {
-      window.history
-        .pushState(
-          {},
-          '',
-          path
-        );
-    }
+    setAdminUrl(
+      next,
+      next === 'templates'
+        ? templateDraft.id
+        : ''
+    );
 
     window.scrollTo({
       top: 0,
-      behavior:
-        'instant',
+      behavior: 'instant',
     });
   };
 
@@ -584,9 +559,7 @@ React.FC<Props> = ({
           )
         );
       } finally {
-        setIsSigningIn(
-          false
-        );
+        setIsSigningIn(false);
       }
     };
 
@@ -597,42 +570,25 @@ React.FC<Props> = ({
       } catch (
         logoutError
       ) {
-        console.error(
-          logoutError
-        );
+        console.error(logoutError);
       }
 
-      setSession(
-        EMPTY_SESSION
-      );
+      setSession(EMPTY_SESSION);
       setOrders([]);
-      setSelectedOrderIds(
-        []
-      );
-
+      setSelectedOrderIds([]);
       setTemplateCatalog([
         DEFAULT_LOVE_TEMPLATE_CONFIG,
       ]);
-
       setTemplateDraft(
         DEFAULT_LOVE_TEMPLATE_CONFIG
       );
-
-      setIsTemplateDirty(
-        false
-      );
+      setIsTemplateDirty(false);
     };
 
   const handleSaveTemplate =
     async () => {
-      setIsSavingTemplate(
-        true
-      );
-
-      setTemplateSaved(
-        false
-      );
-
+      setIsSavingTemplate(true);
+      setTemplateSaved(false);
       setError('');
 
       try {
@@ -641,74 +597,26 @@ React.FC<Props> = ({
             templateDraft
           );
 
-        setTemplateDraft(
-          saved
-        );
-
+        setTemplateDraft(saved);
         setTemplateCatalog(
-          (current) => {
-            const exists =
-              current.some(
+          (current) =>
+            sortTemplates([
+              ...current.filter(
                 (item) =>
-                  item.id ===
-                  saved.id
-              );
-
-            const next =
-              exists
-                ? current.map(
-                    (item) =>
-                      item.id ===
-                      saved.id
-                        ? saved
-                        : item
-                  )
-                : [
-                    ...current,
-                    saved,
-                  ];
-
-            return next.sort(
-              (
-                left,
-                right
-              ) => {
-                if (
-                  left.id ===
-                  'love-01'
-                ) {
-                  return -1;
-                }
-
-                if (
-                  right.id ===
-                  'love-01'
-                ) {
-                  return 1;
-                }
-
-                return left.name.localeCompare(
-                  right.name,
-                  'vi'
-                );
-              }
-            );
-          }
+                  item.id !== saved.id
+              ),
+              saved,
+            ])
         );
-
-        setIsTemplateDirty(
-          false
-        );
-
-        setTemplateSaved(
-          true
+        setIsTemplateDirty(false);
+        setTemplateSaved(true);
+        showNotice(
+          `Đã lưu ${saved.name}.`
         );
 
         window.setTimeout(
           () =>
-            setTemplateSaved(
-              false
-            ),
+            setTemplateSaved(false),
           1800
         );
       } catch (
@@ -720,97 +628,70 @@ React.FC<Props> = ({
           )
         );
       } finally {
-        setIsSavingTemplate(
-          false
-        );
+        setIsSavingTemplate(false);
       }
     };
 
-  const handleSelectTemplate =
-    (
-      templateId:
-        string
-    ) => {
-      if (
-        templateId ===
-        templateDraft.id
-      ) {
+  const handleDiscardTemplateChanges = () => {
+    const original =
+      templateCatalog.find(
+        (item) =>
+          item.id === templateDraft.id
+      );
+
+    if (original) {
+      setTemplateDraft(original);
+    }
+
+    setIsTemplateDirty(false);
+    setTemplateSaved(false);
+  };
+
+  const handleSelectTemplate = (
+    templateId: string
+  ) => {
+    if (
+      templateId ===
+      templateDraft.id
+    ) {
+      return;
+    }
+
+    if (isTemplateDirty) {
+      const discard =
+        window.confirm(
+          'Template hiện tại có thay đổi chưa lưu. Bỏ thay đổi và chuyển template?'
+        );
+
+      if (!discard) {
         return;
       }
+    }
 
-      if (
-        isTemplateDirty
-      ) {
-        const discard =
-          window.confirm(
-            'Sản phẩm hiện tại có thay đổi chưa lưu. Bỏ thay đổi và chuyển sản phẩm?'
-          );
-
-        if (!discard) {
-          return;
-        }
-      }
-
-      const next =
-        templateCatalog.find(
-          (item) =>
-            item.id ===
-            templateId
-        );
-
-      if (!next) {
-        return;
-      }
-
-      setTemplateDraft(
-        next
+    const next =
+      templateCatalog.find(
+        (item) =>
+          item.id === templateId
       );
 
-      setIsTemplateDirty(
-        false
-      );
+    if (!next) {
+      return;
+    }
 
-      setTemplateSaved(
-        false
-      );
-
-      const url =
-        new URL(
-          window.location
-            .href
-        );
-
-      url.pathname =
-        '/admin/templates';
-
-      url.searchParams.set(
-        'template',
-        next.id
-      );
-
-      window.history
-        .pushState(
-          {},
-          '',
-          `${url.pathname}${url.search}`
-        );
-
-      window.scrollTo({
-        top: 0,
-        behavior:
-          'instant',
-      });
-    };
+    setTemplateDraft(next);
+    setIsTemplateDirty(false);
+    setTemplateSaved(false);
+    setAdminUrl(
+      'templates',
+      next.id
+    );
+  };
 
   const handleCreateTemplate =
     async (
-      input:
-        AdminTemplateCreateInput
+      input: AdminTemplateCreateInput
     ) => {
-      setIsTemplateCatalogBusy(
-        true
-      );
-
+      setIsTemplateCatalogBusy(true);
       setError('');
 
       try {
@@ -821,62 +702,24 @@ React.FC<Props> = ({
 
         setTemplateCatalog(
           (current) =>
-            [
+            sortTemplates([
               ...current.filter(
                 (item) =>
-                  item.id !==
-                  created.id
+                  item.id !== created.id
               ),
               created,
-            ].sort(
-              (
-                left,
-                right
-              ) => {
-                if (
-                  left.id ===
-                  'love-01'
-                ) {
-                  return -1;
-                }
-
-                if (
-                  right.id ===
-                  'love-01'
-                ) {
-                  return 1;
-                }
-
-                return left.name.localeCompare(
-                  right.name,
-                  'vi'
-                );
-              }
-            )
+            ])
         );
-
-        setTemplateDraft(
-          created
-        );
-
-        replaceTemplateUrl(
-          created.id
-        );
-
-        setIsTemplateDirty(
-          false
-        );
-
-        setTemplateSaved(
+        setTemplateDraft(created);
+        setIsTemplateDirty(false);
+        setTemplateSaved(true);
+        setAdminUrl(
+          'templates',
+          created.id,
           true
         );
-
-        window.setTimeout(
-          () =>
-            setTemplateSaved(
-              false
-            ),
-          1600
+        showNotice(
+          `Đã tạo ${created.name}.`
         );
 
         return created;
@@ -888,24 +731,17 @@ React.FC<Props> = ({
             createError
           )
         );
-
         throw createError;
       } finally {
-        setIsTemplateCatalogBusy(
-          false
-        );
+        setIsTemplateCatalogBusy(false);
       }
     };
 
   const handleDeleteTemplate =
     async (
-      templateId:
-        string
+      templateId: string
     ) => {
-      setIsTemplateCatalogBusy(
-        true
-      );
-
+      setIsTemplateCatalogBusy(true);
       setError('');
 
       try {
@@ -916,47 +752,34 @@ React.FC<Props> = ({
         const remaining =
           templateCatalog.filter(
             (item) =>
-              item.id !==
-              templateId
+              item.id !== templateId
           );
 
         const safeRemaining =
-          remaining.length
-            ? remaining
-            : [
-                DEFAULT_LOVE_TEMPLATE_CONFIG,
-              ];
+          sortTemplates(
+            remaining.length
+              ? remaining
+              : [
+                  DEFAULT_LOVE_TEMPLATE_CONFIG,
+                ]
+          );
+
+        const next =
+          safeRemaining[0];
 
         setTemplateCatalog(
           safeRemaining
         );
-
-        const next =
-          safeRemaining.find(
-            (item) =>
-              item.id ===
-              'love-01'
-          ) ||
-          safeRemaining[0];
-
-        setTemplateDraft(
-          next
+        setTemplateDraft(next);
+        setIsTemplateDirty(false);
+        setTemplateSaved(false);
+        setAdminUrl(
+          'templates',
+          next.id,
+          true
         );
-
-        replaceTemplateUrl(
-          next.id
-        );
-
-        setIsTemplateDirty(
-          false
-        );
-
-        setTemplateSaved(
-          false
-        );
-
         showNotice(
-          `Đã xóa sản phẩm ${templateId}.`
+          `Đã xóa ${templateId}.`
         );
       } catch (
         deleteError: any
@@ -966,12 +789,9 @@ React.FC<Props> = ({
             deleteError
           )
         );
-
         throw deleteError;
       } finally {
-        setIsTemplateCatalogBusy(
-          false
-        );
+        setIsTemplateCatalogBusy(false);
       }
     };
 
@@ -981,21 +801,14 @@ React.FC<Props> = ({
         orders.filter(
           (order) =>
             Boolean(
-              order.customer
-                ?.fullName ||
-              order.customer
-                ?.email ||
-              order.customer
-                ?.phone ||
-              order
-                .paymentReference
+              order.customer?.fullName ||
+              order.customer?.email ||
+              order.customer?.phone ||
+              order.paymentReference
             ) ||
-            order
-              .paymentStatus ===
+            order.paymentStatus ===
               'waiting_bank_transfer' ||
-            isPaidOrder(
-              order
-            )
+            isPaidOrder(order)
         ),
       [orders]
     );
@@ -1007,62 +820,45 @@ React.FC<Props> = ({
           .trim()
           .toLowerCase();
 
-      return checkoutOrders
-        .filter(
-          (order) => {
-            if (
-              paymentFilter ===
-                'waiting' &&
-              order
-                .paymentStatus !==
-                'waiting_bank_transfer'
-            ) {
-              return false;
-            }
-
-            if (
-              paymentFilter ===
-                'paid' &&
-              !isPaidOrder(
-                order
-              )
-            ) {
-              return false;
-            }
-
-            if (
-              !keyword
-            ) {
-              return true;
-            }
-
-            const haystack =
-              [
-                order.id,
-                order.orderCode,
-                order
-                  .paymentReference,
-                order.customer
-                  ?.fullName,
-                order.customer
-                  ?.email,
-                order.customer
-                  ?.phone,
-                order.senderName,
-                order.receiverName,
-              ]
-                .filter(
-                  Boolean
-                )
-                .join(' ')
-                .toLowerCase();
-
-            return haystack
-              .includes(
-                keyword
-              );
+      return checkoutOrders.filter(
+        (order) => {
+          if (
+            paymentFilter ===
+              'waiting' &&
+            order.paymentStatus !==
+              'waiting_bank_transfer'
+          ) {
+            return false;
           }
-        );
+
+          if (
+            paymentFilter ===
+              'paid' &&
+            !isPaidOrder(order)
+          ) {
+            return false;
+          }
+
+          if (!keyword) {
+            return true;
+          }
+
+          return [
+            order.id,
+            order.orderCode,
+            order.paymentReference,
+            order.customer?.fullName,
+            order.customer?.email,
+            order.customer?.phone,
+            order.senderName,
+            order.receiverName,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(keyword);
+        }
+      );
     }, [
       checkoutOrders,
       search,
@@ -1070,61 +866,60 @@ React.FC<Props> = ({
     ]);
 
   const paidOrders =
-    checkoutOrders.filter(
-      isPaidOrder
+    useMemo(
+      () =>
+        checkoutOrders.filter(
+          isPaidOrder
+        ),
+      [checkoutOrders]
     );
 
   const pendingOrders =
-    checkoutOrders.filter(
-      (order) =>
-        order
-          .paymentStatus ===
-        'waiting_bank_transfer'
+    useMemo(
+      () =>
+        checkoutOrders.filter(
+          (order) =>
+            order.paymentStatus ===
+            'waiting_bank_transfer'
+        ),
+      [checkoutOrders]
     );
 
   const revenue =
-    paidOrders.reduce(
-      (
-        sum,
-        order
-      ) =>
-        sum +
-        (
-          typeof order
-            .price ===
-          'number'
-            ? order.price
-            : 0
-        ),
-      0
-    );
-
-  const showNotice = (
-    message: string
-  ) => {
-    setNotice(
-      message
-    );
-
-    window.setTimeout(
+    useMemo(
       () =>
-        setNotice(''),
-      2200
+        paidOrders.reduce(
+          (sum, order) =>
+            sum +
+            (
+              typeof order.price ===
+              'number'
+                ? order.price
+                : 0
+            ),
+          0
+        ),
+      [paidOrders]
     );
-  };
+
+  const customers =
+    useMemo(
+      () =>
+        buildCustomerSummaries(
+          checkoutOrders
+        ),
+      [checkoutOrders]
+    );
 
   const toggleOrderSelection = (
     orderId: string
   ) => {
     setSelectedOrderIds(
       (current) =>
-        current.includes(
-          orderId
-        )
+        current.includes(orderId)
           ? current.filter(
               (id) =>
-                id !==
-                orderId
+                id !== orderId
             )
           : [
               ...current,
@@ -1141,45 +936,25 @@ React.FC<Props> = ({
             order.id
         );
 
-      if (
-        visibleIds.length ===
-        0
-      ) {
-        return;
-      }
-
       setSelectedOrderIds(
         (current) => {
           const selected =
-            new Set(
-              current
-            );
+            new Set(current);
 
-          const allVisibleSelected =
+          const allSelected =
+            visibleIds.length > 0 &&
             visibleIds.every(
               (id) =>
-                selected.has(
-                  id
-                )
+                selected.has(id)
             );
 
-          if (
-            allVisibleSelected
-          ) {
-            visibleIds.forEach(
-              (id) =>
-                selected.delete(
-                  id
-                )
-            );
-          } else {
-            visibleIds.forEach(
-              (id) =>
-                selected.add(
-                  id
-                )
-            );
-          }
+          visibleIds.forEach((id) => {
+            if (allSelected) {
+              selected.delete(id);
+            } else {
+              selected.add(id);
+            }
+          });
 
           return Array.from(
             selected
@@ -1189,13 +964,10 @@ React.FC<Props> = ({
     };
 
   const removeDeletedOrders = (
-    deletedIds:
-      string[]
+    deletedIds: string[]
   ) => {
     const deletedSet =
-      new Set(
-        deletedIds
-      );
+      new Set(deletedIds);
 
     setOrders(
       (current) =>
@@ -1211,25 +983,17 @@ React.FC<Props> = ({
       (current) =>
         current.filter(
           (id) =>
-            !deletedSet.has(
-              id
-            )
+            !deletedSet.has(id)
         )
     );
   };
 
   const handleDeleteOne =
     async (
-      order:
-        AdminOrderRecord
+      order: AdminOrderRecord
     ) => {
-      const paid =
-        isPaidOrder(
-          order
-        );
-
       const extraWarning =
-        paid
+        isPaidOrder(order)
           ? '\n\nĐơn này ĐÃ THANH TOÁN.'
           : order.status ===
               'published'
@@ -1245,41 +1009,29 @@ React.FC<Props> = ({
         return;
       }
 
-      setIsDeletingOrders(
-        true
-      );
+      setIsDeletingOrders(true);
       setError('');
 
       try {
         await deleteAdminOrder(
           order.id
         );
-
-        removeDeletedOrders(
-          [
-            order.id,
-          ]
-        );
-
+        removeDeletedOrders([
+          order.id,
+        ]);
         showNotice(
           `Đã xóa ${getOrderCode(order)}.`
         );
       } catch (
         deleteError: any
       ) {
-        console.error(
-          deleteError
-        );
-
         setError(
           getAuthErrorMessage(
             deleteError
           )
         );
       } finally {
-        setIsDeletingOrders(
-          false
-        );
+        setIsDeletingOrders(false);
       }
     };
 
@@ -1299,128 +1051,57 @@ React.FC<Props> = ({
         );
 
       if (
-        selectedOrders.length ===
-        0
+        selectedOrders.length === 0
       ) {
-        setSelectedOrderIds(
-          []
-        );
+        setSelectedOrderIds([]);
         return;
       }
 
-      const selectedPaidCount =
-        selectedOrders.filter(
-          isPaidOrder
-        ).length;
-
-      const selectedPublishedCount =
-        selectedOrders.filter(
-          (order) =>
-            order.status ===
-            'published'
-        ).length;
-
-      const warnings = [
-        selectedPaidCount > 0
-          ? `${selectedPaidCount} đơn đã thanh toán`
-          : '',
-        selectedPublishedCount > 0
-          ? `${selectedPublishedCount} gift đang publish`
-          : '',
-      ]
-        .filter(Boolean)
-        .join(' · ');
-
       const confirmed =
         window.confirm(
-          `Xóa vĩnh viễn ${selectedOrders.length} đơn?` +
-          (
-            warnings
-              ? `\n\nCảnh báo: ${warnings}.`
-              : ''
-          ) +
-          '\n\nHành động này không thể hoàn tác.'
+          `Xóa vĩnh viễn ${selectedOrders.length} đơn?\n\nHành động này không thể hoàn tác.`
         );
 
       if (!confirmed) {
         return;
       }
 
-      setIsDeletingOrders(
-        true
-      );
+      setIsDeletingOrders(true);
       setError('');
 
-      const deletedIds:
-        string[] = [];
-
-      const failedIds:
-        string[] = [];
-
       try {
-        const batchSize =
-          8;
-
-        for (
-          let index = 0;
-          index <
-          selectedOrders.length;
-          index +=
-            batchSize
-        ) {
-          const batch =
-            selectedOrders.slice(
-              index,
-              index +
-                batchSize
-            );
-
-          const results =
-            await Promise.allSettled(
-              batch.map(
-                (order) =>
-                  deleteAdminOrder(
-                    order.id
-                  )
-              )
-            );
-
-          results.forEach(
-            (
-              result,
-              resultIndex
-            ) => {
-              const id =
-                batch[
-                  resultIndex
-                ].id;
-
-              if (
-                result.status ===
-                'fulfilled'
-              ) {
-                deletedIds.push(
-                  id
-                );
-              } else {
-                failedIds.push(
-                  id
-                );
-              }
-            }
+        const results =
+          await Promise.allSettled(
+            selectedOrders.map(
+              (order) =>
+                deleteAdminOrder(
+                  order.id
+                )
+            )
           );
-        }
+
+        const deletedIds =
+          results
+            .map((result, index) =>
+              result.status ===
+              'fulfilled'
+                ? selectedOrders[
+                    index
+                  ].id
+                : ''
+            )
+            .filter(Boolean);
 
         removeDeletedOrders(
           deletedIds
         );
 
         if (
-          failedIds.length >
-          0
+          deletedIds.length !==
+          selectedOrders.length
         ) {
           setError(
-            `Đã xóa ${deletedIds.length}/${selectedOrders.length} đơn. ${failedIds.length} đơn xóa lỗi, hãy thử lại.`
+            `Đã xóa ${deletedIds.length}/${selectedOrders.length} đơn. Một số đơn xóa lỗi, hãy thử lại.`
           );
         } else {
           showNotice(
@@ -1428,9 +1109,7 @@ React.FC<Props> = ({
           );
         }
       } finally {
-        setIsDeletingOrders(
-          false
-        );
+        setIsDeletingOrders(false);
       }
     };
 
@@ -1442,10 +1121,7 @@ React.FC<Props> = ({
     );
   }
 
-  if (
-    !session
-      .isGoogleUser
-  ) {
+  if (!session.isGoogleUser) {
     return (
       <AccessScreen
         title="Đăng nhập Dearly Admin"
@@ -1455,64 +1131,50 @@ React.FC<Props> = ({
             ? 'Đang đăng nhập...'
             : 'Đăng nhập với Google'
         }
-        disabled={
-          isSigningIn
-        }
-        error={
-          error
-        }
+        disabled={isSigningIn}
+        error={error}
         onAction={() =>
           void handleGoogleLogin()
         }
-        onBackHome={
-          onBackHome
-        }
+        onBackHome={onBackHome}
       />
     );
   }
 
-  if (
-    !session.isAdmin
-  ) {
+  if (!session.isAdmin) {
     return (
       <AccessScreen
         title="Gmail này chưa có quyền Admin"
         description={`Đang đăng nhập: ${session.email || 'Không xác định'}`}
         buttonLabel="Đổi tài khoản Google"
-        error={
-          error
-        }
+        error={error}
         onAction={() => {
           void logoutAdmin()
             .then(
               handleGoogleLogin
             );
         }}
-        onBackHome={
-          onBackHome
-        }
+        onBackHome={onBackHome}
       />
     );
   }
 
+  const tabCopy =
+    TAB_COPY[tab];
+
   return (
-    <div className="min-h-[100svh] bg-[#f6f5f3] text-[#191919] lg:grid lg:grid-cols-[210px_minmax(0,1fr)]">
+    <div className="min-h-[100svh] bg-[#f6f5f3] text-[#191919] lg:grid lg:grid-cols-[228px_minmax(0,1fr)]">
       <aside className="border-b border-black/8 bg-white lg:sticky lg:top-0 lg:h-[100svh] lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between px-4 py-4 lg:block lg:px-5 lg:py-6">
           <button
             type="button"
-            onClick={
-              onBackHome
-            }
+            onClick={onBackHome}
+            className="block"
           >
             <img
-              src={
-                BRAND.logoPath
-              }
-              alt={
-                BRAND.name
-              }
-              className="h-10 w-auto object-contain"
+              src={BRAND.logoPath}
+              alt={BRAND.name}
+              className="h-9 w-auto object-contain"
             />
           </button>
 
@@ -1527,28 +1189,28 @@ React.FC<Props> = ({
           </button>
         </div>
 
-        <nav className="flex gap-1 px-3 pb-3 lg:block lg:space-y-1">
+        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:block lg:space-y-1 lg:overflow-visible">
           {ADMIN_TABS.map(
             (item) => (
               <button
-                key={
-                  item.key
-                }
+                key={item.key}
                 type="button"
                 onClick={() =>
-                  openTab(
-                    item.key
-                  )
+                  openTab(item.key)
                 }
                 className={[
-                  'flex-1 rounded-[10px] px-3.5 py-2.5 text-left text-xs font-bold transition lg:block lg:w-full',
-                  tab ===
-                  item.key
-                    ? 'bg-[#f5ebed] text-[#b83e57]'
-                    : 'text-black/42 hover:bg-black/[0.03] hover:text-black/70',
+                  'shrink-0 rounded-[10px] px-3.5 py-2.5 text-left transition lg:block lg:w-full',
+                  tab === item.key
+                    ? 'bg-[#f6ecef] text-[#a93650]'
+                    : 'text-black/45 hover:bg-black/[0.03] hover:text-black/70',
                 ].join(' ')}
               >
-                {item.label}
+                <span className="block text-xs font-black">
+                  {item.label}
+                </span>
+                <span className="mt-1 hidden text-[9px] leading-4 opacity-60 lg:block">
+                  {item.description}
+                </span>
               </button>
             )
           )}
@@ -1556,15 +1218,12 @@ React.FC<Props> = ({
 
         <div className="hidden lg:absolute lg:bottom-0 lg:left-0 lg:right-0 lg:block lg:border-t lg:border-black/8 lg:p-4">
           <p className="truncate text-xs font-bold text-black/65">
-            {session
-              .displayName ||
+            {session.displayName ||
               'Google Admin'}
           </p>
-
           <p className="mt-1 truncate text-[10px] text-black/35">
             {session.email}
           </p>
-
           <button
             type="button"
             onClick={() =>
@@ -1578,31 +1237,29 @@ React.FC<Props> = ({
       </aside>
 
       <main className="min-w-0 px-3 py-5 sm:px-6 lg:px-8 lg:py-7">
-        <div className="mx-auto max-w-[1280px]">
-          <header className="mb-5 flex items-end justify-between gap-4">
+        <div className="mx-auto max-w-[1320px]">
+          <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#b83e57]">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#b83e57]">
                 Dearly Admin
               </p>
-
               <h1 className="mt-1.5 text-2xl font-black tracking-[-0.04em] sm:text-3xl">
-                {tab ===
-                'templates'
-                  ? 'Templates'
-                  : 'Đơn hàng'}
+                {tabCopy.title}
               </h1>
+              <p className="mt-1 text-xs text-black/38">
+                {tabCopy.description}
+              </p>
             </div>
 
-            {tab ===
-              'orders' && (
+            {tab !== 'templates' && (
               <button
                 type="button"
                 onClick={() =>
                   void loadAdmin()
                 }
-                className="rounded-[10px] border border-black/10 bg-white px-3 py-2 text-[10px] font-bold text-black/45 hover:text-black/70"
+                className="self-start rounded-[10px] border border-black/10 bg-white px-3.5 py-2.5 text-[10px] font-bold text-black/45 hover:text-black/70 sm:self-auto"
               >
-                Làm mới
+                Làm mới dữ liệu
               </button>
             )}
           </header>
@@ -1619,120 +1276,88 @@ React.FC<Props> = ({
             </div>
           )}
 
-          {tab ===
-            'orders' && (
+          {tab === 'dashboard' && (
+            <AdminDashboardTab
+              orders={checkoutOrders}
+              customers={customers}
+              paidCount={paidOrders.length}
+              pendingCount={pendingOrders.length}
+              revenue={revenue}
+              templates={templateCatalog}
+              onOpenOrders={() =>
+                openTab('orders')
+              }
+              onOpenTemplates={() =>
+                openTab('templates')
+              }
+              onOpenOrder={onOpenOrder}
+            />
+          )}
+
+          {tab === 'orders' && (
             <AdminOrdersTab
-              orders={
-                filteredOrders
-              }
-              totalOrders={
-                checkoutOrders
-                  .length
-              }
-              paidCount={
-                paidOrders
-                  .length
-              }
-              pendingCount={
-                pendingOrders
-                  .length
-              }
-              revenue={
-                revenue
-              }
-              search={
-                search
-              }
-              paymentFilter={
-                paymentFilter
-              }
-              onSearch={
-                setSearch
-              }
-              onPaymentFilter={
-                setPaymentFilter
-              }
-              selectedOrderIds={
-                selectedOrderIds
-              }
-              deleting={
-                isDeletingOrders
-              }
-              onToggleOrder={
-                toggleOrderSelection
-              }
-              onToggleAllVisible={
-                toggleAllVisibleOrders
-              }
+              orders={filteredOrders}
+              totalOrders={checkoutOrders.length}
+              paidCount={paidOrders.length}
+              pendingCount={pendingOrders.length}
+              revenue={revenue}
+              search={search}
+              paymentFilter={paymentFilter}
+              onSearch={setSearch}
+              onPaymentFilter={setPaymentFilter}
+              selectedOrderIds={selectedOrderIds}
+              deleting={isDeletingOrders}
+              onToggleOrder={toggleOrderSelection}
+              onToggleAllVisible={toggleAllVisibleOrders}
               onClearSelection={() =>
-                setSelectedOrderIds(
-                  []
-                )
+                setSelectedOrderIds([])
               }
-              onDeleteOne={(
-                order
-              ) =>
-                void handleDeleteOne(
-                  order
-                )
+              onDeleteOne={(order) =>
+                void handleDeleteOne(order)
               }
               onDeleteSelected={() =>
                 void handleDeleteSelected()
               }
-              onOpenOrder={
-                onOpenOrder
-              }
+              onOpenOrder={onOpenOrder}
             />
           )}
 
-          {tab ===
-            'templates' && (
+          {tab === 'templates' && (
             <AdminTemplatesTab
-              templates={
-                templateCatalog
-              }
-              template={
-                templateDraft
-              }
-              dirty={
-                isTemplateDirty
-              }
-              saved={
-                templateSaved
-              }
-              saving={
-                isSavingTemplate
-              }
-              catalogBusy={
-                isTemplateCatalogBusy
-              }
-              onSelectTemplate={
-                handleSelectTemplate
-              }
-              onCreateTemplate={
-                handleCreateTemplate
-              }
-              onDeleteTemplate={
-                handleDeleteTemplate
-              }
-              onChange={(
-                nextTemplate
-              ) => {
+              templates={templateCatalog}
+              template={templateDraft}
+              dirty={isTemplateDirty}
+              saved={templateSaved}
+              saving={isSavingTemplate}
+              catalogBusy={isTemplateCatalogBusy}
+              onSelectTemplate={handleSelectTemplate}
+              onCreateTemplate={handleCreateTemplate}
+              onDeleteTemplate={handleDeleteTemplate}
+              onChange={(nextTemplate) => {
                 setTemplateDraft(
                   nextTemplate
                 );
-
-                setTemplateSaved(
-                  false
-                );
-
-                setIsTemplateDirty(
-                  true
-                );
+                setTemplateSaved(false);
+                setIsTemplateDirty(true);
               }}
               onSave={() =>
                 void handleSaveTemplate()
               }
+              onDiscardChanges={
+                handleDiscardTemplateChanges
+              }
+            />
+          )}
+
+          {tab === 'customers' && (
+            <AdminCustomersTab
+              customers={customers}
+            />
+          )}
+
+          {tab === 'settings' && (
+            <AdminSettingsTab
+              session={session}
             />
           )}
         </div>
@@ -1763,21 +1388,15 @@ React.FC<{
     <div className="mx-auto max-w-md rounded-[20px] border border-black/8 bg-white p-7">
       <button
         type="button"
-        onClick={
-          onBackHome
-        }
+        onClick={onBackHome}
         className="text-xs font-bold text-black/40"
       >
         ← Về trang chủ
       </button>
 
       <img
-        src={
-          BRAND.logoPath
-        }
-        alt={
-          BRAND.name
-        }
+        src={BRAND.logoPath}
+        alt={BRAND.name}
         className="mt-7 h-12 w-auto"
       />
 
@@ -1797,12 +1416,8 @@ React.FC<{
 
       <button
         type="button"
-        disabled={
-          disabled
-        }
-        onClick={
-          onAction
-        }
+        disabled={disabled}
+        onClick={onAction}
         className="mt-6 w-full rounded-[12px] bg-[#191919] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-50"
       >
         {buttonLabel}
