@@ -16,11 +16,42 @@ import type {
   AppLocation,
 } from '../routing/appRouter';
 
+import type {
+  TemplateVisualEditorConfig,
+} from '../templates/visualEditor';
+
 export interface SharedGiftState {
   giftId: string;
   templateId: string;
   config: unknown;
+  dynamicVisual: boolean;
 }
+
+const isVisualEditorConfig = (
+  value: unknown
+): value is
+  TemplateVisualEditorConfig => {
+  if (
+    !value ||
+    typeof value !==
+      'object'
+  ) {
+    return false;
+  }
+
+  const data =
+    value as any;
+
+  return (
+    Array.isArray(
+      data.scenes
+    ) &&
+    data.scenes.length >
+      0 &&
+    typeof data.initialSceneId ===
+      'string'
+  );
+};
 
 export const useSharedGift = (
   location: AppLocation
@@ -95,17 +126,34 @@ export const useSharedGift = (
               templateId
             );
 
-          if (
-            !template ||
-            !template
-              .validateConfig(
+          let dynamicVisual =
+            false;
+
+          if (template) {
+            if (
+              !template.validateConfig(
                 gift.config
               )
-          ) {
-            setGiftError(
-              'Template của món quà này chưa được hỗ trợ.'
-            );
-            return;
+            ) {
+              setGiftError(
+                'Dữ liệu món quà không hợp lệ.'
+              );
+              return;
+            }
+          } else {
+            if (
+              !isVisualEditorConfig(
+                gift.config
+              )
+            ) {
+              setGiftError(
+                'Template của món quà này chưa được hỗ trợ.'
+              );
+              return;
+            }
+
+            dynamicVisual =
+              true;
           }
 
           setSharedGift({
@@ -114,6 +162,7 @@ export const useSharedGift = (
             templateId,
             config:
               gift.config,
+            dynamicVisual,
           });
 
           const cleanPath =

@@ -6,6 +6,8 @@ import { HomePage } from './components/Homepage';
 import { CartPage } from './components/CartPage';
 import { TrackOrderPage } from './components/TrackOrderPage';
 import { DynamicVisualTemplatePage } from './components/DynamicVisualTemplatePage';
+import { DynamicVisualCheckoutPage } from './components/DynamicVisualCheckoutPage';
+import { DynamicTemplateCatalogPortal } from './components/DynamicTemplateCatalogPortal';
 import { AdminOrdersPage } from './components/admin/AdminOrdersPage';
 import { AdminOrderDetailPage } from './components/admin/AdminOrderDetailPage';
 import { BRAND } from './config/brand';
@@ -14,6 +16,8 @@ import { useTemplateDrafts } from './hooks/useTemplateDrafts';
 import { useSharedGift } from './hooks/useSharedGift';
 import { useCart } from './hooks/useCart';
 import { DEFAULT_TEMPLATE_ID, getTemplateModule } from './templates/registry';
+import { VisualSceneExperience } from './engine';
+import type { TemplateVisualEditorConfig } from './templates/visualEditor';
 
 export default function App() {
   const { location, navigate } = useAppNavigation();
@@ -83,9 +87,23 @@ export default function App() {
     const template = getTemplateModule(sharedGift.templateId);
 
     if (!template) {
+      if (sharedGift.dynamicVisual) {
+        const visualConfig =
+          sharedGift.config as TemplateVisualEditorConfig;
+
+        return (
+          <main className="min-h-[100svh] w-full overflow-x-hidden bg-white">
+            <VisualSceneExperience
+              scenes={visualConfig.scenes}
+              initialSceneId={visualConfig.initialSceneId}
+            />
+          </main>
+        );
+      }
+
       return renderMessage(
         'Template chưa được hỗ trợ',
-        'Món quà này đang dùng template động. Hãy mở lại từ đường dẫn đơn hàng sau khi hệ thống xuất bản.'
+        'Không thể mở template của món quà này.'
       );
     }
 
@@ -106,12 +124,20 @@ export default function App() {
     const template = getTemplateModule(DEFAULT_TEMPLATE_ID);
 
     return (
-      <HomePage
-        onOpenLoveTemplate={() =>
-          navigate(template?.paths.product || '/')
-        }
-        onTrackOrder={() => navigate('/track-order')}
-      />
+      <>
+        <HomePage
+          onOpenLoveTemplate={() =>
+            navigate(template?.paths.product || '/')
+          }
+          onTrackOrder={() => navigate('/track-order')}
+        />
+
+        <DynamicTemplateCatalogPortal
+          onOpenTemplate={(templateId) =>
+            navigate(`/products/${templateId}`)
+          }
+        />
+      </>
     );
   }
 
@@ -137,7 +163,7 @@ export default function App() {
           const template = getTemplateModule(item.templateId);
           navigate(
             template?.paths.checkout ||
-              `/create/${item.templateId}`
+              `/checkout/${item.templateId}`
           );
         }}
       />
@@ -173,20 +199,10 @@ export default function App() {
     if (!template) {
       if (location.kind === 'template-checkout') {
         return (
-          <DynamicVisualTemplatePage
+          <DynamicVisualCheckoutPage
             templateId={location.templateId}
-            mode="create"
+            onBack={() => navigate(`/create/${location.templateId}`)}
             onBackHome={() => navigate('/')}
-            onStartPersonalize={() => navigate(`/create/${location.templateId}`)}
-            onBackProduct={() => navigate(`/products/${location.templateId}`)}
-            onCheckout={() => {
-              try {
-                addCartItem(location.templateId, location.templateId);
-                navigate('/cart');
-              } catch {
-                window.alert('Không thể thêm vào giỏ hàng trên trình duyệt này.');
-              }
-            }}
           />
         );
       }
@@ -198,14 +214,7 @@ export default function App() {
           onBackHome={() => navigate('/')}
           onStartPersonalize={() => navigate(`/create/${location.templateId}`)}
           onBackProduct={() => navigate(`/products/${location.templateId}`)}
-          onCheckout={() => {
-            try {
-              addCartItem(location.templateId, location.templateId);
-              navigate('/cart');
-            } catch {
-              window.alert('Không thể thêm vào giỏ hàng trên trình duyệt này.');
-            }
-          }}
+          onCheckout={() => navigate(`/checkout/${location.templateId}`)}
         />
       );
     }

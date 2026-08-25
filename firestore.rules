@@ -71,8 +71,10 @@ service cloud.firestore {
       // Storefront reads a single template document.
       allow get: if true;
 
-      // Do not expose a public collection listing.
-      allow list: if isAdmin();
+      // Storefront may list only documents explicitly marked visible.
+      // Client query MUST include where('visible', '==', true).
+      allow list: if isAdmin()
+        || resource.data.get('visible', false) == true;
 
       // Price / sale / visibility are Admin-only writes.
       allow create, update, delete: if isAdmin();
