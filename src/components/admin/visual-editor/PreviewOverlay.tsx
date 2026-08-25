@@ -1,10 +1,15 @@
 import React, {
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
 import {
   VisualSceneExperience,
+} from '../../../engine';
+
+import type {
+  SceneElement,
 } from '../../../engine';
 
 import type {
@@ -25,6 +30,130 @@ interface Props {
 type PreviewDevice =
   | 'desktop'
   | 'mobile';
+
+/**
+ * Preview phải chịu được cả:
+ * - template cũ: chỉ có textStyle / buttonStyle
+ * - patch tạm trước đây: textStyle.mobile / buttonStyle.mobile
+ * - schema mới về sau: mobileTextStyle / mobileButtonStyle
+ *
+ * Quan trọng: chỉ tạo bản clone dùng cho preview, không sửa config editor.
+ */
+const resolveElementForPreview = (
+  element:
+    SceneElement,
+  device:
+    PreviewDevice
+):
+  SceneElement => {
+  if (
+    element.type ===
+    'text'
+  ) {
+    const rawStyle =
+      (
+        element.textStyle ||
+        {}
+      ) as
+        Record<
+          string,
+          any
+        >;
+
+    const {
+      mobile:
+        nestedMobile,
+      ...desktopStyle
+    } =
+      rawStyle;
+
+    const explicitMobile =
+      (
+        element as any
+      ).mobileTextStyle;
+
+    const mobileStyle =
+      explicitMobile &&
+      typeof explicitMobile ===
+        'object'
+        ? explicitMobile
+        : nestedMobile &&
+            typeof nestedMobile ===
+              'object'
+          ? nestedMobile
+          : {};
+
+    return {
+      ...element,
+      textStyle:
+        (
+          device ===
+          'mobile'
+            ? {
+                ...desktopStyle,
+                ...mobileStyle,
+              }
+            : desktopStyle
+        ) as any,
+    } as
+      SceneElement;
+  }
+
+  if (
+    element.type ===
+    'button'
+  ) {
+    const rawStyle =
+      (
+        element.buttonStyle ||
+        {}
+      ) as
+        Record<
+          string,
+          any
+        >;
+
+    const {
+      mobile:
+        nestedMobile,
+      ...desktopStyle
+    } =
+      rawStyle;
+
+    const explicitMobile =
+      (
+        element as any
+      ).mobileButtonStyle;
+
+    const mobileStyle =
+      explicitMobile &&
+      typeof explicitMobile ===
+        'object'
+        ? explicitMobile
+        : nestedMobile &&
+            typeof nestedMobile ===
+              'object'
+          ? nestedMobile
+          : {};
+
+    return {
+      ...element,
+      buttonStyle:
+        (
+          device ===
+          'mobile'
+            ? {
+                ...desktopStyle,
+                ...mobileStyle,
+              }
+            : desktopStyle
+        ) as any,
+    } as
+      SceneElement;
+  }
+
+  return element;
+};
 
 export const PreviewOverlay:
 React.FC<Props> = ({
@@ -55,6 +184,44 @@ React.FC<Props> = ({
   ] =
     useState(false);
 
+  /**
+   * Dùng một config riêng cho Preview.
+   * Không mutate config gốc của editor nên mở/đóng Xem thử
+   * không thể làm thay đổi font hoặc layout PC/Mobile.
+   */
+  const previewConfig =
+    useMemo<
+      TemplateVisualEditorConfig
+    >(
+      () => ({
+        ...config,
+
+        scenes:
+          config.scenes.map(
+            (
+              scene
+            ) => ({
+              ...scene,
+
+              elements:
+                scene.elements.map(
+                  (
+                    element
+                  ) =>
+                    resolveElementForPreview(
+                      element,
+                      device
+                    )
+                ),
+            })
+          ),
+      }),
+      [
+        config,
+        device,
+      ]
+    );
+
   useEffect(() => {
     setReady(
       false
@@ -66,7 +233,7 @@ React.FC<Props> = ({
           setReady(
             true
           ),
-        220
+        120
       );
 
     return () =>
@@ -139,9 +306,47 @@ React.FC<Props> = ({
             true
           );
         },
-        80
+        60
       );
     };
+
+  const changeDevice = (
+    nextDevice:
+      PreviewDevice
+  ) => {
+    if (
+      nextDevice ===
+      device
+    ) {
+      replay();
+      return;
+    }
+
+    setDevice(
+      nextDevice
+    );
+
+    setReady(
+      false
+    );
+
+    window.setTimeout(
+      () => {
+        setReplayKey(
+          (
+            value
+          ) =>
+            value +
+            1
+        );
+
+        setReady(
+          true
+        );
+      },
+      60
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-[260] flex flex-col bg-[#171717]/95 p-2 sm:p-3">
@@ -152,7 +357,7 @@ React.FC<Props> = ({
           </p>
 
           <p className="mt-0.5 hidden text-[9px] text-black/35 sm:block">
-            Đây là bản chạy thật của hiệu ứng, chuyển trang và thao tác bấm.
+            Bản xem thử dùng đúng layout và font của từng thiết bị.
           </p>
         </div>
 
@@ -163,12 +368,11 @@ React.FC<Props> = ({
               'desktop'
             }
             label="Máy tính"
-            onClick={() => {
-              setDevice(
+            onClick={() =>
+              changeDevice(
                 'desktop'
-              );
-              replay();
-            }}
+              )
+            }
           />
 
           <PreviewToggle
@@ -177,12 +381,11 @@ React.FC<Props> = ({
               'mobile'
             }
             label="Điện thoại"
-            onClick={() => {
-              setDevice(
+            onClick={() =>
+              changeDevice(
                 'mobile'
-              );
-              replay();
-            }}
+              )
+            }
           />
         </div>
 
@@ -223,10 +426,10 @@ React.FC<Props> = ({
                 `${device}-${replayKey}`
               }
               scenes={
-                config.scenes
+                previewConfig.scenes
               }
               initialSceneId={
-                config.initialSceneId
+                previewConfig.initialSceneId
               }
               mobileOverride={
                 device ===
