@@ -112,11 +112,24 @@ React.FC<
   const detectedMobile =
     useMobileCanvas();
 
+  const longPage =
+    Boolean(
+      (scene.minHeight || 0) >=
+        1200 &&
+      (scene.maxWidth || 0) >=
+        1000
+    );
+
+  // Public long-page gifts are mobile-first.
+  // If no preview explicitly chooses a device, use the same
+  // 390px mobile canvas as Admin/Customer Preview.
   const mobile =
     typeof mobileOverride ===
       'boolean'
       ? mobileOverride
-      : detectedMobile;
+      : longPage
+        ? true
+        : detectedMobile;
 
   const runtime =
     useSceneElementRuntime(
@@ -167,14 +180,6 @@ React.FC<
       )
     );
 
-  const longPage =
-    Boolean(
-      (scene.minHeight || 0) >=
-        1200 &&
-      (scene.maxWidth || 0) >=
-        1000
-    );
-
   const pageHeight =
     Math.max(
       1800,
@@ -217,10 +222,22 @@ React.FC<
       style={{
         maxWidth:
           longPage
-            ? 'none'
+            ? mobile
+              ? 390
+              : 'none'
             : scene.maxWidth ||
               1280,
       }}
+      data-scene-device={
+        mobile
+          ? 'mobile'
+          : 'desktop'
+      }
+      data-scene-long-page={
+        longPage
+          ? 'true'
+          : 'false'
+      }
       className={[
         'relative mx-auto w-full min-w-0',
         className,

@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 
 import { BRAND } from '../config/brand';
+import { CustomerSiteHeader } from './CustomerSiteHeader';
 import { db } from '../config/firebase';
 
 import {
@@ -386,95 +387,21 @@ export const HomePage: React.FC<
 
   return (
     <div className="min-h-[100svh] w-full max-w-full overflow-x-hidden bg-[#fffaf8] text-[#171717]">
-      <header className="sticky top-0 z-50 border-b border-black/5 bg-[#fffaf8]/92 backdrop-blur-xl">
-        <div className="mx-auto flex h-[64px] w-full max-w-7xl items-center justify-between gap-2 px-3 sm:h-[68px] sm:px-8">
-          <button
-            type="button"
-            onClick={() =>
-              window.scrollTo({
-                top: 0,
-                behavior: 'smooth',
-              })
-            }
-            className="flex items-center"
-            aria-label="Dearly - về đầu trang"
-          >
-            <img
-              src={BRAND.logoPath}
-              alt={BRAND.name}
-              className="h-9 w-auto max-w-[92px] object-contain sm:h-11 sm:max-w-none"
-            />
-          </button>
-
-          <nav className="hidden items-center gap-8 text-sm font-medium text-black/50 md:flex">
-            <button
-              type="button"
-              onClick={() =>
-                scrollToSection(
-                  'templates'
-                )
-              }
-              className="transition hover:text-black"
-            >
-              Templates
-            </button>
-
-            <button
-              type="button"
-              onClick={() =>
-                scrollToSection(
-                  'how-it-works'
-                )
-              }
-              className="transition hover:text-black"
-            >
-              Cách hoạt động
-            </button>
-
-            <button
-              type="button"
-              onClick={
-                onTrackOrder
-              }
-              className="transition hover:text-black"
-            >
-              Tra cứu đơn
-            </button>
-          </nav>
-
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              onClick={
-                onTrackOrder
-              }
-              className="rounded-[12px] px-2.5 py-2.5 text-[11px] font-bold text-black/48 transition hover:bg-black/[0.04] hover:text-black sm:px-3 sm:text-xs"
-            >
-              <span className="sm:hidden">
-                Đơn
-              </span>
-              <span className="hidden sm:inline">
-                Tra cứu
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={
-                onOpenLoveTemplate
-              }
-              className="rounded-[12px] bg-[#171717] px-3 py-2.5 text-[11px] font-bold text-white transition hover:bg-[#e64a67] sm:px-5 sm:text-sm"
-            >
-              <span className="sm:hidden">
-                Template
-              </span>
-              <span className="hidden sm:inline">
-                Xem template
-              </span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <CustomerSiteHeader
+        onHome={() =>
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth',
+          })
+        }
+        onTemplates={() => scrollToSection('templates')}
+        onHowItWorks={() => scrollToSection('how-it-works')}
+        onTrackOrder={onTrackOrder}
+        primaryAction={{
+          label: 'Xem template',
+          onClick: onOpenLoveTemplate,
+        }}
+      />
 
       <main>
         <section className="relative overflow-hidden border-b border-black/5">

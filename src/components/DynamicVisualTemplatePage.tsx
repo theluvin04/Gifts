@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { BrandLogo } from './BrandLogo';
+import { CustomerSiteHeader } from './CustomerSiteHeader';
 import { VisualSceneExperience } from '../engine';
 import type { SceneElement } from '../engine';
 import {
@@ -64,6 +64,131 @@ const saveDraft = (
   } catch {
     // local draft is best effort
   }
+};
+
+const formatVnd = (value: number) =>
+  new Intl.NumberFormat('vi-VN').format(value) + 'đ';
+
+const getTemplateCategory = (template: TemplateConfig) => {
+  const id = template.id.toLowerCase();
+
+  if (id.includes('birthday')) return 'Sinh nhật';
+  if (id.includes('wedding') || id.includes('invitation')) return 'Cưới';
+  if (id.includes('anniversary')) return 'Kỷ niệm';
+  if (id.includes('graduation')) return 'Tốt nghiệp';
+  if (id.includes('love')) return 'Tình yêu';
+  return 'Template';
+};
+
+const getTemplateKind = (template: TemplateConfig) => {
+  const id = template.id.toLowerCase();
+
+  if (
+    id.includes('story') ||
+    id.includes('letter') ||
+    id.includes('invitation') ||
+    id.includes('love') ||
+    id.includes('birthday')
+  ) {
+    return 'Website cá nhân hoá';
+  }
+
+  return 'Digital template';
+};
+
+const getIntroCopy = (
+  template: TemplateConfig,
+  customizableCount: number
+) => {
+  const category = getTemplateCategory(template);
+
+  if (category === 'Tình yêu') {
+    return 'Một website nhỏ dành riêng cho một người: ảnh, âm nhạc, câu hỏi và lời nhắn được ghép thành một trải nghiệm duy nhất.';
+  }
+
+  if (category === 'Sinh nhật') {
+    return 'Một mẫu quà sinh nhật dạng website mini. Khách có thể thay ảnh và lời chúc để biến nó thành món quà thật sự dành riêng cho người nhận.';
+  }
+
+  if (category === 'Cưới') {
+    return 'Một trải nghiệm web tinh gọn để kể câu chuyện, chia sẻ thông tin và tạo cảm giác trang trọng hơn một tấm thiệp tĩnh.';
+  }
+
+  if (category === 'Kỷ niệm') {
+    return 'Một câu chuyện số được ghép từ ảnh, chữ và tương tác nhỏ để lưu lại một dịp đặc biệt theo cách cảm xúc hơn.';
+  }
+
+  return `Mẫu website cá nhân hoá với ${customizableCount} nội dung có thể thay để khách biến nó thành món quà của riêng mình.`;
+};
+
+const buildHeroChecklist = (
+  draft: TemplateVisualEditorConfig
+) => {
+  const items = draft.scenes
+    .flatMap((scene) =>
+      scene.elements
+        .map((element) => getCustomerSlot(element))
+        .filter((slot) => slot.kind !== 'none')
+        .map((slot) => slot.label || 'Nội dung tuỳ chỉnh')
+    )
+    .filter(Boolean);
+
+  return Array.from(new Set(items)).slice(0, 6);
+};
+
+const buildHighlights = (
+  template: TemplateConfig,
+  draft: TemplateVisualEditorConfig
+) => {
+  const slots = draft.scenes.flatMap((scene) =>
+    scene.elements
+      .map((element) => ({
+        element,
+        slot: getCustomerSlot(element),
+      }))
+      .filter((item) => item.slot.kind !== 'none')
+  );
+
+  const hasImage = slots.some((item) => item.slot.kind === 'image');
+  const hasText = slots.some((item) => item.slot.kind === 'text');
+  const sceneCount = draft.scenes.length;
+  const category = getTemplateCategory(template);
+
+  const items = [
+    {
+      index: '01',
+      title: sceneCount > 1 ? 'Nhiều phần nội dung' : 'Màn mở đầu tương tác',
+      description:
+        sceneCount > 1
+          ? `Người nhận có thể đi qua ${sceneCount} phần nội dung theo đúng thứ tự bạn thiết kế.`
+          : 'Một trang đầu gọn gàng để mở câu chuyện trước khi đi vào nội dung chính.',
+    },
+    {
+      index: '02',
+      title: hasImage ? 'Ảnh cá nhân hoá' : 'Bố cục có sẵn',
+      description: hasImage
+        ? 'Khách thay ảnh trực tiếp trên mẫu mà vẫn giữ nguyên bố cục và hiệu ứng.'
+        : 'Mẫu giữ sẵn cấu trúc để khách chỉ cần điền đúng nội dung cần đổi.',
+    },
+    {
+      index: '03',
+      title:
+        category === 'Tình yêu'
+          ? 'Âm nhạc / cảm xúc riêng'
+          : 'Nội dung riêng của khách',
+      description: hasText
+        ? 'Các đoạn chữ, lời chúc hoặc CTA có thể chỉnh ngay trước khi thanh toán.'
+        : 'Nội dung được giữ tinh gọn để tối ưu trải nghiệm xem trên điện thoại.',
+    },
+    {
+      index: '04',
+      title: 'Giữ nguyên trải nghiệm mẫu',
+      description:
+        'Admin khoá bố cục, hiệu ứng và tài nguyên trang trí để khách sửa mà không phá bố cục.',
+    },
+  ];
+
+  return items;
 };
 
 export const DynamicVisualTemplatePage: React.FC<Props> = ({
@@ -204,56 +329,153 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
   }
 
   const price = getEffectiveTemplatePrice(template);
-  const formatVnd = (value: number) =>
-    new Intl.NumberFormat('vi-VN').format(value) + 'đ';
-
-  const hasLongPage = draft.scenes.some(
-    (scene) =>
-      (scene.minHeight || 0) >= 1200 &&
-      (scene.maxWidth || 0) >= 1000
-  );
-
-  const phonePreviewShellClass = hasLongPage
-    ? 'mx-auto max-h-[82svh] w-full max-w-[390px] overflow-y-auto overflow-x-hidden rounded-[28px] border border-black/7 bg-white shadow-[0_28px_80px_rgba(70,25,40,0.12)]'
-    : 'mx-auto w-full max-w-[390px] overflow-hidden rounded-[28px] border border-black/7 bg-white shadow-[0_28px_80px_rgba(70,25,40,0.12)]';
 
   if (mode === 'product') {
+    const heroChecklist = buildHeroChecklist(draft);
+    const highlights = buildHighlights(template, draft);
+    const customizableCount = slots.length;
+    const sceneCount = draft.scenes.length;
+
     return (
       <div className="min-h-[100svh] bg-[#fffaf8] text-[#191919]">
-        <header className="border-b border-black/6 bg-white/80 backdrop-blur-xl">
-          <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-4 sm:px-8">
-            <button type="button" onClick={onBackHome} className="text-xs font-black text-black/45">← Trang chủ</button>
-            <BrandLogo onClick={onBackHome} imageClassName="h-10 w-auto" />
-            <span className="text-xs font-black text-[#b83e57]">{formatVnd(price)}</span>
-          </div>
-        </header>
+        <CustomerSiteHeader
+          onHome={onBackHome}
+          onTemplates={() => {
+            window.location.href = '/#templates';
+          }}
+          onHowItWorks={() => {
+            window.location.href = '/#how-it-works';
+          }}
+          onTrackOrder={() => {
+            window.location.href = '/track-order';
+          }}
+          active="templates"
+          primaryAction={{
+            label: 'Cá nhân hoá',
+            onClick: onStartPersonalize,
+          }}
+        />
 
-        <main className="mx-auto grid max-w-7xl gap-10 px-5 py-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:px-8 lg:py-16">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#b83e57]">Template</p>
-            <h1 className="mt-3 text-4xl font-black tracking-[-0.05em] sm:text-5xl">{template.name}</h1>
-            <p className="mt-4 max-w-lg text-sm leading-7 text-black/45">
-              Đây là mẫu thật được tạo trong Admin. Khách chỉ thay những ảnh/chữ bạn đã đánh dấu “Khách thay”.
-            </p>
-            <div className="mt-6 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onStartPersonalize}
-                className="rounded-[14px] bg-[#191919] px-6 py-3.5 text-sm font-black text-white"
-              >
-                Cá nhân hoá
-              </button>
-              <span className="text-sm font-black text-[#b83e57]">{formatVnd(price)}</span>
+        <main className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 lg:px-12 lg:py-14">
+          <section className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(460px,560px)] lg:items-center lg:gap-14">
+            <div>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-[10px] bg-[#fdecef] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#c9455f]">
+                  {getTemplateCategory(template)}
+                </span>
+                <span className="rounded-[10px] border border-black/8 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-black/40">
+                  {getTemplateKind(template)}
+                </span>
+              </div>
+
+              <h1 className="mt-5 text-4xl font-black tracking-[-0.05em] sm:text-5xl lg:text-[60px]">
+                {template.name}
+              </h1>
+
+              <p className="mt-5 max-w-[640px] text-[15px] leading-8 text-black/45">
+                {getIntroCopy(template, customizableCount)}
+              </p>
+
+              <div className="mt-8 grid gap-x-6 gap-y-0 border-y border-black/8 py-3 sm:grid-cols-2">
+                {heroChecklist.length > 0 ? (
+                  heroChecklist.map((item, index) => (
+                    <div
+                      key={`${item}-${index}`}
+                      className="flex items-start gap-3 border-b border-black/6 py-3 text-sm text-black/65 sm:border-b-0"
+                    >
+                      <span className="w-6 shrink-0 text-[10px] font-black text-[#c9455f]">
+                        {(index + 1).toString().padStart(2, '0')}
+                      </span>
+                      <span className="leading-6">{item}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-3 text-sm text-black/45">
+                    Mẫu này giữ sẵn bố cục để khách thay nội dung nhanh hơn.
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={onStartPersonalize}
+                  className="rounded-[14px] bg-[#cf5068] px-7 py-3.5 text-sm font-black text-white shadow-[0_16px_32px_rgba(207,80,104,0.18)] transition hover:-translate-y-0.5"
+                >
+                  Cá nhân hoá →
+                </button>
+              </div>
+
+              <p className="mt-4 max-w-[640px] text-[11px] leading-6 text-black/28">
+                Nội dung khách tự chỉnh không được mở xem trước toàn bộ. Khi thanh toán xong, khách sẽ tiếp tục chỉnh nội dung ở bước tiếp theo.
+              </p>
             </div>
-          </div>
 
-          <div className={phonePreviewShellClass}>
-            <VisualSceneExperience
-              scenes={template.visualEditor!.scenes}
-              initialSceneId={template.visualEditor!.initialSceneId}
-              mobileOverride
-            />
-          </div>
+            <div className="rounded-[34px] border border-black/[0.06] bg-[#f8edf0] p-4 shadow-[0_22px_55px_rgba(72,22,38,0.07)] sm:p-6">
+              <div className="flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.18em] text-[#c9455f]">
+                <span>{template.name}</span>
+                <span className="text-black/28">{sceneCount} phần quà</span>
+              </div>
+
+              <p className="mt-7 text-center text-2xl font-medium tracking-[-0.03em] text-[#d94e68] sm:text-[34px]">
+                Một câu chuyện chỉ dành cho người nhận.
+              </p>
+
+              <div className="mt-8 flex justify-center">
+                <div className="max-h-[760px] w-full max-w-[400px] overflow-y-auto overflow-x-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_30px_80px_rgba(70,25,40,0.12)]">
+                  <VisualSceneExperience
+                    scenes={template.visualEditor!.scenes}
+                    initialSceneId={template.visualEditor!.initialSceneId}
+                    mobileOverride
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-16 border-t border-black/8 pt-14 sm:mt-20 sm:pt-16">
+            <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#c9455f]">
+                  Bên trong có gì
+                </p>
+                <h2 className="mt-3 text-3xl font-black tracking-[-0.05em] sm:text-5xl">
+                  Không chỉ là một mẫu web.
+                </h2>
+              </div>
+
+              <div>
+                <p className="max-w-[620px] text-[15px] leading-8 text-black/45">
+                  {template.name} được thiết kế để người nhận khám phá nội dung theo đúng nhịp mà bạn muốn. Ảnh, chữ và các điểm chạm đều có thể thay mà vẫn giữ nguyên giao diện chung của website.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-10 grid overflow-hidden rounded-[24px] border border-black/8 bg-white sm:grid-cols-2">
+              {highlights.map((item, index) => (
+                <div
+                  key={item.index}
+                  className={[
+                    'px-6 py-6 sm:px-8 sm:py-7',
+                    index % 2 === 0 ? 'sm:border-r sm:border-black/8' : '',
+                    index < 2 ? 'border-b border-black/8' : '',
+                  ].join(' ')}
+                >
+                  <div className="grid gap-3 sm:grid-cols-[34px_1fr] sm:gap-4">
+                    <span className="text-[11px] font-black text-[#c9455f]">{item.index}</span>
+                    <div>
+                      <h3 className="text-lg font-black tracking-[-0.03em] text-[#171717]">
+                        {item.title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-7 text-black/42">
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         </main>
       </div>
     );
@@ -261,22 +483,27 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
 
   return (
     <div className="min-h-[100svh] bg-[#f5f3f2] text-[#191919]">
-      <header className="sticky top-0 z-40 border-b border-black/6 bg-white/92 backdrop-blur-xl">
-        <div className="mx-auto flex min-h-[64px] max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-8">
-          <button type="button" onClick={onBackProduct} className="text-xs font-black text-black/45">← Mẫu</button>
-          <div className="min-w-0 text-center">
-            <p className="truncate text-sm font-black">{template.name}</p>
-            <p className="text-[9px] text-black/30">{slots.length} nội dung có thể thay</p>
-          </div>
-          <button
-            type="button"
-            onClick={onCheckout}
-            className="rounded-[11px] bg-[#191919] px-4 py-2.5 text-[10px] font-black text-white"
-          >
-            Tiếp tục · {formatVnd(price)}
-          </button>
-        </div>
-      </header>
+      <CustomerSiteHeader
+        onHome={onBackHome}
+        onTemplates={() => {
+          window.location.href = '/#templates';
+        }}
+        onHowItWorks={() => {
+          window.location.href = '/#how-it-works';
+        }}
+        onTrackOrder={() => {
+          window.location.href = '/track-order';
+        }}
+        active="templates"
+        primaryAction={{
+          label: `Tiếp tục · ${formatVnd(price)}`,
+          onClick: onCheckout,
+        }}
+        secondaryAction={{
+          label: 'Về mẫu',
+          onClick: onBackProduct,
+        }}
+      />
 
       <main className="mx-auto grid max-w-7xl gap-4 p-4 sm:p-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
         <aside className="rounded-[18px] border border-black/7 bg-white p-4 lg:max-h-[calc(100svh-105px)] lg:overflow-y-auto">
@@ -347,8 +574,8 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
           </div>
         </aside>
 
-        <section className="flex min-h-[650px] items-center justify-center rounded-[18px] border border-black/7 bg-[#dedbd8] p-4 sm:p-8">
-          <div className={phonePreviewShellClass.replace('border-black/7', 'border-black/8').replace('shadow-[0_28px_80px_rgba(70,25,40,0.12)]', 'shadow-[0_26px_80px_rgba(0,0,0,0.14)]')}>
+        <section className="flex min-h-[650px] items-start justify-center rounded-[18px] border border-black/7 bg-[#dedbd8] p-4 sm:p-8">
+          <div className="max-h-[calc(100svh-120px)] w-full max-w-[430px] overflow-y-auto overflow-x-hidden rounded-[28px] border border-black/8 bg-white shadow-[0_26px_80px_rgba(0,0,0,0.14)]">
             <VisualSceneExperience
               scenes={draft.scenes}
               initialSceneId={draft.initialSceneId}

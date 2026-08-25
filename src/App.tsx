@@ -7,6 +7,7 @@ import { CartPage } from './components/CartPage';
 import { TrackOrderPage } from './components/TrackOrderPage';
 import { DynamicVisualTemplatePage } from './components/DynamicVisualTemplatePage';
 import { DynamicVisualCheckoutPage } from './components/DynamicVisualCheckoutPage';
+import { CustomerSiteHeader } from './components/CustomerSiteHeader';
 import { AdminOrdersPage } from './components/admin/AdminOrdersPage';
 import { AdminOrderDetailPage } from './components/admin/AdminOrderDetailPage';
 import { BRAND } from './config/brand';
@@ -37,6 +38,39 @@ export default function App() {
       true
     );
   }, [location, navigate]);
+
+  const openTemplates = () => {
+    navigate('/#templates');
+  };
+
+  const renderCustomerShell = (
+    content: React.ReactNode,
+    active:
+      | 'templates'
+      | 'track-order'
+      | 'cart'
+      | null = null
+  ) => (
+    <div className="dearly-customer-shell min-h-[100svh] bg-[#fffaf8]">
+      <CustomerSiteHeader
+        active={active}
+        cartCount={cartItems.length}
+        onHome={() => navigate('/')}
+        onTemplates={openTemplates}
+        onTrackOrder={() =>
+          navigate('/track-order')
+        }
+        onCart={() =>
+          navigate('/cart')
+        }
+      />
+
+      {/* Ẩn header cũ của page con: toàn customer web chỉ còn 1 navbar. */}
+      <div className="[&>div>header:first-child]:hidden">
+        {content}
+      </div>
+    </div>
+  );
 
   const renderMessage = (
     title: string,
@@ -122,7 +156,7 @@ export default function App() {
   if (location.kind === 'home') {
     const template = getTemplateModule(DEFAULT_TEMPLATE_ID);
 
-    return (
+    return renderCustomerShell(
       <HomePage
         onOpenLoveTemplate={() =>
           navigate(template?.paths.product || '/')
@@ -138,11 +172,18 @@ export default function App() {
   }
 
   if (location.kind === 'track-order') {
-    return <TrackOrderPage onBackHome={() => navigate('/')} />;
+    return renderCustomerShell(
+      <TrackOrderPage
+        onBackHome={() =>
+          navigate('/')
+        }
+      />,
+      'track-order'
+    );
   }
 
   if (location.kind === 'cart') {
-    return (
+    return renderCustomerShell(
       <CartPage
         items={cartItems}
         onBackHome={() => navigate('/')}
@@ -162,7 +203,8 @@ export default function App() {
               `/checkout/${item.templateId}`
           );
         }}
-      />
+      />,
+      'cart'
     );
   }
 
@@ -194,16 +236,17 @@ export default function App() {
 
     if (!template) {
       if (location.kind === 'template-checkout') {
-        return (
+        return renderCustomerShell(
           <DynamicVisualCheckoutPage
             templateId={location.templateId}
             onBack={() => navigate(`/create/${location.templateId}`)}
             onBackHome={() => navigate('/')}
-          />
+          />,
+          'templates'
         );
       }
 
-      return (
+      return renderCustomerShell(
         <DynamicVisualTemplatePage
           templateId={location.templateId}
           mode={location.kind === 'template-product' ? 'product' : 'create'}
@@ -211,7 +254,8 @@ export default function App() {
           onStartPersonalize={() => navigate(`/create/${location.templateId}`)}
           onBackProduct={() => navigate(`/products/${location.templateId}`)}
           onCheckout={() => navigate(`/checkout/${location.templateId}`)}
-        />
+        />,
+        'templates'
       );
     }
 
@@ -219,17 +263,18 @@ export default function App() {
 
     if (location.kind === 'template-product') {
       const ProductPage = template.ProductPage;
-      return (
+      return renderCustomerShell(
         <ProductPage
           onBackHome={() => navigate('/')}
           onStartPersonalize={() => navigate(template.paths.create)}
-        />
+        />,
+        'templates'
       );
     }
 
     if (location.kind === 'template-create') {
       const EditorPage = template.EditorPage;
-      return (
+      return renderCustomerShell(
         <EditorPage
           config={config}
           onChange={(nextConfig) => persistDraft(template, nextConfig)}
@@ -245,16 +290,18 @@ export default function App() {
             }
           }}
           onCheckout={() => navigate(template.paths.checkout)}
-        />
+        />,
+        'templates'
       );
     }
 
     const Checkout = template.CheckoutPage;
-    return (
+    return renderCustomerShell(
       <Checkout
         config={config}
         onBack={() => navigate(template.paths.create)}
-      />
+      />,
+      'templates'
     );
   }
 

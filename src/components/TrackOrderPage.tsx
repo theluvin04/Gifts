@@ -3,7 +3,6 @@ import React, {
 } from 'react';
 
 import {
-  ArrowLeft,
   CheckCircle2,
   Clock3,
   Loader2,
@@ -11,9 +10,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 
-import {
-  BrandLogo,
-} from './BrandLogo';
+import { CustomerSiteHeader } from './CustomerSiteHeader';
 
 import {
   PublicOrderLookupRecord,
@@ -195,31 +192,25 @@ React.FC<
 
   return (
     <div className="min-h-[100svh] w-full overflow-x-hidden bg-[#fffaf8] text-[#1d1d1d]">
-      <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-[#fffaf8]/92 backdrop-blur-xl">
-        <div className="mx-auto grid h-[64px] w-full max-w-4xl grid-cols-[44px_minmax(0,1fr)_44px] items-center px-3 sm:h-[72px] sm:grid-cols-[1fr_auto_1fr] sm:px-6">
-          <button
-            type="button"
-            onClick={
-              onBackHome
-            }
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-black/55 transition hover:bg-black/[0.04] hover:text-[#c9435d] sm:w-fit sm:justify-start sm:gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden text-sm font-bold sm:inline">
-              Trang chủ
-            </span>
-          </button>
-
-          <BrandLogo
-            onClick={
-              onBackHome
-            }
-            imageClassName="h-10 w-auto sm:h-11"
-          />
-
-          <div />
-        </div>
-      </header>
+      <CustomerSiteHeader
+        onHome={onBackHome}
+        onTemplates={() => {
+          window.location.href = '/#templates';
+        }}
+        onHowItWorks={() => {
+          window.location.href = '/#how-it-works';
+        }}
+        onTrackOrder={() => {
+          window.location.href = '/track-order';
+        }}
+        active="track-order"
+        primaryAction={{
+          label: 'Xem template',
+          onClick: () => {
+            window.location.href = '/#templates';
+          },
+        }}
+      />
 
       <main className="mx-auto w-full max-w-4xl px-3 py-7 sm:px-6 sm:py-12">
         <section className="mx-auto max-w-2xl text-center">
