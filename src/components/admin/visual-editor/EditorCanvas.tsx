@@ -1,4 +1,5 @@
 import React, {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -94,6 +95,44 @@ React.FC<Props> = ({
       null
     );
 
+  const viewportRef =
+    useRef<HTMLDivElement>(
+      null
+    );
+
+  const [
+    viewportWidth,
+    setViewportWidth,
+  ] = useState(900);
+
+  useEffect(() => {
+    const viewport =
+      viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const update = () =>
+      setViewportWidth(
+        viewport.clientWidth
+      );
+
+    update();
+
+    const observer =
+      new ResizeObserver(
+        update
+      );
+
+    observer.observe(
+      viewport
+    );
+
+    return () =>
+      observer.disconnect();
+  }, []);
+
   const [
     guides,
     setGuides,
@@ -167,6 +206,31 @@ React.FC<Props> = ({
         ? 9 / 16
         : scene.aspectRatio ||
           16 / 9;
+
+  const designWidth =
+    device === 'mobile'
+      ? 390
+      : scene.maxWidth || 1200;
+
+  const fitScale =
+    Math.min(
+      1,
+      Math.max(
+        0.1,
+        (viewportWidth - 48) /
+          designWidth
+      )
+    );
+
+  const displayScale =
+    fitScale *
+    (zoom / 100);
+
+  const designHeight =
+    longPage
+      ? longPageHeight
+      : designWidth /
+        aspectRatio;
 
   const background =
     scene.background ||
@@ -665,12 +729,42 @@ React.FC<Props> = ({
             'resize'
           ) {
             const preserveRatio =
-              moveEvent.shiftKey;
+              !moveEvent.altKey;
+
+            const relativeX =
+              dxPercent /
+              Math.max(
+                0.001,
+                frame.width
+              );
+
+            const relativeY =
+              typeof frame.height ===
+                'number'
+                ? dyPercent /
+                  Math.max(
+                    0.001,
+                    frame.height
+                  )
+                : relativeX;
+
+            const scaleDelta =
+              Math.abs(
+                relativeY
+              ) >
+              Math.abs(
+                relativeX
+              )
+                ? relativeY
+                : relativeX;
 
             const width =
               clamp(
-                frame.width +
-                  dxPercent,
+                preserveRatio
+                  ? frame.width *
+                    (1 + scaleDelta)
+                  : frame.width +
+                    dxPercent,
                 1,
                 200
               );
@@ -681,13 +775,7 @@ React.FC<Props> = ({
                 ? clamp(
                     preserveRatio
                       ? frame.height *
-                        (
-                          width /
-                          Math.max(
-                            0.001,
-                            frame.width
-                          )
-                        )
+                        (1 + scaleDelta)
                       : frame.height +
                         dyPercent,
                     1,
@@ -1069,11 +1157,12 @@ React.FC<Props> = ({
         </p>
 
         <p className="text-[9px] text-black/30">
-          Shift + kéo = khóa trục · Alt + kéo = tắt bắt dính · Shift + co giãn = giữ tỉ lệ
+          Shift + kéo = khóa trục · Alt + kéo = tắt bắt dính · Co giãn luôn giữ tỉ lệ · Alt + co giãn = tự do
         </p>
       </div>
 
       <div
+        ref={viewportRef}
         className={[
           'relative flex h-[calc(100svh-330px)] min-h-[420px] max-h-[760px] justify-center overflow-auto rounded-[9px] bg-[#deddd9] p-3 sm:p-5',
           longPage
@@ -1083,15 +1172,13 @@ React.FC<Props> = ({
       >
         <div
           style={{
-            transform:
-              `scale(${zoom / 100})`,
-            transformOrigin:
-              longPage
-                ? 'top center'
-                : 'center center',
+            width:
+              `${designWidth * displayScale}px`,
+            height:
+              `${designHeight * displayScale}px`,
           }}
           className={[
-            'flex w-full shrink-0 justify-center transition-transform duration-150',
+            'relative shrink-0',
             longPage
               ? 'items-start'
               : 'items-center',
@@ -1111,10 +1198,13 @@ React.FC<Props> = ({
                 ),
 
               width:
-                device ===
-                'mobile'
-                  ? 'min(100%, 340px)'
-                  : 'min(100%, 900px)',
+                `${designWidth}px`,
+
+              transform:
+                `scale(${displayScale})`,
+
+              transformOrigin:
+                'top left',
 
               backgroundColor:
                 background.color ||
@@ -1124,7 +1214,7 @@ React.FC<Props> = ({
                 scene.overflow ||
                 'hidden',
             }}
-            className="relative isolate shrink-0 select-none shadow-[0_18px_55px_rgba(0,0,0,0.14)]"
+            className="absolute left-0 top-0 isolate shrink-0 select-none shadow-[0_18px_55px_rgba(0,0,0,0.14)]"
           >
             {background
               .imageUrl && (
@@ -1209,6 +1299,27 @@ React.FC<Props> = ({
                 }}
                 className="pointer-events-none absolute inset-0"
               />
+            )}
+
+            {longPage && (
+              <div
+                style={{
+                  top: `${Math.min(
+                    99,
+                    ((device === 'mobile'
+                      ? 390 / (9 / 16)
+                      : (scene.maxWidth || 1200) / (16 / 9)) /
+                      longPageHeight) *
+                      100
+                  )}%`,
+                  zIndex: 21000,
+                }}
+                className="pointer-events-none absolute left-0 right-0 border-t-2 border-dashed border-sky-500"
+              >
+                <span className="absolute right-2 top-1 rounded bg-sky-600 px-2 py-1 text-[8px] font-black text-white shadow-sm">
+                  Hết màn hình đầu · phần dưới cần cuộn
+                </span>
+              </div>
             )}
 
             {typeof guides.x ===
@@ -1369,10 +1480,12 @@ React.FC<{
   onClickSelect,
   onPointerOperation,
 }) => {
-  if (
-    element.visible ===
-    false
-  ) {
+  const visible =
+    device === 'mobile'
+      ? element.mobileVisible ?? element.visible !== false
+      : element.desktopVisible ?? element.visible !== false;
+
+  if (!visible) {
     return null;
   }
 
@@ -1655,9 +1768,13 @@ React.FC<{
     const style =
       element.imageStyle ||
       {};
+    const source =
+      device === 'mobile'
+        ? element.mobileSrc || element.src
+        : element.src;
 
     if (
-      !element.src
+      !source
     ) {
       return (
         <div className="flex h-full min-h-16 w-full items-center justify-center rounded-[8px] border border-dashed border-black/15 bg-white/70 px-2 text-center text-[9px] font-bold text-black/30">
@@ -1669,7 +1786,7 @@ React.FC<{
     return (
       <img
         src={
-          element.src
+          source
         }
         alt=""
         draggable={
@@ -1709,6 +1826,10 @@ React.FC<{
     element.type ===
     'photo-frame'
   ) {
+    const source =
+      device === 'mobile'
+        ? element.mobileSrc || element.src
+        : element.src;
     const style =
       resolvePhotoFrameStyle(
         element.frameStyle
@@ -1772,10 +1893,10 @@ React.FC<{
               '#eeeae5',
           }}
         >
-          {element.src ? (
+          {source ? (
             <img
               src={
-                element.src
+                source
               }
               alt=""
               draggable={

@@ -959,6 +959,11 @@ React.FC<Props> = ({
         1,
     };
 
+    element.desktopVisible =
+      device === 'desktop';
+    element.mobileVisible =
+      device === 'mobile';
+
     const nextElements =
       hydrateMissingMobileFrames([
         ...scene.elements,
@@ -1044,6 +1049,11 @@ React.FC<Props> = ({
           1,
       };
 
+      element.desktopVisible =
+        device === 'desktop';
+      element.mobileVisible =
+        device === 'mobile';
+
       const nextElements =
         hydrateMissingMobileFrames([
           ...scene.elements,
@@ -1122,8 +1132,9 @@ React.FC<Props> = ({
 
             return {
               ...element,
-              src:
-                asset.url,
+              ...(device === 'mobile'
+                ? { mobileSrc: asset.url }
+                : { src: asset.url }),
               name:
                 element.name ||
                 asset.name,
@@ -1160,12 +1171,28 @@ React.FC<Props> = ({
         ...scene,
 
         elements:
-          scene.elements.filter(
-            (element) =>
-              !selected.has(
-                element.id
+          scene.elements
+            .map((element) => {
+              if (!selected.has(element.id)) {
+                return element;
+              }
+
+              return device === 'mobile'
+                ? {
+                    ...element,
+                    mobileVisible: false,
+                  }
+                : {
+                    ...element,
+                    desktopVisible: false,
+                  };
+            })
+            .filter((element) =>
+              !(
+                element.desktopVisible === false &&
+                element.mobileVisible === false
               )
-          ),
+            ),
       });
 
       setSelectedElementIds(
@@ -1830,201 +1857,17 @@ React.FC<Props> = ({
         return;
       }
 
-      const escapeSelector =
-        (
-          value: string
-        ) => {
-          if (
-            typeof CSS !==
-              'undefined' &&
-            typeof CSS.escape ===
-              'function'
-          ) {
-            return CSS.escape(
-              value
-            );
-          }
+      // Always calculate from the logical frame model. DOM rectangles are
+      // affected by browser zoom and canvas transforms, which made grouped
+      // elements drift when centering at non-100% zoom.
+      const bounds =
+        getSelectionBounds(
+          unlocked,
+          device
+        );
 
-          return value.replace(
-            /["\\]/g,
-            '\\$&'
-          );
-        };
-
-      const domElements =
-        unlocked
-          .map(
-            (
-              element
-            ) =>
-              document.querySelector(
-                `[data-editor-element-id="${escapeSelector(element.id)}"]`
-              ) as
-                HTMLElement |
-                null
-          )
-          .filter(
-            (
-              element
-            ):
-              element is
-              HTMLElement =>
-                Boolean(
-                  element
-                )
-          );
-
-      const canvasElement =
-        domElements[0]
-          ?.offsetParent as
-          HTMLElement |
-          null;
-
-      let bounds:
-        {
-          left: number;
-          top: number;
-          right: number;
-          bottom: number;
-          centerX: number;
-          centerY: number;
-        } |
-        null = null;
-
-      if (
-        canvasElement &&
-        domElements.length ===
-          unlocked.length
-      ) {
-        const canvasRect =
-          canvasElement
-            .getBoundingClientRect();
-
-        if (
-          canvasRect.width >
-            0 &&
-          canvasRect.height >
-            0
-        ) {
-          const rects =
-            domElements.map(
-              (
-                element
-              ) =>
-                element
-                  .getBoundingClientRect()
-            );
-
-          const leftPx =
-            Math.min(
-              ...rects.map(
-                (
-                  rect
-                ) =>
-                  rect.left
-              )
-            );
-
-          const topPx =
-            Math.min(
-              ...rects.map(
-                (
-                  rect
-                ) =>
-                  rect.top
-              )
-            );
-
-          const rightPx =
-            Math.max(
-              ...rects.map(
-                (
-                  rect
-                ) =>
-                  rect.right
-              )
-            );
-
-          const bottomPx =
-            Math.max(
-              ...rects.map(
-                (
-                  rect
-                ) =>
-                  rect.bottom
-              )
-            );
-
-          const left =
-            (
-              leftPx -
-              canvasRect.left
-            ) /
-            canvasRect.width *
-            100;
-
-          const top =
-            (
-              topPx -
-              canvasRect.top
-            ) /
-            canvasRect.height *
-            100;
-
-          const right =
-            (
-              rightPx -
-              canvasRect.left
-            ) /
-            canvasRect.width *
-            100;
-
-          const bottom =
-            (
-              bottomPx -
-              canvasRect.top
-            ) /
-            canvasRect.height *
-            100;
-
-          bounds = {
-            left,
-            top,
-            right,
-            bottom,
-            centerX:
-              (
-                left +
-                right
-              ) /
-              2,
-            centerY:
-              (
-                top +
-                bottom
-              ) /
-              2,
-          };
-        }
-      }
-
-      if (
-        !bounds
-      ) {
-        const fallback =
-          getSelectionBounds(
-            unlocked,
-            device
-          );
-
-        if (
-          !fallback
-        ) {
-          return;
-        }
-
-        bounds =
-          fallback;
+      if (!bounds) {
+        return;
       }
 
       let dx = 0;
@@ -2334,13 +2177,19 @@ React.FC<Props> = ({
     ) => {
       updateElement(
         elementId,
-        (element) => ({
-          ...element,
-          visible:
-            element.visible ===
-            false,
-        } as
-          SceneElement)
+        (element) => {
+          const current =
+            device === 'mobile'
+              ? element.mobileVisible ?? element.visible !== false
+              : element.desktopVisible ?? element.visible !== false;
+
+          return ({
+            ...element,
+            ...(device === 'mobile'
+              ? { mobileVisible: !current }
+              : { desktopVisible: !current }),
+          } as SceneElement);
+        }
       );
     };
 
@@ -2389,6 +2238,27 @@ React.FC<Props> = ({
         )
       )
     );
+  };
+
+  const fitCanvas = () => {
+    changeZoom(
+      longPage
+        ? device === 'mobile'
+          ? 55
+          : 45
+        : device === 'mobile'
+          ? 90
+          : 75
+    );
+  };
+
+  const toggleFocusMode = () => {
+    const focused =
+      !layersOpen &&
+      !inspectorOpen;
+
+    setLayersOpen(focused);
+    setInspectorOpen(focused);
   };
 
   const singleSelectedElement =
@@ -2474,7 +2344,9 @@ React.FC<Props> = ({
         ),
 
     group:
-      groupSelected,
+      groupedSelection
+        ? ungroupSelected
+        : groupSelected,
 
     ungroup:
       ungroupSelected,
@@ -2508,6 +2380,18 @@ React.FC<Props> = ({
 
     toggleLock:
       toggleSelectedLock,
+
+    alignCenterX:
+      () =>
+        alignSelectionToCanvas(
+          'center-x'
+        ),
+
+    alignCenterY:
+      () =>
+        alignSelectionToCanvas(
+          'center-y'
+        ),
 
     zoomIn:
       () =>
@@ -2775,6 +2659,31 @@ React.FC<Props> = ({
 
             <button
               type="button"
+              onClick={fitCanvas}
+              className="rounded-[8px] border border-black/8 bg-white px-2.5 py-2 text-[9px] font-black text-black/45"
+              title="Đưa canvas về mức thu phóng dễ quan sát"
+            >
+              Vừa khung
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleFocusMode}
+              className={[
+                'rounded-[8px] border px-2.5 py-2 text-[9px] font-black',
+                !layersOpen && !inspectorOpen
+                  ? 'border-[#cf5068]/20 bg-[#f9eef1] text-[#a63550]'
+                  : 'border-black/8 bg-white text-black/45',
+              ].join(' ')}
+              title="Ẩn hai bảng bên để có thêm chỗ chỉnh canvas"
+            >
+              {!layersOpen && !inspectorOpen
+                ? 'Hiện bảng'
+                : 'Tập trung'}
+            </button>
+
+            <button
+              type="button"
               onClick={() =>
                 setLayersOpen(
                   (value) =>
@@ -2850,48 +2759,46 @@ React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-black/7 bg-white p-2">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            <select
-              value={
-                scene.id
-              }
-              onChange={(
-                event
-              ) => {
-                setSelectedSceneId(
-                  event.target
-                    .value
-                );
+        <div className="mt-2 rounded-[10px] border border-black/7 bg-white p-2">
+          <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
+            {config.scenes.map((item, index) => {
+              const active = item.id === scene.id;
+              const initial = config.initialSceneId === item.id;
 
-                setSelectedElementIds(
-                  []
-                );
-              }}
-              className="min-w-[150px] max-w-[260px] rounded-[8px] border border-black/10 bg-[#faf9f8] px-2.5 py-2 text-[9px] font-black outline-none"
-            >
-              {config.scenes.map(
-                (
-                  item,
-                  index
-                ) => (
-                  <option
-                    key={
-                      item.id
-                    }
-                    value={
-                      item.id
-                    }
-                  >
-                    {index +
-                      1}
-                    .{' '}
-                    {item.title ||
-                      item.id}
-                  </option>
-                )
-              )}
-            </select>
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSceneId(item.id);
+                    setSelectedElementIds([]);
+                  }}
+                  className={[
+                    'min-w-[132px] max-w-[210px] shrink-0 rounded-[9px] border px-3 py-2 text-left transition',
+                    active
+                      ? 'border-[#cf5068]/35 bg-[#fff4f6] shadow-[0_5px_16px_rgba(207,80,104,0.10)]'
+                      : 'border-black/7 bg-[#faf9f8] hover:border-black/15 hover:bg-white',
+                  ].join(' ')}
+                >
+                  <span className="flex items-center justify-between gap-2 text-[8px] font-black uppercase tracking-[0.07em] text-black/30">
+                    Trang {index + 1}
+                    {initial && (
+                      <span className="text-emerald-600">Mở đầu</span>
+                    )}
+                  </span>
+                  <span className="mt-1 block truncate text-[10px] font-black text-black/70">
+                    {item.title || item.id}
+                  </span>
+                  <span className="mt-0.5 block text-[8px] font-bold text-black/30">
+                    {item.elements.length} đối tượng
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
 
             <button
               type="button"
@@ -2970,6 +2877,7 @@ React.FC<Props> = ({
 
             Bật hiển thị động
           </label>
+          </div>
         </div>
 
         <EditorToolbar
@@ -3069,6 +2977,24 @@ React.FC<Props> = ({
               }
             />
           )}
+
+          {singleSelectedElement &&
+            (singleSelectedElement.type === 'image' ||
+              singleSelectedElement.type === 'decor' ||
+              singleSelectedElement.type === 'photo-frame') && (
+              <button
+                type="button"
+                onClick={() =>
+                  setAssetPickerTarget({
+                    kind: 'element',
+                    elementId: singleSelectedElement.id,
+                  })
+                }
+                className="rounded-[9px] border border-[#cf5068]/20 bg-[#fff7f9] px-3 py-2 text-[10px] font-black text-[#a63550]"
+              >
+                Thay ảnh đang chọn
+              </button>
+            )}
 
           <AddElementButton
             label="+ Chữ"
@@ -3213,6 +3139,7 @@ React.FC<Props> = ({
             scene={
               scene
             }
+            device={device}
             selectedElementIds={
               selectedElementIds
             }
@@ -3299,6 +3226,17 @@ React.FC<Props> = ({
             <CanvasQuickBar
               selectionCount={
                 selectedElements.length
+              }
+              groupedSelection={
+                groupedSelection
+              }
+              onToggleGroup={
+                groupedSelection
+                  ? ungroupSelected
+                  : groupSelected
+              }
+              onDelete={
+                deleteSelected
               }
               onAlignCanvas={
                 alignSelectionToCanvas

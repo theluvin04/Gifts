@@ -26,6 +26,8 @@ export interface EditorShortcutHandlers {
   layerFront: () => void;
   layerBack: () => void;
   toggleLock: () => void;
+  alignCenterX: () => void;
+  alignCenterY: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
   zoomReset: () => void;
@@ -43,7 +45,7 @@ export const KEYBOARD_SHORTCUTS = [
   ['Ctrl/Cmd + D', 'Nhân bản'],
   ['Delete / Backspace', 'Xóa'],
   ['Ctrl/Cmd + A', 'Chọn tất cả'],
-  ['Ctrl/Cmd + G', 'Nhóm'],
+  ['Ctrl/Cmd + G', 'Nhóm / bấm lại để bỏ nhóm'],
   ['Ctrl/Cmd + Shift + G', 'Bỏ nhóm'],
   ['Phím mũi tên', 'Di chuyển 0.5%'],
   ['Shift + mũi tên', 'Di chuyển 2%'],
@@ -52,6 +54,8 @@ export const KEYBOARD_SHORTCUTS = [
   ['Shift + ]', 'Đưa lên trên cùng'],
   ['Shift + [', 'Đưa xuống dưới cùng'],
   ['L', 'Khóa / mở khóa'],
+  ['Shift + H', 'Căn giữa ngang theo khung'],
+  ['Shift + V', 'Căn giữa dọc theo khung'],
   ['Esc', 'Bỏ chọn'],
   ['Ctrl/Cmd + +', 'Phóng to'],
   ['Ctrl/Cmd + -', 'Thu nhỏ'],
@@ -257,6 +261,24 @@ export const useEditorShortcuts =
           ) {
             event.preventDefault();
             handlers.toggleLock();
+            return;
+          }
+
+          if (
+            event.shiftKey &&
+            lower === 'h'
+          ) {
+            event.preventDefault();
+            handlers.alignCenterX();
+            return;
+          }
+
+          if (
+            event.shiftKey &&
+            lower === 'v'
+          ) {
+            event.preventDefault();
+            handlers.alignCenterY();
             return;
           }
 

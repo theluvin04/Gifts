@@ -151,7 +151,7 @@ React.FC<Props> = ({
         }
         title={
           groupedSelection
-            ? 'Bỏ nhóm · Ctrl/Cmd+Shift+G'
+            ? 'Bỏ nhóm · Ctrl/Cmd+G'
             : 'Nhóm · Ctrl/Cmd+G'
         }
         disabled={

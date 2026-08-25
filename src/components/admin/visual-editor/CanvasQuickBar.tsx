@@ -31,6 +31,15 @@ interface Props {
 
   onToggleLock:
     () => void;
+
+  groupedSelection:
+    boolean;
+
+  onToggleGroup:
+    () => void;
+
+  onDelete:
+    () => void;
 }
 
 export const CanvasQuickBar:
@@ -41,6 +50,9 @@ React.FC<Props> = ({
   onLayer,
   onDuplicate,
   onToggleLock,
+  groupedSelection,
+  onToggleGroup,
+  onDelete,
 }) => {
   if (
     selectionCount ===
@@ -54,7 +66,7 @@ React.FC<Props> = ({
   }
 
   return (
-    <div className="sticky bottom-2 z-20 mt-2 flex min-w-0 flex-wrap items-center justify-center gap-1 rounded-[11px] border border-black/10 bg-white/95 p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.1)] backdrop-blur-xl">
+    <div className="sticky bottom-2 z-20 mt-2 flex min-w-0 flex-nowrap items-center justify-start gap-1 overflow-x-auto rounded-[11px] border border-black/10 bg-white/95 p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.1)] backdrop-blur-xl">
       <span className="mr-1 hidden text-[8px] font-black uppercase tracking-[0.12em] text-black/25 sm:inline">
         Căn nhanh
       </span>
@@ -194,6 +206,27 @@ React.FC<Props> = ({
           onToggleLock
         }
       />
+
+      <QuickButton
+        label={
+          groupedSelection
+            ? 'Bỏ nhóm'
+            : 'Nhóm'
+        }
+        title="Nhóm hoặc bỏ nhóm · Ctrl/Cmd+G"
+        onClick={
+          onToggleGroup
+        }
+      />
+
+      <QuickButton
+        label="Xóa"
+        title="Xóa trên thiết bị đang chỉnh"
+        danger
+        onClick={
+          onDelete
+        }
+      />
     </div>
   );
 };
@@ -214,12 +247,16 @@ React.FC<{
   strong?:
     boolean;
 
+  danger?:
+    boolean;
+
   onClick:
     () => void;
 }> = ({
   label,
   title,
   strong = false,
+  danger = false,
   onClick,
 }) => (
   <button
@@ -231,8 +268,10 @@ React.FC<{
       onClick
     }
     className={[
-      'rounded-[8px] border px-2.5 py-2 text-[8px] font-black transition',
-      strong
+      'shrink-0 rounded-[8px] border px-2.5 py-2 text-[8px] font-black transition',
+      danger
+        ? 'border-red-100 bg-red-50 text-red-600 hover:bg-red-100'
+        : strong
         ? 'border-[#cf5068]/25 bg-[#fff5f7] text-[#a73551] hover:bg-[#f8e9ed]'
         : 'border-black/8 bg-white text-black/45 hover:border-[#cf5068]/25 hover:text-[#a73551]',
     ].join(' ')}
