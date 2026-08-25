@@ -106,7 +106,7 @@ export const CustomerPreviewOverlay: React.FC<Props> = ({ config, onClose }) => 
         </aside>
 
         <main className="min-h-0 overflow-y-auto p-4 sm:p-6">
-          <div className="mx-auto max-h-[calc(100svh-64px)] w-full max-w-[430px] overflow-y-auto overflow-x-hidden rounded-[26px] border border-black/8 bg-white shadow-[0_24px_70px_rgba(40,20,25,0.12)]">
+          <div className="mx-auto max-h-[calc(100svh-64px)] w-full max-w-[390px] overflow-y-auto overflow-x-hidden rounded-[26px] border border-black/8 bg-white shadow-[0_24px_70px_rgba(40,20,25,0.12)]">
             <VisualSceneExperience
               scenes={draft.scenes}
               initialSceneId={draft.initialSceneId}

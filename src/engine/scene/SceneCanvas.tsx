@@ -179,7 +179,7 @@ React.FC<
     Math.max(
       1800,
       scene.minHeight ||
-        3500
+        3200
     );
 
   const longPageDesktopWidth =
@@ -189,11 +189,11 @@ React.FC<
   const longPageMobileHeight =
     Math.round(
       Math.max(
-        1800,
+        1180,
         Math.min(
-          3000,
+          1900,
           pageHeight *
-            0.72
+            0.47
         )
       )
     );
