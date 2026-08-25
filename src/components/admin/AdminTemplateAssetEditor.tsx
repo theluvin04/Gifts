@@ -1,523 +1,669 @@
 import React, {
-  useState,
+  useMemo,
 } from 'react';
 
-import {
-  Plus,
-  Trash2,
-} from 'lucide-react';
+import type {
+  SceneCanvasDefinition,
+  SceneElement,
+} from '../../engine';
 
 import type {
-  TemplateAssetChoice,
-  TemplateAssetLibrary,
-  TemplateAssetSlot,
-} from '../../templates/assets';
+  TemplateVisualEditorConfig,
+} from '../../templates/visualEditor';
 
 import {
-  getEnabledAssetChoices,
-} from '../../templates/assets';
+  encodeCustomerSlot,
+  getCustomerSlot,
+} from '../../templates/customerSlots';
 
 interface Props {
-  assets:
-    TemplateAssetLibrary;
+  visualEditor:
+    TemplateVisualEditorConfig;
+
   onChange: (
-    assets:
-      TemplateAssetLibrary
+    visualEditor:
+      TemplateVisualEditorConfig
   ) => void;
 }
 
-const makeAssetId = () => {
-  if (
-    crypto?.randomUUID
-  ) {
-    return crypto
-      .randomUUID()
-      .slice(0, 18);
-  }
-
-  return `asset-${Date.now()}`;
+type VisualResource = {
+  sceneId: string;
+  sceneTitle: string;
+  element: SceneElement;
 };
 
-const updateSlot = (
-  library:
-    TemplateAssetLibrary,
-  slotId: string,
-  next:
-    TemplateAssetSlot
-) => ({
-  ...library,
-  slots: {
-    ...library.slots,
-    [slotId]:
-      next,
-  },
-});
+const getElementLabel = (
+  element: SceneElement
+) => {
+  if (element.name?.trim()) {
+    return element.name.trim();
+  }
+
+  if (
+    element.type === 'image' ||
+    element.type === 'decor'
+  ) {
+    return element.alt?.trim() ||
+      (element.type === 'decor'
+        ? 'Trang trí'
+        : 'Ảnh');
+  }
+
+  if (
+    element.type ===
+    'photo-frame'
+  ) {
+    return element.caption?.trim() ||
+      'Khung ảnh';
+  }
+
+  if (element.type === 'text') {
+    return element.text.trim().slice(0, 56) ||
+      'Chữ';
+  }
+
+  if (element.type === 'button') {
+    return element.label.trim().slice(0, 56) ||
+      'Nút';
+  }
+
+  return element.id;
+};
+
+const getImageUrl = (
+  element: SceneElement
+) => {
+  if (
+    element.type === 'image' ||
+    element.type === 'decor' ||
+    element.type === 'photo-frame'
+  ) {
+    return element.src || '';
+  }
+
+  return '';
+};
+
+const getTypeLabel = (
+  element: SceneElement
+) => {
+  switch (element.type) {
+    case 'image':
+      return 'Ảnh';
+    case 'decor':
+      return 'Trang trí';
+    case 'photo-frame':
+      return 'Khung ảnh';
+    case 'text':
+      return 'Chữ';
+    case 'button':
+      return 'Nút';
+    default:
+      return 'Layer';
+  }
+};
 
 export const AdminTemplateAssetEditor:
 React.FC<Props> = ({
-  assets,
+  visualEditor,
   onChange,
 }) => {
-  const groups =
-    Array.from(
-      new Set(
-        Object.values(
-          assets.slots
-        ).map(
-          (slot) =>
-            slot.group
-        )
-      )
+  const resources =
+    useMemo<VisualResource[]>(
+      () =>
+        visualEditor.scenes.flatMap(
+          (scene) =>
+            scene.elements
+              .filter(
+                (element) =>
+                  element.type === 'image' ||
+                  element.type === 'decor' ||
+                  element.type === 'photo-frame' ||
+                  element.type === 'text' ||
+                  element.type === 'button'
+              )
+              .map((element) => ({
+                sceneId: scene.id,
+                sceneTitle:
+                  scene.title ||
+                  scene.id,
+                element,
+              }))
+        ),
+      [visualEditor]
     );
+
+  const imageResources =
+    resources.filter(
+      ({ element }) =>
+        element.type === 'image' ||
+        element.type === 'decor' ||
+        element.type === 'photo-frame'
+    );
+
+  const textResources =
+    resources.filter(
+      ({ element }) =>
+        element.type === 'text' ||
+        element.type === 'button'
+    );
+
+  const backgrounds =
+    visualEditor.scenes.filter(
+      (scene) =>
+        Boolean(
+          scene.background?.imageUrl
+        )
+    );
+
+  const customerSlots =
+    resources.filter(
+      ({ element }) =>
+        getCustomerSlot(element)
+          .kind !== 'none'
+    );
+
+  const updateElement = (
+    sceneId: string,
+    elementId: string,
+    updater: (
+      element: SceneElement
+    ) => SceneElement
+  ) => {
+    onChange({
+      ...visualEditor,
+      scenes:
+        visualEditor.scenes.map(
+          (scene) =>
+            scene.id === sceneId
+              ? {
+                  ...scene,
+                  elements:
+                    scene.elements.map(
+                      (element) =>
+                        element.id ===
+                        elementId
+                          ? updater(
+                              element
+                            )
+                          : element
+                    ),
+                }
+              : scene
+        ),
+    });
+  };
+
+  const updateScene = (
+    sceneId: string,
+    updater: (
+      scene:
+        SceneCanvasDefinition
+    ) => SceneCanvasDefinition
+  ) => {
+    onChange({
+      ...visualEditor,
+      scenes:
+        visualEditor.scenes.map(
+          (scene) =>
+            scene.id === sceneId
+              ? updater(scene)
+              : scene
+        ),
+    });
+  };
 
   return (
     <div>
-      <div className="rounded-[14px] bg-[#fff4f6] px-4 py-3 text-[11px] leading-5 text-[#9f4054]">
-        Asset được khai báo trong code sẽ tự xuất hiện ở đây.
-        Nếu preview báo “Thiếu file / sai path” thì path đã có nhưng file chưa nằm đúng trong{' '}
-        <strong>
-          public/images/template-assets/
-        </strong>
-        .
+      <div className="rounded-[14px] border border-[#cf5068]/10 bg-[#fff6f8] px-4 py-3">
+        <p className="text-[11px] font-black text-[#9f4054]">
+          Tài nguyên của đúng template này
+        </p>
+        <p className="mt-1 text-[10px] leading-5 text-[#9f4054]/70">
+          Danh sách bên dưới lấy trực tiếp từ các layer trong Thiết kế trang. Không còn dùng bộ asset Love cũ. Đánh dấu “Khách thay” ở đây thì màn cá nhân hoá của khách sẽ hiện đúng trường đó.
+        </p>
+
+        <div className="mt-3 flex flex-wrap gap-2 text-[9px] font-black">
+          <span className="rounded-full bg-white px-2.5 py-1.5 text-black/45">
+            {imageResources.length} ảnh
+          </span>
+          <span className="rounded-full bg-white px-2.5 py-1.5 text-black/45">
+            {textResources.length} chữ
+          </span>
+          <span className="rounded-full bg-[#191919] px-2.5 py-1.5 text-white">
+            {customerSlots.length} khách được thay
+          </span>
+        </div>
       </div>
 
-      <div className="mt-4 space-y-3">
-        {groups.map(
-          (
-            group,
-            groupIndex
-          ) => (
-            <details
-              key={group}
-              open={
-                groupIndex ===
-                0
-              }
-              className="group rounded-[16px] border border-black/8 bg-white"
-            >
-              <summary className="cursor-pointer list-none px-4 py-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-black">
-                    {group}
-                  </p>
-
-                  <span className="text-lg text-black/25 transition group-open:rotate-45">
-                    +
-                  </span>
-                </div>
-              </summary>
-
-              <div className="space-y-3 border-t border-black/6 p-3">
-                {Object.values(
-                  assets.slots
-                )
-                  .filter(
-                    (slot) =>
-                      slot.group ===
-                      group
-                  )
-                  .map(
-                    (slot) => (
-                      <AssetSlot
-                        key={
-                          slot.id
-                        }
-                        slot={
-                          slot
-                        }
-                        onChange={(
-                          next
-                        ) =>
-                          onChange(
-                            updateSlot(
-                              assets,
-                              slot.id,
-                              next
-                            )
-                          )
-                        }
-                      />
+      {backgrounds.length > 0 && (
+        <ResourceSection
+          title="Ảnh nền"
+          description="Ảnh nền đang được dùng thực tế trong từng trang."
+        >
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {backgrounds.map(
+              (scene) => (
+                <BackgroundCard
+                  key={scene.id}
+                  scene={scene}
+                  onChange={(imageUrl) =>
+                    updateScene(
+                      scene.id,
+                      (current) => ({
+                        ...current,
+                        background: {
+                          ...current.background,
+                          imageUrl:
+                            imageUrl ||
+                            undefined,
+                        },
+                      })
                     )
-                  )}
-              </div>
-            </details>
-          )
+                  }
+                />
+              )
+            )}
+          </div>
+        </ResourceSection>
+      )}
+
+      <ResourceSection
+        title="Ảnh & trang trí trong mẫu"
+        description="Mỗi card tương ứng đúng một layer đang xuất hiện trên canvas."
+      >
+        {imageResources.length === 0 ? (
+          <EmptyState text="Template chưa có layer ảnh/trang trí." />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {imageResources.map(
+              ({
+                sceneId,
+                sceneTitle,
+                element,
+              }) => (
+                <ImageResourceCard
+                  key={`${sceneId}-${element.id}`}
+                  sceneTitle={sceneTitle}
+                  element={element}
+                  onChange={(next) =>
+                    updateElement(
+                      sceneId,
+                      element.id,
+                      () => next
+                    )
+                  }
+                />
+              )
+            )}
+          </div>
         )}
-      </div>
+      </ResourceSection>
+
+      <ResourceSection
+        title="Chữ khách có thể sửa"
+        description="Bật đúng những dòng khách cần nhập. Chữ trang trí hoặc chữ cố định cứ để khóa."
+      >
+        {textResources.length === 0 ? (
+          <EmptyState text="Template chưa có layer chữ/nút." />
+        ) : (
+          <div className="space-y-2">
+            {textResources.map(
+              ({
+                sceneId,
+                sceneTitle,
+                element,
+              }) => (
+                <TextResourceRow
+                  key={`${sceneId}-${element.id}`}
+                  sceneTitle={sceneTitle}
+                  element={element}
+                  onChange={(next) =>
+                    updateElement(
+                      sceneId,
+                      element.id,
+                      () => next
+                    )
+                  }
+                />
+              )
+            )}
+          </div>
+        )}
+      </ResourceSection>
     </div>
   );
 };
 
-const AssetSlot:
+const ResourceSection:
 React.FC<{
-  slot:
-    TemplateAssetSlot;
+  title: string;
+  description: string;
+  children:
+    React.ReactNode;
+}> = ({
+  title,
+  description,
+  children,
+}) => (
+  <section className="mt-4 rounded-[16px] border border-black/8 bg-white p-3 sm:p-4">
+    <div className="mb-3">
+      <h3 className="text-sm font-black text-black/75">
+        {title}
+      </h3>
+      <p className="mt-1 text-[9px] leading-4 text-black/35">
+        {description}
+      </p>
+    </div>
+    {children}
+  </section>
+);
+
+const EmptyState:
+React.FC<{
+  text: string;
+}> = ({ text }) => (
+  <div className="rounded-[11px] border border-dashed border-black/10 bg-[#faf9f8] p-4 text-center text-[10px] font-bold text-black/30">
+    {text}
+  </div>
+);
+
+const BackgroundCard:
+React.FC<{
+  scene: SceneCanvasDefinition;
   onChange: (
-    slot:
-      TemplateAssetSlot
+    imageUrl: string
   ) => void;
 }> = ({
-  slot,
+  scene,
   onChange,
 }) => {
-  const enabledCount =
-    getEnabledAssetChoices(
-      slot
-    ).length;
-
-  const updateChoice = (
-    id: string,
-    patch:
-      Partial<
-        TemplateAssetChoice
-      >
-  ) => {
-    const choices =
-      slot.choices.map(
-        (choice) =>
-          choice.id === id
-            ? {
-                ...choice,
-                ...patch,
-              }
-            : choice
-      );
-
-    const currentDefault =
-      choices.find(
-        (choice) =>
-          choice.id ===
-          slot.defaultAssetId
-      );
-
-    const defaultAssetId =
-      currentDefault
-        ?.enabled
-        ? slot.defaultAssetId
-        : (
-            choices.find(
-              (choice) =>
-                choice.enabled
-            ) ||
-            choices[0]
-          )?.id || '';
-
-    onChange({
-      ...slot,
-      choices,
-      defaultAssetId,
-    });
-  };
-
-  const addChoice = () => {
-    onChange({
-      ...slot,
-      choices: [
-        ...slot.choices,
-        {
-          id:
-            makeAssetId(),
-          label:
-            `Asset ${slot.choices.length + 1}`,
-          url: '',
-          enabled: true,
-        },
-      ],
-    });
-  };
-
-  const removeChoice = (
-    id: string
-  ) => {
-    if (
-      slot.choices.length <=
-      1
-    ) {
-      return;
-    }
-
-    const choices =
-      slot.choices.filter(
-        (choice) =>
-          choice.id !== id
-      );
-
-    const defaultAssetId =
-      slot.defaultAssetId ===
-      id
-        ? (
-            choices.find(
-              (choice) =>
-                choice.enabled
-            ) ||
-            choices[0]
-          )?.id || ''
-        : slot.defaultAssetId;
-
-    onChange({
-      ...slot,
-      choices,
-      defaultAssetId,
-    });
-  };
+  const url =
+    scene.background?.imageUrl ||
+    '';
 
   return (
-    <section className="rounded-[14px] bg-[#faf9f8] p-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-black text-black/70">
-            {slot.label}
-          </p>
-
-          <p className="mt-1 text-[10px] leading-4 text-black/35">
-            {slot.description}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <p className="text-[9px] font-semibold text-black/30">
-            {enabledCount}{' '}
-            đang bật
-          </p>
-
-          <label className="flex items-center gap-1.5 text-[10px] font-bold text-black/50">
-            <input
-              type="checkbox"
-              checked={
-                slot
-                  .customerCanChoose
-              }
-              onChange={(
-                event
-              ) =>
-                onChange({
-                  ...slot,
-                  customerCanChoose:
-                    event.target
-                      .checked,
-                })
-              }
-              className="h-4 w-4 accent-[#b83e57]"
-            />
-
-            Khách được chọn
-          </label>
-        </div>
+    <div className="rounded-[12px] border border-black/7 bg-[#faf9f8] p-3">
+      <div className="aspect-[16/10] overflow-hidden rounded-[9px] bg-white">
+        {url ? (
+          <img
+            src={url}
+            alt=""
+            className="h-full w-full object-contain"
+          />
+        ) : null}
       </div>
-
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {slot.choices.map(
-          (choice) => (
-            <AssetCard
-              key={
-                choice.id
-              }
-              choice={
-                choice
-              }
-              defaultAssetId={
-                slot.defaultAssetId
-              }
-              radioName={
-                `default-${slot.id}`
-              }
-              canDelete={
-                slot.choices
-                  .length >
-                1
-              }
-              onUpdate={(
-                patch
-              ) =>
-                updateChoice(
-                  choice.id,
-                  patch
-                )
-              }
-              onSetDefault={() =>
-                onChange({
-                  ...slot,
-                  defaultAssetId:
-                    choice.id,
-                })
-              }
-              onDelete={() =>
-                removeChoice(
-                  choice.id
-                )
-              }
-            />
+      <p className="mt-2 text-[10px] font-black text-black/65">
+        {scene.title || scene.id}
+      </p>
+      <input
+        value={url}
+        onChange={(event) =>
+          onChange(
+            event.target.value
           )
-        )}
-      </div>
-
-      <button
-        type="button"
-        onClick={
-          addChoice
         }
-        className="mt-3 inline-flex items-center gap-1.5 rounded-[10px] border border-dashed border-[#cf5068]/35 bg-white px-3 py-2 text-[10px] font-bold text-[#b83e57]"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        Thêm asset
-      </button>
-    </section>
+        placeholder="/images/..."
+        className="mt-2 w-full rounded-[8px] border border-black/7 bg-white px-2.5 py-2 font-mono text-[9px] outline-none focus:border-[#cf5068]/40"
+      />
+    </div>
   );
 };
 
-const AssetCard:
+const ImageResourceCard:
 React.FC<{
-  choice:
-    TemplateAssetChoice;
-  defaultAssetId:
-    string;
-  radioName: string;
-  canDelete: boolean;
-  onUpdate: (
-    patch:
-      Partial<
-        TemplateAssetChoice
-      >
+  sceneTitle: string;
+  element: SceneElement;
+  onChange: (
+    next: SceneElement
   ) => void;
-  onSetDefault:
-    () => void;
-  onDelete:
-    () => void;
 }> = ({
-  choice,
-  defaultAssetId,
-  radioName,
-  canDelete,
-  onUpdate,
-  onSetDefault,
-  onDelete,
+  sceneTitle,
+  element,
+  onChange,
 }) => {
-  const [
-    broken,
-    setBroken,
-  ] = useState(false);
+  const slot =
+    getCustomerSlot(element);
+
+  const url =
+    getImageUrl(element);
+
+  const canCustomerReplace =
+    element.type === 'image' ||
+    element.type ===
+      'photo-frame';
+
+  const setUrl = (
+    nextUrl: string
+  ) => {
+    if (
+      element.type === 'image' ||
+      element.type === 'decor' ||
+      element.type === 'photo-frame'
+    ) {
+      onChange({
+        ...element,
+        src: nextUrl,
+      } as SceneElement);
+    }
+  };
+
+  const setCustomerReplace = (
+    enabled: boolean
+  ) => {
+    onChange(
+      encodeCustomerSlot(
+        element,
+        enabled
+          ? 'image'
+          : 'none',
+        slot.label ||
+          getElementLabel(
+            element
+          )
+      )
+    );
+  };
+
+  const setCustomerLabel = (
+    label: string
+  ) => {
+    onChange(
+      encodeCustomerSlot(
+        element,
+        'image',
+        label
+      )
+    );
+  };
 
   return (
-    <div className="rounded-[12px] border border-black/7 bg-white p-3">
-      <div className="aspect-[16/10] overflow-hidden rounded-[10px] bg-[#f5f1f2]">
-        {choice.url &&
-        !broken ? (
+    <article className="rounded-[12px] border border-black/7 bg-[#faf9f8] p-3">
+      <div className="relative aspect-[16/10] overflow-hidden rounded-[9px] bg-white">
+        {url ? (
           <img
-            src={
-              choice.url
-            }
+            src={url}
             alt=""
-            onError={() =>
-              setBroken(true)
-            }
-            onLoad={() =>
-              setBroken(false)
-            }
             className="h-full w-full object-contain"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center px-4 text-center">
-            <p className="text-[10px] font-bold text-red-400">
-              {choice.url
-                ? 'Thiếu file / sai path'
-                : 'Chưa có URL'}
-            </p>
+          <div className="flex h-full items-center justify-center text-[9px] font-bold text-black/25">
+            Chưa có ảnh
           </div>
+        )}
+
+        <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[7px] font-black uppercase text-white">
+          {getTypeLabel(
+            element
+          )}
+        </span>
+      </div>
+
+      <div className="mt-2 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-[10px] font-black text-black/70">
+            {getElementLabel(
+              element
+            )}
+          </p>
+          <p className="mt-0.5 truncate text-[8px] text-black/30">
+            {sceneTitle}
+          </p>
+        </div>
+
+        {canCustomerReplace && (
+          <label className="flex shrink-0 items-center gap-1.5 text-[8px] font-black text-black/45">
+            <input
+              type="checkbox"
+              checked={
+                slot.kind === 'image'
+              }
+              onChange={(event) =>
+                setCustomerReplace(
+                  event.target.checked
+                )
+              }
+              className="h-3.5 w-3.5 accent-[#b83e57]"
+            />
+            Khách thay
+          </label>
         )}
       </div>
 
       <input
-        value={
-          choice.label
+        value={url}
+        onChange={(event) =>
+          setUrl(
+            event.target.value
+          )
         }
-        onChange={(
-          event
-        ) =>
-          onUpdate({
-            label:
-              event.target
-                .value,
-          })
-        }
-        className="mt-3 w-full border-0 border-b border-black/8 px-0 py-1.5 text-xs font-bold outline-none focus:border-[#cf5068]"
-      />
-
-      <input
-        value={
-          choice.url
-        }
-        onChange={(
-          event
-        ) => {
-          setBroken(false);
-
-          onUpdate({
-            url:
-              event.target
-                .value,
-          });
-        }}
         placeholder="/images/..."
-        className="mt-2 w-full rounded-[8px] bg-[#faf9f8] px-2.5 py-2 font-mono text-[9px] text-black/48 outline-none"
+        className="mt-2 w-full rounded-[8px] border border-black/7 bg-white px-2.5 py-2 font-mono text-[9px] outline-none focus:border-[#cf5068]/40"
       />
 
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1 text-[9px] font-bold text-black/40">
-            <input
-              type="checkbox"
-              checked={
-                choice.enabled
-              }
-              onChange={(
-                event
-              ) =>
-                onUpdate({
-                  enabled:
-                    event.target
-                      .checked,
-                })
-              }
-              className="h-3.5 w-3.5 accent-[#b83e57]"
-            />
-            Bật
-          </label>
+      {canCustomerReplace &&
+      slot.kind === 'image' && (
+        <input
+          value={
+            slot.label ||
+            getElementLabel(
+              element
+            )
+          }
+          onChange={(event) =>
+            setCustomerLabel(
+              event.target.value
+            )
+          }
+          placeholder="Tên trường khách thấy"
+          className="mt-2 w-full rounded-[8px] border border-[#cf5068]/15 bg-[#fff7f9] px-2.5 py-2 text-[9px] font-bold text-[#9f4054] outline-none focus:border-[#cf5068]/40"
+        />
+      )}
 
-          <label className="flex items-center gap-1 text-[9px] font-bold text-black/40">
-            <input
-              type="radio"
-              name={
-                radioName
-              }
-              checked={
-                defaultAssetId ===
-                choice.id
-              }
-              disabled={
-                !choice.enabled
-              }
-              onChange={
-                onSetDefault
-              }
-              className="h-3.5 w-3.5 accent-[#b83e57]"
-            />
-            Mặc định
-          </label>
+      {element.type === 'decor' && (
+        <p className="mt-2 text-[8px] leading-4 text-black/28">
+          Trang trí được khóa theo mẫu, khách không thay.
+        </p>
+      )}
+    </article>
+  );
+};
+
+const TextResourceRow:
+React.FC<{
+  sceneTitle: string;
+  element: SceneElement;
+  onChange: (
+    next: SceneElement
+  ) => void;
+}> = ({
+  sceneTitle,
+  element,
+  onChange,
+}) => {
+  const slot =
+    getCustomerSlot(element);
+
+  const canEdit =
+    element.type === 'text' ||
+    element.type === 'button';
+
+  if (!canEdit) {
+    return null;
+  }
+
+  const label =
+    getElementLabel(element);
+
+  const setCustomerReplace = (
+    enabled: boolean
+  ) => {
+    onChange(
+      encodeCustomerSlot(
+        element,
+        enabled
+          ? 'text'
+          : 'none',
+        slot.label || label
+      )
+    );
+  };
+
+  const setCustomerLabel = (
+    nextLabel: string
+  ) => {
+    onChange(
+      encodeCustomerSlot(
+        element,
+        'text',
+        nextLabel
+      )
+    );
+  };
+
+  return (
+    <div className="rounded-[11px] border border-black/7 bg-[#faf9f8] p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="truncate text-[10px] font-black text-black/65">
+            {label}
+          </p>
+          <p className="mt-0.5 text-[8px] text-black/28">
+            {sceneTitle} · {getTypeLabel(element)}
+          </p>
         </div>
 
-        <button
-          type="button"
-          disabled={
-            !canDelete
-          }
-          onClick={
-            onDelete
-          }
-          className="flex h-7 w-7 items-center justify-center text-black/20 hover:text-red-500 disabled:opacity-20"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        <label className="flex shrink-0 items-center gap-1.5 text-[8px] font-black text-black/45">
+          <input
+            type="checkbox"
+            checked={
+              slot.kind === 'text'
+            }
+            onChange={(event) =>
+              setCustomerReplace(
+                event.target.checked
+              )
+            }
+            className="h-3.5 w-3.5 accent-[#b83e57]"
+          />
+          Khách thay chữ
+        </label>
       </div>
+
+      {slot.kind === 'text' && (
+        <input
+          value={
+            slot.label || label
+          }
+          onChange={(event) =>
+            setCustomerLabel(
+              event.target.value
+            )
+          }
+          placeholder="Tên trường khách thấy"
+          className="mt-2 w-full rounded-[8px] border border-[#cf5068]/15 bg-white px-2.5 py-2 text-[9px] font-bold text-[#9f4054] outline-none focus:border-[#cf5068]/40"
+        />
+      )}
     </div>
   );
 };

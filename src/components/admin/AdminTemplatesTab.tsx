@@ -729,11 +729,14 @@ React.FC<Props> = ({
       {section === 'assets' && (
         <section className="rounded-[18px] border border-black/8 bg-white p-4 sm:p-5">
           <AdminTemplateAssetEditor
-            assets={template.assets}
-            onChange={(assets) =>
+            visualEditor={
+              template.visualEditor ||
+              DEFAULT_LOVE_VISUAL_EDITOR_CONFIG
+            }
+            onChange={(visualEditor) =>
               onChange({
                 ...template,
-                assets,
+                visualEditor,
               })
             }
           />
