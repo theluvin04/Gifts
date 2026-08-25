@@ -29,6 +29,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/preview/:path*",
+      "destination": "/index.html"
+    },
+    {
       "source": "/admin/:path*",
       "destination": "/index.html"
     }
