@@ -3,24 +3,23 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { motion } from 'motion/react';
+
 import {
-  ArrowLeft,
-  CreditCard,
   Image as ImageIcon,
   Mail,
   Music2,
   Plus,
-  RotateCcw,
-  ShoppingBag,
-  Sparkles,
-  WandSparkles,
   Trash2,
   Upload,
   UserRound,
+  WandSparkles,
 } from 'lucide-react';
 
-import { LoveConfig } from '../types';
+import type {
+  LoveConfig,
+  MemoryDisplayCaptions,
+} from '../types';
+
 import {
   getYouTubeThumbnailUrl,
   getYouTubeVideoId,
@@ -28,7 +27,7 @@ import {
 
 import {
   DEFAULT_LOVE_TEMPLATE_ASSETS,
-  TemplateAssetLibrary,
+  type TemplateAssetLibrary,
   getCustomerSelectableSlots,
   getEnabledAssetChoices,
   getSelectedAssetChoiceId,
@@ -38,14 +37,18 @@ import {
   DEFAULT_LOVE_TEMPLATE_DESIGN,
 } from '../templates/design';
 
-import type {
-  MemoryDisplayCaptions,
-} from '../types';
-
 import {
   getCachedTemplateConfigById,
   getRequiredPublicTemplateConfigById,
 } from '../services/templateService';
+
+import {
+  PersonalizeInput,
+  PersonalizePageShell,
+  PersonalizeSectionHeader,
+  PersonalizeTextarea,
+  type PersonalizeTab,
+} from './PersonalizePageShell';
 
 interface CreateLovePageProps {
   config: LoveConfig;
@@ -64,45 +67,27 @@ type TabId =
   | 'assets';
 
 type MemoryPhoto =
-  LoveConfig[
-    'gifts'
-  ][
-    'gift1'
-  ][
-    'photos'
-  ][number];
+  LoveConfig['gifts']['gift1']['photos'][number];
 
-const TOTAL_MEMORY_PHOTOS =
-  8;
+const TOTAL_MEMORY_PHOTOS = 8;
 
 const makeEmptyMemoryPhoto = (
   index: number
 ): MemoryPhoto => ({
-  id:
-    `memory-slot-${index + 1}`,
+  id: `memory-slot-${index + 1}`,
   url: '',
   caption: '',
 });
 
 const ensureEightMemoryPhotos = (
-  photos:
-    MemoryPhoto[]
-) => {
-  return Array.from(
-    {
-      length:
-        TOTAL_MEMORY_PHOTOS,
-    },
-    (
-      _,
-      index
-    ) =>
+  photos: MemoryPhoto[]
+) =>
+  Array.from(
+    { length: TOTAL_MEMORY_PHOTOS },
+    (_, index) =>
       photos[index] ||
-      makeEmptyMemoryPhoto(
-        index
-      )
+      makeEmptyMemoryPhoto(index)
   );
-};
 
 const compressImage = (
   file: File,
@@ -116,23 +101,23 @@ const compressImage = (
     image.onload = () => {
       const scale = Math.min(
         1,
-        maxSize / Math.max(image.width, image.height)
+        maxSize /
+          Math.max(
+            image.width,
+            image.height
+          )
       );
-
       const width = Math.max(
         1,
         Math.round(image.width * scale)
       );
-
       const height = Math.max(
         1,
         Math.round(image.height * scale)
       );
-
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
-
       const context = canvas.getContext('2d');
 
       if (!context) {
@@ -141,13 +126,18 @@ const compressImage = (
         return;
       }
 
-      context.drawImage(image, 0, 0, width, height);
+      context.drawImage(
+        image,
+        0,
+        0,
+        width,
+        height
+      );
 
       const dataUrl = canvas.toDataURL(
         'image/jpeg',
         quality
       );
-
       URL.revokeObjectURL(objectUrl);
       resolve(dataUrl);
     };
@@ -160,220 +150,129 @@ const compressImage = (
     image.src = objectUrl;
   });
 
-export const CreateLovePage: React.FC<
-  CreateLovePageProps
-> = ({
+export const CreateLovePage:
+React.FC<CreateLovePageProps> = ({
   config,
   onChange,
-  onBack,
   onReset,
   onAddToCart,
   onCheckout,
 }) => {
   const [activeTab, setActiveTab] =
     useState<TabId>('basic');
-
   const [imageError, setImageError] =
     useState('');
-
-  const [
-    assetLibrary,
-    setAssetLibrary,
-  ] =
+  const [assetLibrary, setAssetLibrary] =
     useState<TemplateAssetLibrary>(
       () =>
-        getCachedTemplateConfigById(
-          'love-01'
-        )?.assets ||
+        getCachedTemplateConfigById('love-01')
+          ?.assets ||
         DEFAULT_LOVE_TEMPLATE_ASSETS
     );
-
   const [
     memoryCaptionDefaults,
     setMemoryCaptionDefaults,
-  ] =
-    useState<MemoryDisplayCaptions>(
-      () =>
-        getCachedTemplateConfigById(
-          'love-01'
-        )?.design
-          .memories
-          .captions ||
-        DEFAULT_LOVE_TEMPLATE_DESIGN
-          .memories
-          .captions
-    );
+  ] = useState<MemoryDisplayCaptions>(
+    () =>
+      getCachedTemplateConfigById('love-01')
+        ?.design.memories.captions ||
+      DEFAULT_LOVE_TEMPLATE_DESIGN.memories
+        .captions
+  );
 
   useEffect(() => {
     let cancelled = false;
-    let loading = false;
 
-    const loadAssets =
-      async () => {
-        if (loading) {
-          return;
-        }
-
-        loading = true;
-
-        try {
-          const template =
-            await getRequiredPublicTemplateConfigById(
-              'love-01'
-            );
-
-          if (!cancelled) {
-            setAssetLibrary(
-              template.assets
-            );
-
-            setMemoryCaptionDefaults(
-              template.design
-                .memories
-                .captions
-            );
-          }
-        } catch (
-          error
-        ) {
-          console.warn(
-            'Fresh template assets load failed:',
-            error
+    const loadTemplate = async () => {
+      try {
+        const template =
+          await getRequiredPublicTemplateConfigById(
+            'love-01'
           );
-        } finally {
-          loading = false;
+
+        if (!cancelled) {
+          setAssetLibrary(template.assets);
+          setMemoryCaptionDefaults(
+            template.design.memories.captions
+          );
         }
-      };
+      } catch (error) {
+        console.warn(
+          'Fresh template assets load failed:',
+          error
+        );
+      }
+    };
 
-    const handleFocus =
-      () => {
-        void loadAssets();
-      };
-
-    const handleVisibilityChange =
-      () => {
-        if (
-          document.visibilityState ===
-          'visible'
-        ) {
-          void loadAssets();
-        }
-      };
-
-    void loadAssets();
-
-    window.addEventListener(
-      'focus',
-      handleFocus
-    );
-
-    document.addEventListener(
-      'visibilitychange',
-      handleVisibilityChange
-    );
+    void loadTemplate();
+    const handleFocus = () => void loadTemplate();
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       cancelled = true;
-
       window.removeEventListener(
         'focus',
         handleFocus
       );
-
-      document.removeEventListener(
-        'visibilitychange',
-        handleVisibilityChange
-      );
     };
   }, []);
 
-  const selectableAssetSlots =
-    useMemo(
-      () =>
-        getCustomerSelectableSlots(
-          assetLibrary
-        ),
-      [assetLibrary]
-    );
-
-  const tabs = useMemo(
-    () => [
-      {
-        id: 'basic' as const,
-        label: 'Thông tin',
-        icon: UserRound,
-      },
-      {
-        id: 'memories' as const,
-        label: 'Ảnh kỷ niệm',
-        icon: ImageIcon,
-      },
-      {
-        id: 'music' as const,
-        label: 'Âm nhạc',
-        icon: Music2,
-      },
-      {
-        id: 'letter' as const,
-        label: 'Bức thư',
-        icon: Mail,
-      },
-      {
-        id: 'assets' as const,
-        label: 'GIF & hình',
-        icon: WandSparkles,
-      },
-    ],
-    []
+  const selectableAssetSlots = useMemo(
+    () =>
+      getCustomerSelectableSlots(assetLibrary),
+    [assetLibrary]
   );
 
-  const updateAssetSelection = (
-    slotId: string,
-    assetId: string
-  ) => {
-    onChange({
-      ...config,
-      assetSelections: {
-        ...(
-          config.assetSelections ||
-          {}
-        ),
-        [slotId]:
-          assetId,
-      },
-    });
-  };
-
-  const updateMemoryCaption = (
-    key:
-      keyof MemoryDisplayCaptions,
-    value: string
-  ) => {
-    onChange({
-      ...config,
-      gifts: {
-        ...config.gifts,
-        gift1: {
-          ...config.gifts.gift1,
-          displayCaptions: {
-            ...memoryCaptionDefaults,
-            ...(
-              config.gifts
-                .gift1
-                .displayCaptions ||
-              {}
-            ),
-            [key]:
-              value,
-          },
+  const tabs = useMemo<PersonalizeTab[]>(
+    () => {
+      const items: PersonalizeTab[] = [
+        {
+          id: 'basic',
+          label: 'Thông tin',
+          icon: UserRound,
         },
-      },
-    });
-  };
+        {
+          id: 'memories',
+          label: 'Ảnh',
+          icon: ImageIcon,
+        },
+        {
+          id: 'music',
+          label: 'Âm nhạc',
+          icon: Music2,
+        },
+        {
+          id: 'letter',
+          label: 'Bức thư',
+          icon: Mail,
+        },
+      ];
+
+      if (selectableAssetSlots.length > 0) {
+        items.push({
+          id: 'assets',
+          label: 'GIF & hình',
+          icon: WandSparkles,
+        });
+      }
+
+      return items;
+    },
+    [selectableAssetSlots.length]
+  );
+
+  useEffect(() => {
+    if (
+      activeTab === 'assets' &&
+      selectableAssetSlots.length === 0
+    ) {
+      setActiveTab('basic');
+    }
+  }, [activeTab, selectableAssetSlots.length]);
 
   const updateCouple = (
     patch: Partial<LoveConfig['couple']>
-  ) => {
+  ) =>
     onChange({
       ...config,
       couple: {
@@ -381,11 +280,10 @@ export const CreateLovePage: React.FC<
         ...patch,
       },
     });
-  };
 
   const updateProposal = (
     patch: Partial<LoveConfig['proposal']>
-  ) => {
+  ) =>
     onChange({
       ...config,
       proposal: {
@@ -393,31 +291,18 @@ export const CreateLovePage: React.FC<
         ...patch,
       },
     });
-  };
 
   const updatePhoto = (
     index: number,
-    patch: Partial<
-      LoveConfig['gifts']['gift1']['photos'][number]
-    >
+    patch: Partial<MemoryPhoto>
   ) => {
-    const photos =
-      ensureEightMemoryPhotos(
-        config.gifts
-          .gift1.photos
-      ).map(
-        (
-          photo,
-          photoIndex
-        ) =>
-          photoIndex ===
-          index
-            ? {
-                ...photo,
-                ...patch,
-              }
-            : photo
-      );
+    const photos = ensureEightMemoryPhotos(
+      config.gifts.gift1.photos
+    ).map((photo, photoIndex) =>
+      photoIndex === index
+        ? { ...photo, ...patch }
+        : photo
+    );
 
     onChange({
       ...config,
@@ -431,40 +316,94 @@ export const CreateLovePage: React.FC<
     });
   };
 
+  const updateMemoryCaption = (
+    key: keyof MemoryDisplayCaptions,
+    value: string
+  ) =>
+    onChange({
+      ...config,
+      gifts: {
+        ...config.gifts,
+        gift1: {
+          ...config.gifts.gift1,
+          displayCaptions: {
+            ...memoryCaptionDefaults,
+            ...(config.gifts.gift1
+              .displayCaptions || {}),
+            [key]: value,
+          },
+        },
+      },
+    });
+
+  const uploadPhoto = async (
+    index: number,
+    file?: File
+  ) => {
+    if (!file) return;
+    setImageError('');
+
+    try {
+      updatePhoto(index, {
+        url: await compressImage(file),
+      });
+    } catch {
+      setImageError(
+        'Ảnh này không đọc được. Thử ảnh JPG/PNG khác.'
+      );
+    }
+  };
+
   const updateTrack = (
     index: number,
     patch: Partial<
       LoveConfig['gifts']['gift2']['playlist'][number]
     >
-  ) => {
-    const playlist =
-      config.gifts.gift2.playlist.map(
-        (track, trackIndex) =>
-          trackIndex === index
-            ? {
-                ...track,
-                ...patch,
-              }
-            : track
-      );
-
+  ) =>
     onChange({
       ...config,
       gifts: {
         ...config.gifts,
         gift2: {
           ...config.gifts.gift2,
-          playlist,
+          playlist:
+            config.gifts.gift2.playlist.map(
+              (track, trackIndex) =>
+                trackIndex === index
+                  ? { ...track, ...patch }
+                  : track
+            ),
         },
       },
     });
+
+  const uploadCover = async (
+    index: number,
+    file?: File
+  ) => {
+    if (!file) return;
+    setImageError('');
+
+    try {
+      updateTrack(index, {
+        coverUrl: await compressImage(
+          file,
+          900,
+          0.8
+        ),
+      });
+    } catch {
+      setImageError(
+        'Ảnh bìa này không đọc được.'
+      );
+    }
   };
 
   const updateLetter = (
     patch: Partial<
       LoveConfig['gifts']['gift3']['letter']
     >
-  ) => {
+  ) =>
     onChange({
       ...config,
       gifts: {
@@ -478,56 +417,6 @@ export const CreateLovePage: React.FC<
         },
       },
     });
-  };
-
-  const uploadPhoto = async (
-    index: number,
-    file?: File
-  ) => {
-    if (!file) {
-      return;
-    }
-
-    setImageError('');
-
-    try {
-      const dataUrl = await compressImage(file);
-      updatePhoto(index, {
-        url: dataUrl,
-      });
-    } catch {
-      setImageError(
-        'Ảnh này không đọc được. Thử ảnh JPG/PNG khác.'
-      );
-    }
-  };
-
-  const uploadCover = async (
-    index: number,
-    file?: File
-  ) => {
-    if (!file) {
-      return;
-    }
-
-    setImageError('');
-
-    try {
-      const dataUrl = await compressImage(
-        file,
-        900,
-        0.8
-      );
-
-      updateTrack(index, {
-        coverUrl: dataUrl,
-      });
-    } catch {
-      setImageError(
-        'Ảnh bìa này không đọc được. Thử ảnh JPG/PNG khác.'
-      );
-    }
-  };
 
   const updateParagraph = (
     index: number,
@@ -536,26 +425,19 @@ export const CreateLovePage: React.FC<
     const paragraphs = [
       ...config.gifts.gift3.letter.paragraphs,
     ];
-
     paragraphs[index] = value;
-
-    updateLetter({
-      paragraphs,
-    });
+    updateLetter({ paragraphs });
   };
 
-  const addParagraph = () => {
+  const addParagraph = () =>
     updateLetter({
       paragraphs: [
         ...config.gifts.gift3.letter.paragraphs,
         '',
       ],
     });
-  };
 
-  const removeParagraph = (
-    index: number
-  ) => {
+  const removeParagraph = (index: number) => {
     if (
       config.gifts.gift3.letter.paragraphs
         .length <= 1
@@ -572,371 +454,92 @@ export const CreateLovePage: React.FC<
     });
   };
 
+  const updateAssetSelection = (
+    slotId: string,
+    assetId: string
+  ) =>
+    onChange({
+      ...config,
+      assetSelections: {
+        ...(config.assetSelections || {}),
+        [slotId]: assetId,
+      },
+    });
+
   return (
-    <div className="min-h-[100svh] w-full max-w-full overflow-x-hidden bg-[#fff9fb] text-slate-800">
-      <header className="sticky top-0 z-50 border-b border-rose-100 bg-[#fff9fb]/90 backdrop-blur-xl">
-        <div className="mx-auto grid h-[64px] w-full max-w-[1440px] grid-cols-[44px_minmax(0,1fr)_44px] items-center px-3 sm:flex sm:h-[68px] sm:justify-between sm:px-7">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 transition hover:text-rose-500"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">
-              Love Story 01
-            </span>
-          </button>
+    <PersonalizePageShell
+      title="Love Story 01"
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={(tabId) =>
+        setActiveTab(tabId as TabId)
+      }
+      error={imageError}
+      primaryAction={{
+        label: 'Tiếp tục thanh toán',
+        onClick: onCheckout,
+      }}
+      secondaryActions={[
+        {
+          label: 'Thêm vào giỏ',
+          onClick: onAddToCart,
+        },
+        {
+          label: 'Khôi phục',
+          onClick: onReset,
+        },
+      ]}
+    >
+      {activeTab === 'basic' && (
+        <BasicSection
+          config={config}
+          updateCouple={updateCouple}
+          updateProposal={updateProposal}
+        />
+      )}
 
-          <div className="min-w-0 px-1 text-center sm:px-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-400">
-              Personalize
-            </p>
+      {activeTab === 'memories' && (
+        <MemoriesSection
+          config={config}
+          captionDefaults={memoryCaptionDefaults}
+          updateMemoryCaption={
+            updateMemoryCaption
+          }
+          uploadPhoto={uploadPhoto}
+        />
+      )}
 
-            <p className="text-sm font-bold text-slate-900">
-              Tạo món quà của bạn
-            </p>
-          </div>
+      {activeTab === 'music' && (
+        <MusicSection
+          config={config}
+          updateTrack={updateTrack}
+          uploadCover={uploadCover}
+        />
+      )}
 
-          <div className="hidden items-center gap-2 sm:flex">
-            <button
-              type="button"
-              onClick={onAddToCart}
-              className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-white px-4 py-2.5 text-xs font-bold text-rose-500 transition hover:bg-rose-50"
-            >
-              <ShoppingBag className="h-3.5 w-3.5" />
-              Thêm vào giỏ
-            </button>
+      {activeTab === 'letter' && (
+        <LetterSection
+          config={config}
+          updateLetter={updateLetter}
+          updateParagraph={updateParagraph}
+          addParagraph={addParagraph}
+          removeParagraph={removeParagraph}
+        />
+      )}
 
-            <button
-              type="button"
-              onClick={onCheckout}
-              className="inline-flex items-center gap-1.5 rounded-full bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-rose-200 transition hover:bg-rose-600"
-            >
-              <CreditCard className="h-3.5 w-3.5" />
-              Thanh toán
-            </button>
-          </div>
-
-          <div className="h-8 w-8 sm:hidden" />
-        </div>
-      </header>
-
-      <main className="mx-auto w-full min-w-0 max-w-[1440px] px-3 pb-24 pt-4 sm:px-7 sm:py-8">
-        <div className="mb-6 rounded-[24px] border border-rose-100 bg-white px-5 py-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-500">
-              <Sparkles className="h-4 w-4" />
-            </span>
-
-            <div className="min-w-0">
-              <h1 className="text-base font-bold text-slate-900 sm:text-lg">
-                Cá nhân hóa Love Story 01
-              </h1>
-
-              <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
-                Điền đầy đủ nội dung món quà bên dưới.
-                Bản nháp được tự lưu trên trình duyệt này.
-                Preview chỉ được mở sau khi thanh toán được xác nhận.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {imageError && (
-          <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-semibold text-red-600">
-            {imageError}
-          </div>
-        )}
-
-        <div className="grid w-full min-w-0 gap-5 xl:grid-cols-[210px_minmax(0,1fr)] xl:gap-6">
-          <aside className="min-w-0 max-w-full">
-            <div className="sticky top-[76px] flex w-full max-w-full gap-2 overflow-x-auto rounded-[22px] border border-rose-100 bg-white p-2 shadow-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:top-[92px] xl:flex-col">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                const active =
-                  activeTab === tab.id;
-
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() =>
-                      setActiveTab(tab.id)
-                    }
-                    className={[
-                      'inline-flex shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-left text-xs font-bold transition xl:w-full',
-                      active
-                        ? 'bg-rose-500 text-white shadow-md shadow-rose-100'
-                        : 'text-slate-500 hover:bg-rose-50 hover:text-rose-500',
-                    ].join(' ')}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
-
-          <section className="min-w-0">
-            <motion.div
-              key={activeTab}
-              initial={{
-                opacity: 0,
-                y: 8,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              className="min-w-0 overflow-hidden rounded-[24px] border border-rose-100 bg-white p-4 shadow-sm sm:rounded-[26px] sm:p-7"
-            >
-              {activeTab === 'basic' && (
-                <BasicSection
-                  config={config}
-                  updateCouple={updateCouple}
-                  updateProposal={updateProposal}
-                />
-              )}
-
-              {activeTab === 'memories' && (
-                <MemoriesSection
-                  config={config}
-                  captionDefaults={
-                    memoryCaptionDefaults
-                  }
-                  updatePhoto={updatePhoto}
-                  updateMemoryCaption={
-                    updateMemoryCaption
-                  }
-                  uploadPhoto={uploadPhoto}
-                />
-              )}
-
-              {activeTab === 'music' && (
-                <MusicSection
-                  config={config}
-                  updateTrack={updateTrack}
-                  uploadCover={uploadCover}
-                />
-              )}
-
-              {activeTab === 'letter' && (
-                <LetterSection
-                  config={config}
-                  updateLetter={updateLetter}
-                  updateParagraph={updateParagraph}
-                  addParagraph={addParagraph}
-                  removeParagraph={removeParagraph}
-                />
-              )}
-
-              {activeTab === 'assets' && (
-                <AssetSelectionSection
-                  config={config}
-                  slots={
-                    selectableAssetSlots
-                  }
-                  onSelect={
-                    updateAssetSelection
-                  }
-                />
-              )}
-            </motion.div>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <button
-                type="button"
-                onClick={onReset}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-500 transition hover:border-rose-200 hover:text-rose-500"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Khôi phục mẫu gốc
-              </button>
-
-              <div className="flex flex-col items-stretch gap-2 sm:items-end">
-                <button
-                  type="button"
-                  onClick={onCheckout}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-rose-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-rose-200 transition hover:-translate-y-0.5 hover:bg-rose-600"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Tiếp tục thanh toán
-                </button>
-
-                <p className="text-center text-[10px] font-medium text-slate-400 sm:text-right">
-                  Preview mở sau khi thanh toán thành công.
-                </p>
-              </div>
-            </div>
-          </section>
-
-        </div>
-      </main>
-
-      <div className="fixed inset-x-0 bottom-0 z-50 w-full max-w-[100vw] overflow-hidden border-t border-rose-100 bg-white/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl sm:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={onAddToCart}
-            className="inline-flex items-center justify-center gap-1.5 rounded-[14px] border border-rose-200 bg-white px-3 py-3 text-xs font-bold text-rose-500"
-          >
-            <ShoppingBag className="h-4 w-4" />
-            Thêm vào giỏ
-          </button>
-
-          <button
-            type="button"
-            onClick={onCheckout}
-            className="inline-flex items-center justify-center gap-1.5 rounded-[14px] bg-rose-500 px-3 py-3 text-xs font-bold text-white shadow-lg shadow-rose-100"
-          >
-            <CreditCard className="h-4 w-4" />
-            Thanh toán
-          </button>
-        </div>
-      </div>
-    </div>
+      {activeTab === 'assets' && (
+        <AssetSection
+          config={config}
+          slots={selectableAssetSlots}
+          onSelect={updateAssetSelection}
+        />
+      )}
+    </PersonalizePageShell>
   );
 };
 
-interface AssetSelectionSectionProps {
-  config: LoveConfig;
-  slots: ReturnType<
-    typeof getCustomerSelectableSlots
-  >;
-  onSelect: (
-    slotId: string,
-    assetId: string
-  ) => void;
-}
-
-const AssetSelectionSection:
-React.FC<
-  AssetSelectionSectionProps
-> = ({
-  config,
-  slots,
-  onSelect,
-}) => (
-  <div>
-    <SectionHeader
-      title="Chọn GIF & hình"
-      description="Chỉ những lựa chọn được Dearly mở trong mẫu gốc mới xuất hiện ở đây."
-    />
-
-    {slots.length === 0 ? (
-      <div className="mt-7 rounded-[20px] border border-dashed border-rose-200 bg-rose-50/50 px-5 py-9 text-center">
-        <WandSparkles className="mx-auto h-5 w-5 text-rose-300" />
-
-        <p className="mt-3 text-sm font-bold text-slate-700">
-          Mẫu này chưa mở lựa chọn asset
-        </p>
-
-        <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-slate-400">
-          Các GIF và hình mặc định vẫn được dùng bình thường.
-        </p>
-      </div>
-    ) : (
-      <div className="mt-7 grid gap-7">
-        {slots.map(
-          (slot) => {
-            const choices =
-              getEnabledAssetChoices(
-                slot
-              );
-
-            const selectedId =
-              getSelectedAssetChoiceId(
-                slot,
-                config.assetSelections
-              );
-
-            return (
-              <section
-                key={
-                  slot.id
-                }
-              >
-                <div className="mb-3">
-                  <h3 className="text-sm font-bold text-slate-900">
-                    {
-                      slot.label
-                    }
-                  </h3>
-
-                  <p className="mt-1 text-[11px] leading-5 text-slate-400">
-                    {
-                      slot.description
-                    }
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                  {choices.map(
-                    (
-                      choice
-                    ) => {
-                      const selected =
-                        selectedId ===
-                        choice.id;
-
-                      return (
-                        <button
-                          key={
-                            choice.id
-                          }
-                          type="button"
-                          onClick={() =>
-                            onSelect(
-                              slot.id,
-                              choice.id
-                            )
-                          }
-                          className={[
-                            'min-w-0 overflow-hidden rounded-[18px] border bg-white p-2 text-left transition',
-                            selected
-                              ? 'border-rose-400 shadow-[0_0_0_2px_rgba(251,113,133,0.16)]'
-                              : 'border-slate-100 hover:border-rose-200',
-                          ].join(' ')}
-                        >
-                          <div className="aspect-square overflow-hidden rounded-[13px] bg-rose-50">
-                            <img
-                              src={
-                                choice.url
-                              }
-                              alt={
-                                choice.label
-                              }
-                              className="h-full w-full object-contain"
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between gap-2 px-1 pb-1 pt-2">
-                            <span className="truncate text-[11px] font-bold text-slate-600">
-                              {
-                                choice.label
-                              }
-                            </span>
-
-                            {selected && (
-                              <span className="h-2 w-2 shrink-0 rounded-full bg-rose-500" />
-                            )}
-                          </div>
-                        </button>
-                      );
-                    }
-                  )}
-                </div>
-              </section>
-            );
-          }
-        )}
-      </div>
-    )}
-  </div>
-);
-
-interface BasicSectionProps {
+const BasicSection:
+React.FC<{
   config: LoveConfig;
   updateCouple: (
     patch: Partial<LoveConfig['couple']>
@@ -944,424 +547,160 @@ interface BasicSectionProps {
   updateProposal: (
     patch: Partial<LoveConfig['proposal']>
   ) => void;
-}
-
-const BasicSection: React.FC<
-  BasicSectionProps
-> = ({
+}> = ({
   config,
   updateCouple,
   updateProposal,
 }) => (
   <div>
-    <SectionHeader
-      title="Thông tin cơ bản"
-      description="Những nội dung xuất hiện ở phần mở đầu và xuyên suốt món quà."
+    <PersonalizeSectionHeader
+      title="Thông tin chính"
     />
 
-    <div className="mt-7 grid gap-4 sm:grid-cols-2">
-      <InputField
+    <div className="grid gap-4 sm:grid-cols-2">
+      <PersonalizeInput
         label="Tên người gửi"
         value={config.couple.senderName}
-        onChange={(value) =>
-          updateCouple({
-            senderName: value,
-          })
+        onChange={(senderName) =>
+          updateCouple({ senderName })
         }
-        placeholder="VD: Anh nè"
+        placeholder="VD: Dương"
       />
 
-      <InputField
+      <PersonalizeInput
         label="Tên người nhận"
         value={config.couple.receiverName}
-        onChange={(value) =>
-          updateCouple({
-            receiverName: value,
-          })
+        onChange={(receiverName) =>
+          updateCouple({ receiverName })
         }
-        placeholder="VD: Em bé của anh"
-      />
-
-      <InputField
-        label="Biệt danh"
-        value={config.couple.nickname ?? ''}
-        onChange={(value) =>
-          updateCouple({
-            nickname: value,
-          })
-        }
-        placeholder="VD: Công chúa nhỏ"
-      />
-
-      <InputField
-        label="Ngày đặc biệt"
-        value={
-          config.couple.anniversaryDate ?? ''
-        }
-        onChange={(value) =>
-          updateCouple({
-            anniversaryDate: value,
-          })
-        }
-        placeholder="VD: 14/02"
+        placeholder="VD: Linh"
       />
     </div>
 
-    <div className="my-7 h-px bg-slate-100" />
+    <div className="my-5 h-px bg-black/[0.06]" />
 
     <div className="grid gap-4">
-      <InputField
-        label="Câu hỏi YES / NO"
+      <PersonalizeInput
+        label="Câu hỏi"
         value={config.proposal.question}
-        onChange={(value) =>
-          updateProposal({
-            question: value,
-          })
+        onChange={(question) =>
+          updateProposal({ question })
         }
-        placeholder="Do you love me? ❤️"
+        placeholder="Em có yêu anh không?"
       />
 
-      <InputField
-        label="Nội dung nút YES"
+      <PersonalizeInput
+        label="Nút đồng ý"
         value={config.proposal.yesBtnText}
-        onChange={(value) =>
-          updateProposal({
-            yesBtnText: value,
-          })
+        onChange={(yesBtnText) =>
+          updateProposal({ yesBtnText })
         }
-        placeholder="YES! Yêu nhiều lắmmm 💕"
+        placeholder="Có 💕"
       />
     </div>
   </div>
 );
 
-interface MemoriesSectionProps {
+const MemoriesSection:
+React.FC<{
   config: LoveConfig;
-
-  captionDefaults:
-    MemoryDisplayCaptions;
-
-  updatePhoto: (
-    index: number,
-    patch: Partial<
-      LoveConfig['gifts']['gift1']['photos'][number]
-    >
-  ) => void;
-
+  captionDefaults: MemoryDisplayCaptions;
   updateMemoryCaption: (
-    key:
-      keyof MemoryDisplayCaptions,
+    key: keyof MemoryDisplayCaptions,
     value: string
   ) => void;
-
   uploadPhoto: (
     index: number,
     file?: File
   ) => void;
-}
-
-const MemoriesSection: React.FC<
-  MemoriesSectionProps
-> = ({
+}> = ({
   config,
   captionDefaults,
-  updatePhoto,
   updateMemoryCaption,
   uploadPhoto,
 }) => {
-  const captionKeys:
-    Array<
-      keyof
-        MemoryDisplayCaptions
-    > = [
-      'leftTop',
-      'leftBottom',
-      'rightTop',
-      'rightBottom',
-    ];
-
-  const captionLabels = [
-    'Chữ dưới ảnh trái trên',
-    'Chữ dưới ảnh trái dưới',
-    'Chữ dưới ảnh phải trên',
-    'Chữ dưới ảnh phải dưới',
+  const photos = ensureEightMemoryPhotos(
+    config.gifts.gift1.photos
+  );
+  const captionKeys: Array<
+    keyof MemoryDisplayCaptions
+  > = [
+    'leftTop',
+    'leftBottom',
+    'rightTop',
+    'rightBottom',
   ];
-
-  const displayCaptions = {
+  const captions = {
     ...captionDefaults,
-    ...(
-      config.gifts
-        .gift1
-        .displayCaptions ||
-      {}
-    ),
+    ...(config.gifts.gift1.displayCaptions || {}),
   };
-
-  const photos =
-    ensureEightMemoryPhotos(
-      config.gifts
-        .gift1.photos
-    );
 
   return (
     <div>
-      <SectionHeader
+      <PersonalizeSectionHeader
         title="Ảnh kỷ niệm"
-        description="4 ảnh chính nằm ngoài và 4 ảnh phụ chỉ dùng cho collage giữa. Một ảnh chỉ xuất hiện đúng một vị trí."
+        hint="8 ảnh · 4 ảnh đầu có thêm caption."
       />
 
-      <div className="mt-7">
-        <MemoryPhotoGroupTitle
-          title="4 ảnh chính"
-          description="Hiển thị thành 4 Polaroid lớn bên ngoài. Bạn có thể sửa cả ảnh và dòng chữ bên dưới."
-        />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {photos.map((photo, index) => (
+          <div
+            key={photo.id}
+            className="rounded-[15px] border border-black/[0.07] bg-[#faf9f8] p-3"
+          >
+            <div className="aspect-square overflow-hidden rounded-[11px] bg-white">
+              {photo.url ? (
+                <img
+                  src={photo.url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs font-bold text-black/25">
+                  Ảnh {index + 1}
+                </div>
+              )}
+            </div>
 
-        <div className="mt-4 space-y-4">
-          {photos
-            .slice(
-              0,
-              4
-            )
-            .map(
-              (
-                photo,
-                index
-              ) => (
-                <MemoryPhotoEditor
-                  key={
-                    photo.id
-                  }
-                  photo={
-                    photo
-                  }
-                  index={
-                    index
-                  }
-                  label={
-                    `Ảnh chính ${index + 1}`
-                  }
-                  onUpload={
-                    uploadPhoto
-                  }
-                  onUrlChange={(
-                    value
-                  ) =>
-                    updatePhoto(
-                      index,
-                      {
-                        url:
-                          value,
-                      }
+            <label className="mt-2 flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-[10px] border border-black/[0.07] bg-white px-3 text-[11px] font-black text-[#b83e57]">
+              <Upload className="h-3.5 w-3.5" />
+              Chọn ảnh
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(event) =>
+                  void uploadPhoto(
+                    index,
+                    event.target.files?.[0]
+                  )
+                }
+              />
+            </label>
+
+            {index < 4 && (
+              <div className="mt-3">
+                <PersonalizeInput
+                  label="Caption"
+                  value={captions[captionKeys[index]]}
+                  onChange={(value) =>
+                    updateMemoryCaption(
+                      captionKeys[index],
+                      value
                     )
                   }
-                >
-                  <InputField
-                    label={
-                      captionLabels[
-                        index
-                      ]
-                    }
-                    value={
-                      displayCaptions[
-                        captionKeys[
-                          index
-                        ]
-                      ]
-                    }
-                    onChange={(
-                      value
-                    ) =>
-                      updateMemoryCaption(
-                        captionKeys[
-                          index
-                        ],
-                        value
-                      )
-                    }
-                    placeholder="Nhập chữ hiển thị dưới ảnh"
-                  />
-                </MemoryPhotoEditor>
-              )
+                />
+              </div>
             )}
-        </div>
-
-        <div className="my-8 h-px bg-slate-100" />
-
-        <MemoryPhotoGroupTitle
-          title="4 ảnh phụ cho collage giữa"
-          description="Bốn ảnh này chỉ xuất hiện trong 2 dãy ảnh chéo ở giữa. Không có caption và không bị lấy lại từ 4 ảnh chính."
-        />
-
-        <div className="mt-4 space-y-4">
-          {photos
-            .slice(
-              4,
-              8
-            )
-            .map(
-              (
-                photo,
-                localIndex
-              ) => {
-                const index =
-                  localIndex +
-                  4;
-
-                return (
-                  <MemoryPhotoEditor
-                    key={
-                      photo.id
-                    }
-                    photo={
-                      photo
-                    }
-                    index={
-                      index
-                    }
-                    label={
-                      `Ảnh collage ${localIndex + 1}`
-                    }
-                    onUpload={
-                      uploadPhoto
-                    }
-                    onUrlChange={(
-                      value
-                    ) =>
-                      updatePhoto(
-                        index,
-                        {
-                          url:
-                            value,
-                        }
-                      )
-                    }
-                  >
-                    <p className="rounded-xl bg-white px-3 py-2.5 text-[10px] leading-5 text-slate-400">
-                      Chỉ dùng cho dãy ảnh giữa · không có chữ bên dưới.
-                    </p>
-                  </MemoryPhotoEditor>
-                );
-              }
-            )}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
-const MemoryPhotoGroupTitle:
+const MusicSection:
 React.FC<{
-  title: string;
-  description: string;
-}> = ({
-  title,
-  description,
-}) => (
-  <div>
-    <p className="text-sm font-bold text-slate-900">
-      {title}
-    </p>
-
-    <p className="mt-1 text-[11px] leading-5 text-slate-400">
-      {description}
-    </p>
-  </div>
-);
-
-const MemoryPhotoEditor:
-React.FC<{
-  photo:
-    MemoryPhoto;
-  index: number;
-  label: string;
-  onUpload: (
-    index: number,
-    file?: File
-  ) => void;
-  onUrlChange: (
-    value: string
-  ) => void;
-  children:
-    React.ReactNode;
-}> = ({
-  photo,
-  index,
-  label,
-  onUpload,
-  onUrlChange,
-  children,
-}) => (
-  <div className="grid min-w-0 gap-4 rounded-[22px] border border-slate-100 bg-slate-50/60 p-3 sm:grid-cols-[150px_minmax(0,1fr)] sm:p-4">
-    <div>
-      <div className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-white">
-        {photo.url ? (
-          <img
-            src={
-              photo.url
-            }
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center bg-rose-50/50 px-3 text-center">
-            <ImageIcon className="h-5 w-5 text-rose-200" />
-
-            <span className="mt-2 text-[10px] font-bold text-rose-300">
-              Chưa chọn ảnh
-            </span>
-          </div>
-        )}
-      </div>
-
-      <label className="mt-2 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-[11px] font-bold text-rose-500 shadow-sm">
-        <Upload className="h-3.5 w-3.5" />
-        Chọn ảnh
-
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={(
-            event
-          ) =>
-            onUpload(
-              index,
-              event.target
-                .files?.[0]
-            )
-          }
-        />
-      </label>
-    </div>
-
-    <div className="grid min-w-0 content-start gap-3">
-      <div>
-        <p className="text-xs font-bold text-slate-700">
-          {label}
-        </p>
-
-        <p className="mt-1 text-[10px] text-slate-400">
-          Vị trí cố định trong gallery
-        </p>
-      </div>
-
-      <InputField
-        label="URL ảnh"
-        value={
-          photo.url
-        }
-        onChange={
-          onUrlChange
-        }
-        placeholder="Dán URL hoặc chọn ảnh ở bên trái"
-      />
-
-      {children}
-    </div>
-  </div>
-);
-
-interface MusicSectionProps {
   config: LoveConfig;
   updateTrack: (
     index: number,
@@ -1373,46 +712,42 @@ interface MusicSectionProps {
     index: number,
     file?: File
   ) => void;
-}
-
-const MusicSection: React.FC<
-  MusicSectionProps
-> = ({
+}> = ({
   config,
   updateTrack,
   uploadCover,
 }) => (
   <div>
-    <SectionHeader
-      title="Playlist riêng"
-      description="Dán link video YouTube cho từng bài. Ảnh thumbnail sẽ được lấy tự động; Audio URL chỉ là phương án dự phòng."
+    <PersonalizeSectionHeader
+      title="Âm nhạc"
+      hint="Dán link YouTube. Thumbnail được lấy tự động."
     />
 
-    <div className="mt-7 space-y-5">
+    <div className="space-y-3">
       {config.gifts.gift2.playlist.map(
         (track, index) => (
           <div
             key={track.id}
-            className="grid min-w-0 gap-4 rounded-[22px] border border-slate-100 bg-slate-50/60 p-3 sm:grid-cols-[150px_minmax(0,1fr)] sm:p-4"
+            className="grid gap-4 rounded-[15px] border border-black/[0.07] bg-[#faf9f8] p-3 sm:grid-cols-[100px_minmax(0,1fr)]"
           >
             <div>
-              <div className="aspect-square overflow-hidden rounded-2xl bg-slate-900">
-                <img
-                  src={track.coverUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
+              <div className="aspect-square overflow-hidden rounded-[11px] bg-white">
+                {track.coverUrl ? (
+                  <img
+                    src={track.coverUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
               </div>
-
-              <label className="mt-2 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-[11px] font-bold text-rose-500 shadow-sm">
-                <Upload className="h-3.5 w-3.5" />
-                Ảnh bìa
+              <label className="mt-2 flex min-h-9 cursor-pointer items-center justify-center rounded-[9px] bg-white px-2 text-[10px] font-bold text-[#b83e57]">
+                Đổi ảnh bìa
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   className="hidden"
                   onChange={(event) =>
-                    uploadCover(
+                    void uploadCover(
                       index,
                       event.target.files?.[0]
                     )
@@ -1421,92 +756,50 @@ const MusicSection: React.FC<
               </label>
             </div>
 
-            <div className="grid min-w-0 gap-3">
-              <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-                <InputField
-                  label={`Bài ${index + 1}`}
-                  value={track.title}
-                  onChange={(value) =>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <PersonalizeInput
+                label={`Tên bài ${index + 1}`}
+                value={track.title}
+                onChange={(title) =>
+                  updateTrack(index, { title })
+                }
+              />
+              <PersonalizeInput
+                label="Ca sĩ"
+                value={track.artist}
+                onChange={(artist) =>
+                  updateTrack(index, { artist })
+                }
+              />
+              <div className="sm:col-span-2">
+                <PersonalizeInput
+                  label="Link YouTube"
+                  value={track.youtubeUrl ?? ''}
+                  placeholder="https://youtu.be/..."
+                  onChange={(youtubeUrl) => {
+                    const thumbnail =
+                      getYouTubeThumbnailUrl(
+                        youtubeUrl
+                      );
                     updateTrack(index, {
-                      title: value,
-                    })
-                  }
+                      youtubeUrl,
+                      ...(getYouTubeVideoId(
+                        youtubeUrl
+                      ) && thumbnail
+                        ? { coverUrl: thumbnail }
+                        : {}),
+                    });
+                  }}
                 />
-
-                <InputField
-                  label="Ca sĩ"
-                  value={track.artist}
-                  onChange={(value) =>
-                    updateTrack(index, {
-                      artist: value,
-                    })
-                  }
-                />
+                {track.youtubeUrl &&
+                  !getYouTubeVideoId(
+                    track.youtubeUrl
+                  ) && (
+                  <p className="mt-1.5 text-[11px] font-semibold text-red-500">
+                    Link YouTube chưa đúng.
+                  </p>
+                )}
               </div>
-
-              <InputField
-                label="Ảnh bìa · URL"
-                value={track.coverUrl}
-                onChange={(value) =>
-                  updateTrack(index, {
-                    coverUrl: value,
-                  })
-                }
-              />
-
-              <InputField
-                label="Video YouTube"
-                value={
-                  track.youtubeUrl ?? ''
-                }
-                onChange={(value) => {
-                  const videoId =
-                    getYouTubeVideoId(
-                      value
-                    );
-
-                  const thumbnail =
-                    getYouTubeThumbnailUrl(
-                      value
-                    );
-
-                  updateTrack(index, {
-                    youtubeUrl: value,
-                    ...(videoId &&
-                    thumbnail
-                      ? {
-                          coverUrl:
-                            thumbnail,
-                        }
-                      : {}),
-                  });
-                }}
-                placeholder="https://www.youtube.com/watch?v=..."
-              />
-
-              {track.youtubeUrl &&
-                !getYouTubeVideoId(
-                  track.youtubeUrl
-                ) && (
-                <p className="text-[11px] font-semibold leading-5 text-red-500">
-                  Link YouTube chưa đúng. Hãy dán link video YouTube, YouTube Music hoặc youtu.be.
-                </p>
-              )}
-
-              <InputField
-                label="Audio URL · không bắt buộc"
-                value={track.audioUrl}
-                onChange={(value) =>
-                  updateTrack(index, {
-                    audioUrl: value,
-                  })
-                }
-                placeholder="https://...mp3"
-              />
-
-              <p className="text-[11px] leading-5 text-slate-400">
-                Nếu có link YouTube hợp lệ, món quà sẽ ưu tiên hiển thị video YouTube. Không cần upload file nhạc.
-              </p>
             </div>
           </div>
         )
@@ -1515,7 +808,8 @@ const MusicSection: React.FC<
   </div>
 );
 
-interface LetterSectionProps {
+const LetterSection:
+React.FC<{
   config: LoveConfig;
   updateLetter: (
     patch: Partial<
@@ -1527,51 +821,38 @@ interface LetterSectionProps {
     value: string
   ) => void;
   addParagraph: () => void;
-  removeParagraph: (
-    index: number
-  ) => void;
-}
-
-const LetterSection: React.FC<
-  LetterSectionProps
-> = ({
+  removeParagraph: (index: number) => void;
+}> = ({
   config,
   updateLetter,
   updateParagraph,
   addParagraph,
   removeParagraph,
 }) => {
-  const letter =
-    config.gifts.gift3.letter;
+  const letter = config.gifts.gift3.letter;
 
   return (
     <div>
-      <SectionHeader
-        title="Bức thư"
-        description="Viết lời nhắn cuối cùng mà người nhận sẽ mở trong Gift 3."
-      />
+      <PersonalizeSectionHeader title="Bức thư" />
 
-      <div className="mt-7 grid gap-4">
-        <InputField
+      <div className="grid gap-4">
+        <PersonalizeInput
           label="Lời chào"
           value={letter.salutation}
-          onChange={(value) =>
-            updateLetter({
-              salutation: value,
-            })
+          onChange={(salutation) =>
+            updateLetter({ salutation })
           }
         />
 
         <div>
-          <div className="mb-2 flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-700">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-xs font-bold text-black/58">
               Nội dung thư
-            </label>
-
+            </p>
             <button
               type="button"
               onClick={addParagraph}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-500"
+              className="inline-flex min-h-9 items-center gap-1 rounded-[9px] px-2 text-[11px] font-black text-[#b83e57]"
             >
               <Plus className="h-3.5 w-3.5" />
               Thêm đoạn
@@ -1583,38 +864,31 @@ const LetterSection: React.FC<
               (paragraph, index) => (
                 <div
                   key={index}
-                  className="rounded-2xl border border-slate-200 bg-white p-3"
+                  className="relative"
                 >
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                      Đoạn {index + 1}
-                    </span>
-
-                    {letter.paragraphs.length >
-                      1 && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          removeParagraph(index)
-                        }
-                        className="text-slate-300 transition hover:text-red-500"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  <textarea
+                  <PersonalizeTextarea
+                    label={`Đoạn ${index + 1}`}
                     value={paragraph}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       updateParagraph(
                         index,
-                        event.target.value
+                        value
                       )
                     }
-                    rows={4}
-                    className="w-full resize-y bg-transparent text-sm leading-6 text-slate-700 outline-none"
                   />
+
+                  {letter.paragraphs.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removeParagraph(index)
+                      }
+                      className="absolute right-2 top-0 flex h-8 w-8 items-center justify-center rounded-full text-black/25 hover:bg-red-50 hover:text-red-500"
+                      aria-label={`Xóa đoạn ${index + 1}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               )
             )}
@@ -1622,23 +896,18 @@ const LetterSection: React.FC<
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <InputField
+          <PersonalizeInput
             label="Lời kết"
             value={letter.closing}
-            onChange={(value) =>
-              updateLetter({
-                closing: value,
-              })
+            onChange={(closing) =>
+              updateLetter({ closing })
             }
           />
-
-          <InputField
+          <PersonalizeInput
             label="Chữ ký"
             value={letter.signature}
-            onChange={(value) =>
-              updateLetter({
-                signature: value,
-              })
+            onChange={(signature) =>
+              updateLetter({ signature })
             }
           />
         </div>
@@ -1647,60 +916,86 @@ const LetterSection: React.FC<
   );
 };
 
-interface SectionHeaderProps {
-  title: string;
-  description: string;
-}
-
-const SectionHeader: React.FC<
-  SectionHeaderProps
-> = ({
-  title,
-  description,
+const AssetSection:
+React.FC<{
+  config: LoveConfig;
+  slots: ReturnType<
+    typeof getCustomerSelectableSlots
+  >;
+  onSelect: (
+    slotId: string,
+    assetId: string
+  ) => void;
+}> = ({
+  config,
+  slots,
+  onSelect,
 }) => (
   <div>
-    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-400">
-      Love Story 01
-    </p>
-
-    <h2 className="mt-2 text-2xl font-bold tracking-[-0.035em] text-slate-900">
-      {title}
-    </h2>
-
-    <p className="mt-2 text-sm leading-6 text-slate-500">
-      {description}
-    </p>
-  </div>
-);
-
-interface InputFieldProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}
-
-const InputField: React.FC<
-  InputFieldProps
-> = ({
-  label,
-  value,
-  onChange,
-  placeholder,
-}) => (
-  <div>
-    <label className="mb-1.5 block text-xs font-bold text-slate-700">
-      {label}
-    </label>
-
-    <input
-      type="text"
-      value={value}
-      onChange={(event) =>
-        onChange(event.target.value)
-      }
-      placeholder={placeholder}
-      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 outline-none transition placeholder:text-slate-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+    <PersonalizeSectionHeader
+      title="GIF & hình"
     />
+
+    {slots.length === 0 ? (
+      <div className="rounded-[14px] border border-dashed border-black/10 bg-[#faf9f8] p-8 text-center text-xs text-black/35">
+        Mẫu này không có hình để thay.
+      </div>
+    ) : (
+      <div className="space-y-6">
+        {slots.map((slot) => {
+          const choices =
+            getEnabledAssetChoices(slot);
+          const selectedId =
+            getSelectedAssetChoiceId(
+              slot,
+              config.assetSelections
+            );
+
+          return (
+            <div key={slot.id}>
+              <p className="mb-2 text-xs font-black text-black/60">
+                {slot.label}
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                {choices.map((choice) => {
+                  const selected =
+                    selectedId === choice.id;
+
+                  return (
+                    <button
+                      key={choice.id}
+                      type="button"
+                      onClick={() =>
+                        onSelect(
+                          slot.id,
+                          choice.id
+                        )
+                      }
+                      className={[
+                        'overflow-hidden rounded-[13px] border bg-white p-2 text-left transition',
+                        selected
+                          ? 'border-[#c9435d] ring-2 ring-[#c9435d]/10'
+                          : 'border-black/[0.07]',
+                      ].join(' ')}
+                    >
+                      <div className="aspect-square overflow-hidden rounded-[9px] bg-[#faf9f8]">
+                        <img
+                          src={choice.url}
+                          alt={choice.label}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <p className="mt-2 truncate px-1 text-[10px] font-bold text-black/50">
+                        {choice.label}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
   </div>
 );
