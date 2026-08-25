@@ -60,6 +60,10 @@ import {
   AdminTemplatesTab,
 } from './AdminTemplatesTab';
 
+import {
+  AdminDecorateTab,
+} from './AdminDecorateTab';
+
 interface Props {
   onBackHome: () => void;
   onOpenOrder: (
@@ -103,7 +107,9 @@ const getTemplateIdFromUrl =
   () => {
     if (
       window.location.pathname !==
-      '/admin/templates'
+        '/admin/templates' &&
+      window.location.pathname !==
+        '/admin/decorate'
     ) {
       return '';
     }
@@ -130,7 +136,8 @@ const setAdminUrl = (
   url.search = '';
 
   if (
-    tab === 'templates' &&
+    (tab === 'templates' ||
+      tab === 'decorate') &&
     templateId
   ) {
     url.searchParams.set(
@@ -211,7 +218,12 @@ const TAB_COPY: Record<
   templates: {
     title: 'Templates',
     description:
-      'Quản lý sản phẩm và thiết kế trải nghiệm.',
+      'Quản lý thông tin và trạng thái sản phẩm.',
+  },
+  decorate: {
+    title: 'Trang trí',
+    description:
+      'Không gian thiết kế riêng, mở thẳng vào editor.',
   },
   customers: {
     title: 'Khách hàng',
@@ -433,10 +445,14 @@ React.FC<Props> = ({
 
         if (
           window.location.pathname ===
-          '/admin/templates'
+            '/admin/templates' ||
+          window.location.pathname ===
+            '/admin/decorate'
         ) {
           setAdminUrl(
-            'templates',
+            getAdminTabFromPath(
+              window.location.pathname
+            ),
             preferred.id,
             true
           );
@@ -470,7 +486,8 @@ React.FC<Props> = ({
         setTab(nextTab);
 
         if (
-          nextTab !== 'templates'
+          nextTab !== 'templates' &&
+          nextTab !== 'decorate'
         ) {
           return;
         }
@@ -533,8 +550,10 @@ React.FC<Props> = ({
     next: AdminTab
   ) => {
     if (
-      tab === 'templates' &&
+      (tab === 'templates' ||
+        tab === 'decorate') &&
       next !== 'templates' &&
+      next !== 'decorate' &&
       isTemplateDirty
     ) {
       const leave =
@@ -550,7 +569,8 @@ React.FC<Props> = ({
     setTab(next);
     setAdminUrl(
       next,
-      next === 'templates'
+      next === 'templates' ||
+      next === 'decorate'
         ? templateDraft.id
         : ''
     );
@@ -701,7 +721,9 @@ React.FC<Props> = ({
     setIsTemplateDirty(false);
     setTemplateSaved(false);
     setAdminUrl(
-      'templates',
+      tab === 'decorate'
+        ? 'decorate'
+        : 'templates',
       next.id
     );
   };
@@ -1390,14 +1412,16 @@ React.FC<Props> = ({
       <main
         className={[
           'min-w-0 py-5 lg:py-6',
-          tab === 'templates'
+          tab === 'templates' ||
+          tab === 'decorate'
             ? 'px-2.5 sm:px-4 lg:px-4 xl:px-5'
             : 'px-3 sm:px-6 lg:px-7 xl:px-8',
         ].join(' ')}
       >
         <div
           className={
-            tab === 'templates'
+            tab === 'templates' ||
+            tab === 'decorate'
               ? 'mx-auto max-w-[1640px]'
               : 'mx-auto max-w-[1320px]'
           }
@@ -1410,7 +1434,8 @@ React.FC<Props> = ({
 
             </div>
 
-            {tab !== 'templates' && (
+            {tab !== 'templates' &&
+              tab !== 'decorate' && (
               <button
                 type="button"
                 onClick={() =>
@@ -1508,6 +1533,29 @@ React.FC<Props> = ({
                 setTemplateDraft(
                   nextTemplate
                 );
+                setTemplateSaved(false);
+                setIsTemplateDirty(true);
+              }}
+              onSave={() =>
+                void handleSaveTemplate()
+              }
+              onDiscardChanges={
+                handleDiscardTemplateChanges
+              }
+            />
+          )}
+
+          {tab === 'decorate' && (
+            <AdminDecorateTab
+              templates={templateCatalog}
+              template={templateDraft}
+              dirty={isTemplateDirty}
+              saved={templateSaved}
+              saving={isSavingTemplate}
+              catalogBusy={isTemplateCatalogBusy}
+              onSelectTemplate={handleSelectTemplate}
+              onChange={(nextTemplate) => {
+                setTemplateDraft(nextTemplate);
                 setTemplateSaved(false);
                 setIsTemplateDirty(true);
               }}

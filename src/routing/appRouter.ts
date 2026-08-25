@@ -2,6 +2,7 @@ export type AdminSection =
   | 'dashboard'
   | 'orders'
   | 'templates'
+  | 'decorate'
   | 'customers'
   | 'settings';
 
@@ -34,6 +35,11 @@ export type AppLocation =
   | {
       kind: 'gift';
       giftId: string;
+    }
+  | {
+      kind:
+        'template-preview';
+      previewId: string;
     }
   | {
       kind: 'admin';
@@ -136,6 +142,22 @@ export const resolveAppLocation = (
     };
   }
 
+  const previewMatch =
+    path.match(
+      new RegExp(
+        `^/preview/(${GIFT_ID})$`
+      )
+    );
+
+  if (previewMatch) {
+    return {
+      kind:
+        'template-preview',
+      previewId:
+        previewMatch[1],
+    };
+  }
+
   const adminOrder =
     path.match(
       new RegExp(
@@ -158,6 +180,8 @@ export const resolveAppLocation = (
       '/admin/orders': 'orders',
       '/admin/templates':
         'templates',
+      '/admin/decorate':
+        'decorate',
       '/admin/customers':
         'customers',
       '/admin/settings':

@@ -265,5 +265,15 @@ service cloud.firestore {
           )
         );
     }
+
+    // Admin-generated, opaque preview links for testing a template on a
+    // real phone. They expire automatically in the UI after 24 hours.
+    match /templatePreviews/{previewId} {
+      allow get: if resource != null
+        && resource.data.get('expiresAtMs', 0)
+          > request.time.toMillis();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
   }
 }

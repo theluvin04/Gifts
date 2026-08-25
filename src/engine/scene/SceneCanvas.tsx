@@ -120,16 +120,11 @@ React.FC<
         1000
     );
 
-  // Public long-page gifts are mobile-first.
-  // If no preview explicitly chooses a device, use the same
-  // 390px mobile canvas as Admin/Customer Preview.
   const mobile =
     typeof mobileOverride ===
       'boolean'
       ? mobileOverride
-      : longPage
-        ? true
-        : detectedMobile;
+      : detectedMobile;
 
   const runtime =
     useSceneElementRuntime(
@@ -191,24 +186,12 @@ React.FC<
     scene.maxWidth ||
     1366;
 
-  const longPageMobileHeight =
-    Math.round(
-      Math.max(
-        1180,
-        Math.min(
-          1900,
-          pageHeight *
-            0.47
-        )
-      )
-    );
-
   const aspectRatio =
     longPage
       ? (
           mobile
             ? 390 /
-              longPageMobileHeight
+              pageHeight
             : longPageDesktopWidth /
               pageHeight
         )
@@ -224,7 +207,7 @@ React.FC<
           longPage
             ? mobile
               ? 390
-              : 'none'
+              : longPageDesktopWidth
             : scene.maxWidth ||
               1280,
       }}

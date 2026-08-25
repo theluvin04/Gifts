@@ -143,26 +143,11 @@ type AssetPickerTarget =
         string;
     };
 
-const LONG_PAGE_DESKTOP_WIDTH =
-  1366;
-
 const LONG_PAGE_MOBILE_WIDTH =
   390;
 
 const LONG_PAGE_DEFAULT_HEIGHT =
   3200;
-
-const getLongPageMobileHeight = (
-  desktopHeight: number
-) =>
-  Math.round(
-    clamp(
-      desktopHeight *
-        0.47,
-      1180,
-      1900
-    )
-  );
 
 const isLongPageScene = (
   scene:
@@ -2573,13 +2558,11 @@ React.FC<Props> = ({
 
       updateScene({
         ...scene,
-        aspectRatio:
-          LONG_PAGE_DESKTOP_WIDTH /
-          LONG_PAGE_DEFAULT_HEIGHT,
         minHeight:
           LONG_PAGE_DEFAULT_HEIGHT,
         maxWidth:
-          LONG_PAGE_DESKTOP_WIDTH,
+          scene.maxWidth ||
+          1200,
         overflow:
           'hidden',
       });
@@ -2608,10 +2591,8 @@ React.FC<Props> = ({
         minHeight:
           safeHeight,
         maxWidth:
-          LONG_PAGE_DESKTOP_WIDTH,
-        aspectRatio:
-          LONG_PAGE_DESKTOP_WIDTH /
-          safeHeight,
+          scene.maxWidth ||
+          1200,
       });
     };
 
@@ -2640,47 +2621,13 @@ React.FC<Props> = ({
       scene
     );
 
-  // EditorCanvas hard-codes 9:16 for mobile. For a long page we feed it
-  // a mobile-frame snapshot as a desktop canvas so the page can use the
-  // real 390 × pageHeight ratio while all edits are still written back
-  // to mobileFrame by updateFrames().
   const editorCanvasScene:
     SceneCanvasDefinition =
-    longPage &&
-    device === 'mobile'
-      ? {
-          ...scene,
-          aspectRatio:
-            LONG_PAGE_MOBILE_WIDTH /
-            getLongPageMobileHeight(
-              Math.max(
-                1800,
-                scene.minHeight ||
-                  LONG_PAGE_DEFAULT_HEIGHT
-              )
-            ),
-          elements:
-            scene.elements.map(
-              (element) => ({
-                ...element,
-                frame:
-                  getEffectiveFrame(
-                    element,
-                    'mobile'
-                  ),
-                mobileFrame:
-                  undefined,
-              })
-            ),
-        }
-      : scene;
+    scene;
 
   const editorCanvasDevice:
     DeviceMode =
-    longPage &&
-    device === 'mobile'
-      ? 'desktop'
-      : device;
+    device;
 
   return (
     <>
@@ -3261,8 +3208,8 @@ React.FC<Props> = ({
           >
             {longPage && (
               <div className="sticky top-0 z-30 mb-2 flex items-center justify-between rounded-[9px] border border-black/7 bg-white/95 px-3 py-2 text-[9px] font-bold text-black/45 backdrop-blur">
-                <span>Trang dài · mobile được nén về khoảng 2 màn hình để khớp bản khách xem</span>
-                <span>Desktop {LONG_PAGE_DESKTOP_WIDTH} × {Math.round(scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT)} · Mobile {LONG_PAGE_MOBILE_WIDTH} × {getLongPageMobileHeight(scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT)}</span>
+                <span>Trang dài · giữ nguyên chiều ngang, chỉ kéo dài xuống dưới</span>
+                <span>Desktop {Math.round(scene.maxWidth || 1200)} × {Math.round(scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT)} · Mobile {LONG_PAGE_MOBILE_WIDTH} × {Math.round(scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT)}</span>
               </div>
             )}
 

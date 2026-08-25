@@ -6,6 +6,7 @@ export type AdminTab =
   | 'dashboard'
   | 'orders'
   | 'templates'
+  | 'decorate'
   | 'customers'
   | 'settings';
 
@@ -46,8 +47,14 @@ export const ADMIN_TABS: Array<{
   {
     key: 'templates',
     label: 'Templates',
-    description: 'Sản phẩm và trình thiết kế',
+    description: 'Thông tin và sản phẩm',
     path: '/admin/templates',
+  },
+  {
+    key: 'decorate',
+    label: 'Trang trí',
+    description: 'Mở thẳng trình thiết kế',
+    path: '/admin/decorate',
   },
   {
     key: 'customers',
@@ -70,6 +77,12 @@ export const getAdminTabFromPath = (
     pathname === '/admin/templates'
   ) {
     return 'templates';
+  }
+
+  if (
+    pathname === '/admin/decorate'
+  ) {
+    return 'decorate';
   }
 
   if (

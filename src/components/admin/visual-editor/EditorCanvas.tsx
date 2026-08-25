@@ -132,12 +132,35 @@ React.FC<Props> = ({
     ] ||
     '';
 
+  const longPage =
+    Boolean(
+      (scene.minHeight || 0) >=
+        1200 &&
+      (scene.maxWidth || 0) >=
+        1000
+    );
+
+  const longPageHeight =
+    Math.max(
+      1200,
+      scene.minHeight || 3200
+    );
+
   const aspectRatio =
-    device ===
-    'mobile'
-      ? 9 / 16
-      : scene.aspectRatio ||
-        16 / 9;
+    longPage
+      ? (
+          device === 'mobile'
+            ? 390 /
+              longPageHeight
+            : (scene.maxWidth ||
+                1200) /
+              longPageHeight
+        )
+      : device ===
+          'mobile'
+        ? 9 / 16
+        : scene.aspectRatio ||
+          16 / 9;
 
   const background =
     scene.background ||
@@ -1044,15 +1067,29 @@ React.FC<Props> = ({
         </p>
       </div>
 
-      <div className="relative flex h-[calc(100svh-330px)] min-h-[420px] max-h-[760px] items-center justify-center overflow-auto rounded-[9px] bg-[#deddd9] p-3 sm:p-5">
+      <div
+        className={[
+          'relative flex h-[calc(100svh-330px)] min-h-[420px] max-h-[760px] justify-center overflow-auto rounded-[9px] bg-[#deddd9] p-3 sm:p-5',
+          longPage
+            ? 'items-start'
+            : 'items-center',
+        ].join(' ')}
+      >
         <div
           style={{
             transform:
               `scale(${zoom / 100})`,
             transformOrigin:
-              'center center',
+              longPage
+                ? 'top center'
+                : 'center center',
           }}
-          className="flex w-full shrink-0 items-center justify-center transition-transform duration-150"
+          className={[
+            'flex w-full shrink-0 justify-center transition-transform duration-150',
+            longPage
+              ? 'items-start'
+              : 'items-center',
+          ].join(' ')}
         >
           <div
             ref={

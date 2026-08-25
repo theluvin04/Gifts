@@ -10,6 +10,7 @@ import { DynamicVisualCheckoutPage } from './components/DynamicVisualCheckoutPag
 import { CustomerSiteHeader } from './components/CustomerSiteHeader';
 import { AdminOrdersPage } from './components/admin/AdminOrdersPage';
 import { AdminOrderDetailPage } from './components/admin/AdminOrderDetailPage';
+import { TemplatePreviewPage } from './components/TemplatePreviewPage';
 import { BRAND } from './config/brand';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useTemplateDrafts } from './hooks/useTemplateDrafts';
@@ -100,6 +101,19 @@ export default function App() {
   );
 
   if (location.kind === 'legacy-template') return null;
+
+  if (
+    location.kind ===
+    'template-preview'
+  ) {
+    return (
+      <TemplatePreviewPage
+        previewId={
+          location.previewId
+        }
+      />
+    );
+  }
 
   if (location.kind === 'gift') {
     if (isLoadingGift) {
