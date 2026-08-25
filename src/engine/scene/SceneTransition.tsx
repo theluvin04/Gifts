@@ -214,7 +214,10 @@ React.FC<
   return (
     <AnimatePresence
       mode={mode}
-      initial={false}
+      // Do not suppress the first render. `initial={false}` is inherited by
+      // nested Motion elements and makes every entrance effect jump straight
+      // to its final state in Preview and on the published first scene.
+      initial
     >
       <motion.div
         key={sceneKey}
