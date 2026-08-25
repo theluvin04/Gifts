@@ -210,14 +210,13 @@ React.FC<
     <div
       style={{
         maxWidth:
-          longPage
-            ? 'none'
-            : scene.maxWidth ||
-              1280,
+          'none',
         backgroundColor:
+          background.color,
+        minHeight:
           longPage
-            ? background.color
-            : undefined,
+            ? undefined
+            : '100svh',
       }}
       data-scene-device={
         mobile
@@ -231,24 +230,27 @@ React.FC<
       }
       className={[
         'relative mx-auto w-full min-w-0',
+        longPage
+          ? ''
+          : 'flex items-center justify-center',
         className,
       ].join(' ')}
     >
       <div
         style={{
           maxWidth:
-            longPage &&
-            !mobile
-              ? longPageDesktopWidth
-              : undefined,
+            longPage
+              ? !mobile
+                ? longPageDesktopWidth
+                : undefined
+              : scene.maxWidth ||
+                1280,
           marginLeft:
-            longPage &&
-            !mobile
+            longPage
               ? 'auto'
               : undefined,
           marginRight:
-            longPage &&
-            !mobile
+            longPage
               ? 'auto'
               : undefined,
           aspectRatio:
