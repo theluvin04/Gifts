@@ -1163,8 +1163,8 @@ React.FC<Props> = ({
     TAB_COPY[tab];
 
   return (
-    <div className="min-h-[100svh] bg-[#f6f5f3] text-[#191919] lg:grid lg:grid-cols-[228px_minmax(0,1fr)]">
-      <aside className="border-b border-black/8 bg-white lg:sticky lg:top-0 lg:h-[100svh] lg:border-b-0 lg:border-r">
+    <div className="min-h-[100svh] bg-[#f6f5f3] text-[#191919] lg:grid lg:grid-cols-[188px_minmax(0,1fr)] xl:grid-cols-[216px_minmax(0,1fr)]">
+      <aside className="sticky top-0 z-50 border-b border-black/8 bg-white/96 backdrop-blur-xl lg:h-[100svh] lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between px-4 py-4 lg:block lg:px-5 lg:py-6">
           <button
             type="button"
@@ -1189,7 +1189,7 @@ React.FC<Props> = ({
           </button>
         </div>
 
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:block lg:space-y-1 lg:overflow-visible">
+        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:block lg:space-y-1 lg:overflow-visible">
           {ADMIN_TABS.map(
             (item) => (
               <button
@@ -1208,7 +1208,7 @@ React.FC<Props> = ({
                 <span className="block text-xs font-black">
                   {item.label}
                 </span>
-                <span className="mt-1 hidden text-[9px] leading-4 opacity-60 lg:block">
+                <span className="mt-1 hidden text-[9px] leading-4 opacity-60 xl:block">
                   {item.description}
                 </span>
               </button>
@@ -1236,9 +1236,22 @@ React.FC<Props> = ({
         </div>
       </aside>
 
-      <main className="min-w-0 px-3 py-5 sm:px-6 lg:px-8 lg:py-7">
-        <div className="mx-auto max-w-[1320px]">
-          <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <main
+        className={[
+          'min-w-0 py-5 lg:py-6',
+          tab === 'templates'
+            ? 'px-2.5 sm:px-4 lg:px-4 xl:px-5'
+            : 'px-3 sm:px-6 lg:px-7 xl:px-8',
+        ].join(' ')}
+      >
+        <div
+          className={
+            tab === 'templates'
+              ? 'mx-auto max-w-[1640px]'
+              : 'mx-auto max-w-[1320px]'
+          }
+        >
+          <header className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between lg:mb-5">
             <div>
               <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#b83e57]">
                 Dearly Admin

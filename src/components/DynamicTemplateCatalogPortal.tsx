@@ -109,7 +109,7 @@ export const DynamicTemplateCatalogPortal: React.FC<Props> = ({
         const snapshot = await getDocs(
           query(
             collection(db, 'templates'),
-            where('visible', '==', true),
+            where('status', '==', 'available'),
             limit(50)
           )
         );
@@ -123,7 +123,7 @@ export const DynamicTemplateCatalogPortal: React.FC<Props> = ({
               id: item.id,
             })
           )
-          .filter((item) => item.visible && item.id !== 'love-01')
+          .filter((item) => item.status === 'available' && item.id !== 'love-01')
           .sort((left, right) =>
             left.name.localeCompare(right.name, 'vi')
           );
@@ -166,12 +166,6 @@ export const DynamicTemplateCatalogPortal: React.FC<Props> = ({
                 alt={template.name}
                 className="h-[82%] w-[82%] object-contain transition duration-500 group-hover:scale-[1.035]"
               />
-
-              {template.status === 'coming_soon' && (
-                <span className="absolute right-4 top-4 rounded-full bg-white/90 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-[0.12em] text-black/38">
-                  Sắp ra mắt
-                </span>
-              )}
             </div>
 
             <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">

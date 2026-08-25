@@ -12,6 +12,10 @@ import {
 import type { TemplateVisualEditorConfig } from '../templates/visualEditor';
 import { getCustomerSlot } from '../templates/customerSlots';
 import { getTemplatePresentation } from '../templates/templatePresentation';
+import {
+  loadVisualCustomerDraft,
+  saveVisualCustomerDraft,
+} from '../services/visualCustomerDraftService';
 
 interface Props {
   templateId: string;
@@ -21,82 +25,6 @@ interface Props {
   onBackProduct: () => void;
   onCheckout: () => void;
 }
-
-interface StoredDraft {
-  fingerprint: string;
-  config: TemplateVisualEditorConfig;
-}
-
-const clone = <T,>(value: T): T =>
-  JSON.parse(JSON.stringify(value));
-
-const draftKey = (templateId: string) =>
-  `dearly:visual-customer-draft:${templateId}`;
-
-const getTemplateFingerprint = (
-  config: TemplateVisualEditorConfig
-) =>
-  JSON.stringify(
-    config.scenes.map((scene) => ({
-      id: scene.id,
-      title: scene.title || '',
-      elements: scene.elements.map((element) => ({
-        id: element.id,
-        type: element.type,
-        ariaLabel: element.ariaLabel || '',
-      })),
-    }))
-  );
-
-const loadDraft = (
-  templateId: string,
-  fallback: TemplateVisualEditorConfig
-): TemplateVisualEditorConfig => {
-  const fingerprint = getTemplateFingerprint(fallback);
-
-  try {
-    const raw = window.localStorage.getItem(draftKey(templateId));
-    if (!raw) return clone(fallback);
-
-    const parsed = JSON.parse(raw) as StoredDraft | TemplateVisualEditorConfig;
-
-    if (
-      parsed &&
-      'fingerprint' in parsed &&
-      'config' in parsed &&
-      parsed.fingerprint === fingerprint &&
-      Array.isArray(parsed.config?.scenes)
-    ) {
-      return parsed.config;
-    }
-
-    window.localStorage.removeItem(draftKey(templateId));
-  } catch {
-    // fallback below
-  }
-
-  return clone(fallback);
-};
-
-const saveDraft = (
-  templateId: string,
-  templateConfig: TemplateVisualEditorConfig,
-  config: TemplateVisualEditorConfig
-) => {
-  try {
-    const payload: StoredDraft = {
-      fingerprint: getTemplateFingerprint(templateConfig),
-      config,
-    };
-
-    window.localStorage.setItem(
-      draftKey(templateId),
-      JSON.stringify(payload)
-    );
-  } catch {
-    // local draft is best effort
-  }
-};
 
 const formatVnd = (value: number) =>
   new Intl.NumberFormat('vi-VN').format(value) + 'đ';
@@ -123,6 +51,8 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<TemplateVisualEditorConfig | null>(null);
   const [previewMobile, setPreviewMobile] = useState(true);
+  const [mobilePanel, setMobilePanel] =
+    useState<'content' | 'preview'>('content');
 
   useEffect(() => {
     let active = true;
@@ -135,7 +65,6 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
         if (!active) return;
 
         if (
-          !next.visible ||
           next.status !== 'available' ||
           !hasUsableVisualEditor(next)
         ) {
@@ -144,7 +73,12 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
         }
 
         setTemplate(next);
-        setDraft(loadDraft(templateId, next.visualEditor!));
+        setDraft(
+          loadVisualCustomerDraft(
+            templateId,
+            next.visualEditor!
+          )
+        );
       })
       .catch((loadError: any) => {
         if (!active) return;
@@ -161,7 +95,11 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
 
   useEffect(() => {
     if (draft && template?.visualEditor) {
-      saveDraft(templateId, template.visualEditor, draft);
+      saveVisualCustomerDraft(
+        templateId,
+        template.visualEditor,
+        draft
+      );
     }
   }, [draft, template, templateId]);
 
@@ -250,28 +188,28 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
   if (mode === 'product') {
     return (
       <div className="min-h-[100svh] bg-[#fbf8f6] text-[#171717]">
-        <header className="border-b border-black/[0.06] bg-white/95 backdrop-blur-xl">
-          <div className="mx-auto flex h-[68px] max-w-[1480px] items-center justify-between px-4 sm:px-8">
+        <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-white/95 backdrop-blur-xl">
+          <div className="mx-auto grid h-[64px] max-w-[1480px] grid-cols-[88px_minmax(0,1fr)_88px] items-center px-3 sm:h-[68px] sm:grid-cols-[1fr_auto_1fr] sm:px-8">
             <button
               type="button"
               onClick={onBackHome}
-              className="text-xs font-bold text-black/42 transition hover:text-black"
+              className="inline-flex min-h-10 items-center justify-start text-xs font-bold text-black/42 transition hover:text-black"
             >
               ← Templates
             </button>
 
             <BrandLogo
               onClick={onBackHome}
-              imageClassName="h-10 w-auto"
+              imageClassName="mx-auto h-9 w-auto sm:h-10"
             />
 
-            <span className="text-xs font-black text-black/70">
+            <span className="justify-self-end text-[11px] font-black text-black/70 sm:text-xs">
               {formatVnd(price)}
             </span>
           </div>
         </header>
 
-        <main className="mx-auto grid max-w-[1480px] gap-7 px-4 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-start lg:py-9">
+        <main className="mx-auto grid max-w-[1480px] gap-5 px-3 pb-24 pt-4 sm:gap-7 sm:px-8 sm:pt-6 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-start lg:pb-9 lg:pt-9">
           <section className="min-w-0 overflow-hidden rounded-[26px] border border-black/[0.07] bg-white shadow-[0_20px_65px_rgba(45,20,28,0.07)]">
             <VisualSceneExperience
               scenes={template.visualEditor!.scenes}
@@ -279,7 +217,7 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
             />
           </section>
 
-          <aside className="h-fit rounded-[26px] border border-black/[0.07] bg-white p-6 shadow-[0_20px_65px_rgba(45,20,28,0.06)] lg:sticky lg:top-6">
+          <aside className="h-fit rounded-[22px] border border-black/[0.07] bg-white p-5 shadow-[0_20px_65px_rgba(45,20,28,0.06)] sm:rounded-[26px] sm:p-6 lg:sticky lg:top-[92px]">
             <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#c9435d]">
               {presentation.category}
             </p>
@@ -335,7 +273,7 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
             <button
               type="button"
               onClick={onStartPersonalize}
-              className="mt-5 w-full rounded-[14px] bg-[#171717] px-5 py-3.5 text-sm font-black text-white transition hover:bg-[#c9435d]"
+              className="mt-5 min-h-12 w-full rounded-[14px] bg-[#171717] px-5 py-3.5 text-sm font-black text-white transition hover:bg-[#c9435d]"
             >
               Cá nhân hoá mẫu này
             </button>
@@ -345,6 +283,27 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
             </p>
           </aside>
         </main>
+
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/[0.07] bg-white/95 px-3 py-3 backdrop-blur-xl lg:hidden">
+          <div className="mx-auto flex max-w-lg items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-black/30">
+                Giá
+              </p>
+              <p className="truncate text-base font-black">
+                {formatVnd(price)}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onStartPersonalize}
+              className="min-h-12 shrink-0 rounded-[14px] bg-[#171717] px-5 text-sm font-black text-white"
+            >
+              Cá nhân hoá
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -352,54 +311,91 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
   return (
     <div className="min-h-[100svh] bg-[#f4f1ef] text-[#171717]">
       <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-white/95 backdrop-blur-xl">
-        <div className="mx-auto flex min-h-[64px] max-w-[1500px] flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-8">
+        <div className="mx-auto grid min-h-[64px] max-w-[1500px] grid-cols-[84px_minmax(0,1fr)_84px] items-center gap-2 px-3 py-2 sm:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
           <button
             type="button"
             onClick={onBackProduct}
-            className="text-xs font-bold text-black/42"
+            className="inline-flex min-h-10 items-center justify-start text-xs font-bold text-black/45 transition hover:text-black"
           >
             ← Mẫu
           </button>
 
           <div className="min-w-0 text-center">
             <p className="truncate text-sm font-black">{template.name}</p>
-            <p className="text-[9px] text-black/30">
-              {slots.length} nội dung được phép thay
+            <p className="mt-0.5 hidden text-[10px] text-black/30 sm:block">
+              {slots.length} nội dung có thể thay
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onCheckout}
-            className="rounded-[11px] bg-[#171717] px-4 py-2.5 text-[10px] font-black text-white"
-          >
-            Thanh toán · {formatVnd(price)}
-          </button>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onCheckout}
+              className="hidden min-h-11 rounded-[12px] bg-[#171717] px-4 text-[11px] font-black text-white transition hover:bg-[#c9435d] lg:inline-flex lg:items-center"
+            >
+              Thanh toán · {formatVnd(price)}
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-[1500px] gap-4 p-4 sm:p-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
-        <aside className="rounded-[18px] border border-black/[0.07] bg-white p-4 lg:max-h-[calc(100svh-105px)] lg:overflow-y-auto">
-          <h2 className="text-base font-black">Nội dung của bạn</h2>
-          <p className="mt-1 text-[10px] leading-5 text-black/35">
+      <div className="sticky top-[64px] z-30 border-b border-black/[0.06] bg-[#f4f1ef]/95 px-3 py-2 backdrop-blur-xl lg:hidden">
+        <div className="mx-auto grid max-w-lg grid-cols-2 rounded-[12px] border border-black/[0.07] bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setMobilePanel('content')}
+            className={[
+              'min-h-10 rounded-[9px] px-3 text-xs font-black transition',
+              mobilePanel === 'content'
+                ? 'bg-[#171717] text-white'
+                : 'text-black/42',
+            ].join(' ')}
+          >
+            Nội dung
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobilePanel('preview')}
+            className={[
+              'min-h-10 rounded-[9px] px-3 text-xs font-black transition',
+              mobilePanel === 'preview'
+                ? 'bg-[#171717] text-white'
+                : 'text-black/42',
+            ].join(' ')}
+          >
+            Xem trước
+          </button>
+        </div>
+      </div>
+
+      <main className="mx-auto grid max-w-[1500px] gap-4 px-3 pb-28 pt-3 sm:px-6 sm:pt-5 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6 lg:px-8 lg:pb-6">
+        <aside
+          className={[
+            'rounded-[18px] border border-black/[0.07] bg-white p-4 sm:p-5 lg:block lg:max-h-[calc(100svh-105px)] lg:overflow-y-auto',
+            mobilePanel === 'content' ? 'block' : 'hidden',
+          ].join(' ')}
+        >
+          <h2 className="text-lg font-black tracking-[-0.02em]">Nội dung của bạn</h2>
+          <p className="mt-1 text-xs leading-5 text-black/40">
             Chỉ những nội dung được cho phép thay mới xuất hiện ở đây.
           </p>
 
           <div className="mt-4 space-y-3">
             {slots.length === 0 ? (
-              <div className="rounded-[12px] border border-dashed border-black/10 bg-[#faf9f8] p-4 text-[10px] leading-5 text-black/40">
+              <div className="rounded-[12px] border border-dashed border-black/10 bg-[#faf9f8] p-4 text-xs leading-5 text-black/40">
                 Mẫu này chưa có nội dung nào được bật cho khách thay.
               </div>
             ) : (
               slots.map(({ sceneId, sceneTitle, element, slot }, index) => (
                 <div
                   key={`${sceneId}-${element.id}`}
-                  className="rounded-[12px] border border-black/[0.07] bg-[#faf9f8] p-3"
+                  className="rounded-[14px] border border-black/[0.07] bg-[#faf9f8] p-3.5"
                 >
-                  <p className="text-[8px] font-black uppercase tracking-[0.08em] text-black/25">
+                  <p className="text-[11px] font-black text-black/60">
                     {index + 1}. {slot.label || element.name || element.id}
                   </p>
-                  <p className="mt-1 text-[8px] text-black/25">{sceneTitle}</p>
+                  <p className="mt-1 text-[10px] font-medium text-black/30">{sceneTitle}</p>
 
                   {slot.kind === 'text' && (
                     <textarea
@@ -423,7 +419,7 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
                           return current;
                         })
                       }
-                      className="mt-2 min-h-[82px] w-full rounded-[9px] border border-black/9 bg-white px-3 py-2.5 text-[11px] outline-none focus:border-[#cf5068]/40"
+                      className="mt-3 min-h-[96px] w-full resize-y rounded-[11px] border border-black/10 bg-white px-3.5 py-3 text-[16px] leading-6 outline-none transition focus:border-[#cf5068]/45 focus:ring-2 focus:ring-[#cf5068]/10 sm:text-sm"
                     />
                   )}
 
@@ -441,7 +437,7 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
                           />
                         )}
 
-                      <label className="block cursor-pointer rounded-[10px] border border-dashed border-[#cf5068]/30 bg-white p-3 text-center text-[9px] font-black text-[#a73551]">
+                      <label className="flex min-h-11 cursor-pointer items-center justify-center rounded-[11px] border border-dashed border-[#cf5068]/30 bg-white px-3 py-3 text-center text-xs font-black text-[#a73551] transition hover:bg-[#fff6f8]">
                         Chọn ảnh khác
                         <input
                           type="file"
@@ -478,17 +474,27 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
           </div>
         </aside>
 
-        <section className="min-w-0 rounded-[18px] border border-black/[0.07] bg-[#ddd9d6] p-3 sm:p-5">
+        <section
+          className={[
+            'min-w-0 rounded-[18px] border border-black/[0.07] bg-[#ddd9d6] p-3 sm:p-5 lg:block',
+            mobilePanel === 'preview' ? 'block' : 'hidden',
+          ].join(' ')}
+        >
           <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-black/30">
-              Bản của bạn
-            </p>
+            <div>
+              <p className="text-xs font-black text-black/55">
+                Bản xem trước
+              </p>
+              <p className="mt-0.5 text-[10px] text-black/30">
+                Chuyển thiết bị để kiểm tra bố cục.
+              </p>
+            </div>
 
-            <div className="flex rounded-[10px] bg-white p-1">
+            <div className="flex shrink-0 rounded-[10px] bg-white p-1 shadow-sm">
               <button
                 type="button"
                 onClick={() => setPreviewMobile(false)}
-                className={`rounded-[8px] px-3 py-1.5 text-[9px] font-black ${
+                className={`min-h-9 rounded-[8px] px-3 py-1.5 text-[10px] font-black ${
                   !previewMobile ? 'bg-black text-white' : 'text-black/40'
                 }`}
               >
@@ -497,7 +503,7 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setPreviewMobile(true)}
-                className={`rounded-[8px] px-3 py-1.5 text-[9px] font-black ${
+                className={`min-h-9 rounded-[8px] px-3 py-1.5 text-[10px] font-black ${
                   previewMobile ? 'bg-black text-white' : 'text-black/40'
                 }`}
               >
@@ -508,7 +514,7 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
 
           <div
             className={[
-              'mx-auto max-h-[calc(100svh-165px)] overflow-y-auto overflow-x-hidden rounded-[18px] border border-black/8 bg-white shadow-[0_22px_70px_rgba(0,0,0,0.12)]',
+              'mx-auto max-h-[calc(100svh-238px)] min-h-[55svh] overflow-y-auto overflow-x-hidden rounded-[16px] border border-black/8 bg-white shadow-[0_22px_70px_rgba(0,0,0,0.12)] lg:max-h-[calc(100svh-165px)] lg:min-h-0 lg:rounded-[18px]',
               previewMobile ? 'max-w-[430px]' : 'max-w-[1000px]',
             ].join(' ')}
           >
@@ -520,6 +526,34 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
           </div>
         </section>
       </main>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/[0.07] bg-white/95 px-3 py-3 backdrop-blur-xl lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center gap-3">
+          <button
+            type="button"
+            onClick={() =>
+              setMobilePanel(
+                mobilePanel === 'content'
+                  ? 'preview'
+                  : 'content'
+              )
+            }
+            className="min-h-12 rounded-[13px] border border-black/10 bg-white px-4 text-xs font-black text-black/55"
+          >
+            {mobilePanel === 'content'
+              ? 'Xem trước'
+              : 'Sửa nội dung'}
+          </button>
+
+          <button
+            type="button"
+            onClick={onCheckout}
+            className="min-h-12 min-w-0 flex-1 rounded-[13px] bg-[#171717] px-4 text-sm font-black text-white"
+          >
+            Thanh toán · {formatVnd(price)}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

@@ -17,6 +17,11 @@ import {
 } from './templateService';
 import type { TemplateVisualEditorConfig } from '../templates/visualEditor';
 import { upsertPublicOrderLookup } from './orderLookupService';
+import { reserveUniqueOrderCode } from './orderCodeService';
+import {
+  GIFT_SCHEMA_VERSION,
+  createTemplateRevision,
+} from './giftSchema';
 
 const SECURE_GIFT_ALPHABET =
   'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
@@ -43,12 +48,6 @@ const generateGiftId = (length = 24) => {
         byte % SECURE_GIFT_ALPHABET.length
       ]
   ).join('');
-};
-
-const generateOrderNumber = () => {
-  const bytes = new Uint32Array(1);
-  crypto.getRandomValues(bytes);
-  return String(1000 + (bytes[0] % 9000));
 };
 
 const loadImage = (src: string) =>
@@ -193,8 +192,6 @@ export const createDynamicBankTransferOrder = async (
   customer: CheckoutCustomer
 ): Promise<DynamicCheckoutResult> => {
   const giftId = generateGiftId();
-  const orderNumber = generateOrderNumber();
-  const orderCode = `Dearly${orderNumber}`;
 
   try {
     const [template, user, cleanConfig] = await Promise.all([
@@ -208,15 +205,31 @@ export const createDynamicBankTransferOrder = async (
     );
 
     if (
-      !template.visible ||
       template.status !== 'available' ||
       !hasScenes
     ) {
       throw new Error('Template này hiện chưa mở bán.');
     }
 
+    // Claim the human-readable order code before creating the gift.
+    // Firestore rejects a code that already exists, then the helper
+    // automatically retries with another 4-digit number.
+    const {
+      orderNumber,
+      orderCode,
+    } = await reserveUniqueOrderCode({
+      giftId,
+      creatorId: user.uid,
+    });
+
     const price = getEffectiveTemplatePrice(template);
     const currency = template.currency || 'VND';
+    const templateRevision =
+      createTemplateRevision({
+        templateId,
+        visualEditor:
+          template.visualEditor,
+      });
     const now = serverTimestamp();
 
     await setDoc(
@@ -224,6 +237,10 @@ export const createDynamicBankTransferOrder = async (
       {
         id: giftId,
         config: cleanConfig,
+        configType: 'visual-v1',
+        schemaVersion:
+          GIFT_SCHEMA_VERSION,
+        templateRevision,
         senderName: customer.fullName || 'Anonymous',
         receiverName: 'Someone Special',
         creatorId: user.uid,

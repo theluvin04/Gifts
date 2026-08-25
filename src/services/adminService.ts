@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -289,6 +290,7 @@ export const listAdminOrders =
 
     const giftsQuery = query(
       collection(db, 'gifts'),
+      orderBy('createdAt', 'desc'),
       limit(200)
     );
 
@@ -304,6 +306,8 @@ export const listAdminOrders =
           )
       );
 
+    // Firestore đã trả về theo createdAt DESC.
+    // Vẫn sort phòng trường hợp dữ liệu timestamp cũ không đồng nhất.
     const sorted =
       orders.sort(
         (left, right) =>

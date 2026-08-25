@@ -71,15 +71,16 @@ service cloud.firestore {
       // Storefront reads a single template document.
       allow get: if true;
 
-      // Storefront may list only documents explicitly marked visible.
-      // Client query MUST include where('visible', '==', true).
+      // Storefront lists only templates that are actually on sale.
+      // Client query MUST include where('status', '==', 'available').
+      // `visible` remains only for backward compatibility and is not
+      // allowed to disagree with the sale state anymore.
       allow list: if isAdmin()
-        || resource.data.get('visible', false) == true;
+        || resource.data.get('status', '') == 'available';
 
-      // Price / sale / visibility are Admin-only writes.
+      // Price / sale / status are Admin-only writes.
       allow create, update, delete: if isAdmin();
     }
-
 
     match /assetLibrary/{assetId} {
       // Asset metadata is only needed inside Admin.
@@ -90,7 +91,6 @@ service cloud.firestore {
     match /assetFolders/{folderId} {
       allow get, list, create, update, delete: if isAdmin();
     }
-
 
     match /orderCodes/{orderNumber} {
       // Anonymous checkout may only CLAIM a brand-new 4-digit code.
@@ -103,7 +103,11 @@ service cloud.firestore {
         && request.resource.data.giftId is string;
 
       allow get, list: if isAdmin();
-      allow update, delete: if isAdmin();
+
+      // Reservation documents are immutable. Even Admin checkout tests
+      // must not be able to overwrite a code that is already claimed.
+      allow update: if false;
+      allow delete: if isAdmin();
     }
 
     match /orderLookupRecords/{lookupId} {
@@ -138,9 +142,11 @@ service cloud.firestore {
           && request.resource.data.updatedAtMs is number;
       }
 
-      // Public lookup data contains no name, email,
-      // phone number or private gift URL.
-      allow get, list: if true;
+      // Public tracking may read one exact lookup document only.
+      // Collection listing/search is Admin-only, so a visitor must know
+      // BOTH the order code and phone number to derive the document id.
+      allow get: if true;
+      allow list: if isAdmin();
 
       // Customer browser can only create the initial
       // waiting-payment lookup record.
@@ -173,13 +179,56 @@ service cloud.firestore {
           );
       }
 
-      function validWrite() {
+      function isSafeCustomerPaymentStatus(value) {
+        return value == 'unpaid'
+          || value == 'waiting_bank_transfer';
+      }
+
+      function validCustomerCreate() {
         return request.auth != null
           && request.resource.data.config != null
-          && (
-            request.resource.data.creatorId == request.auth.uid
-            || isAdmin()
-          );
+          && request.resource.data.creatorId == request.auth.uid
+          && request.resource.data.get('status', '') == 'draft'
+          && request.resource.data.get('isPublished', false) == false
+          && isSafeCustomerPaymentStatus(
+            request.resource.data.get('paymentStatus', 'unpaid')
+          )
+          && !request.resource.data.keys().hasAny([
+            'paidAt',
+            'publishedAt'
+          ]);
+      }
+
+      function validCustomerDraftUpdate() {
+        return isOwner()
+          && resource.data.get('status', 'draft') == 'draft'
+          && resource.data.get('isPublished', false) == false
+          && isSafeCustomerPaymentStatus(
+            resource.data.get('paymentStatus', 'unpaid')
+          )
+          && request.resource.data.config != null
+          && request.resource.data.get('creatorId', '')
+            == resource.data.get('creatorId', '')
+          && request.resource.data.get('status', 'draft') == 'draft'
+          && request.resource.data.get('isPublished', false) == false
+          && request.resource.data.get('paymentStatus', 'unpaid')
+            == resource.data.get('paymentStatus', 'unpaid')
+          && request.resource.data.get('templateId', '')
+            == resource.data.get('templateId', '')
+          && request.resource.data.get('price', 0)
+            == resource.data.get('price', 0)
+          && request.resource.data.get('currency', '')
+            == resource.data.get('currency', '')
+          && request.resource.data.get('orderNumber', '')
+            == resource.data.get('orderNumber', '')
+          && request.resource.data.get('orderCode', '')
+            == resource.data.get('orderCode', '')
+          && request.resource.data.get('paymentReference', '')
+            == resource.data.get('paymentReference', '')
+          && !request.resource.data.keys().hasAny([
+            'paidAt',
+            'publishedAt'
+          ]);
       }
 
       // Needed because checkout probes a custom gift ID
@@ -191,13 +240,26 @@ service cloud.firestore {
 
       allow list: if isAdmin();
 
-      allow create: if validWrite();
+      // Customer can only create an unpublished draft.
+      // Paid/published gifts can only be created directly by Admin.
+      allow create: if isAdmin()
+        || validCustomerCreate();
 
-      allow update: if (isOwner() || isAdmin())
-        && validWrite();
+      // Customer may keep editing their own unpaid draft, but cannot
+      // change payment, price, order identity or publication state.
+      allow update: if isAdmin()
+        || validCustomerDraftUpdate();
 
-      allow delete: if isOwner()
-        || isAdmin();
+      // Once a gift is paid/published, only Admin may delete it.
+      allow delete: if isAdmin()
+        || (
+          isOwner()
+          && resource.data.get('status', 'draft') == 'draft'
+          && resource.data.get('isPublished', false) == false
+          && isSafeCustomerPaymentStatus(
+            resource.data.get('paymentStatus', 'unpaid')
+          )
+        );
     }
   }
 }

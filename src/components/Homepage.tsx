@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 
+import {
+  collection,
+  getDocs,
+  limit,
+  query,
+  where,
+} from 'firebase/firestore';
+
 import { BRAND } from '../config/brand';
+import { db } from '../config/firebase';
 
 import {
   DEFAULT_LOVE_TEMPLATE_CONFIG,
@@ -9,10 +18,18 @@ import {
   getEffectiveTemplatePrice,
   getPublicTemplateConfig,
   getTemplateDiscountPercent,
+  normalizeTemplateConfig,
 } from '../services/templateService';
+
+import {
+  getTemplatePresentation,
+} from '../templates/templatePresentation';
 
 interface HomePageProps {
   onOpenLoveTemplate: () => void;
+  onOpenTemplate: (
+    templateId: string
+  ) => void;
   onTrackOrder: () => void;
 }
 
@@ -55,20 +72,265 @@ const steps = [
   },
 ];
 
+const formatVnd = (
+  amount: number
+) =>
+  new Intl.NumberFormat(
+    'vi-VN'
+  ).format(amount) + 'đ';
+
+const findPreviewImage = (
+  template: TemplateConfig
+) => {
+  const scenes =
+    template.visualEditor
+      ?.scenes || [];
+
+  for (
+    const scene of scenes
+  ) {
+    for (
+      const element of
+        scene.elements
+    ) {
+      if (
+        (
+          element.type ===
+            'image' ||
+          element.type ===
+            'decor' ||
+          element.type ===
+            'photo-frame'
+        ) &&
+        element.src
+      ) {
+        return element.src;
+      }
+    }
+  }
+
+  return '/images/gifts/success.gif';
+};
+
+const DynamicTemplateCard:
+React.FC<{
+  template: TemplateConfig;
+  onOpen: () => void;
+}> = ({
+  template,
+  onOpen,
+}) => {
+  const price =
+    getEffectiveTemplatePrice(
+      template
+    );
+
+  const discount =
+    getTemplateDiscountPercent(
+      template
+    );
+
+  const presentation =
+    getTemplatePresentation(
+      template
+    );
+
+  const preview =
+    findPreviewImage(
+      template
+    );
+
+  return (
+    <motion.button
+      type="button"
+      onClick={onOpen}
+      whileHover={{
+        y: -5,
+      }}
+      transition={{
+        duration: 0.2,
+      }}
+      className="group overflow-hidden rounded-[30px] border border-black/[0.07] bg-[#fffafb] p-2 text-left shadow-[0_12px_35px_rgba(23,23,23,0.04)] transition hover:border-black/[0.12] hover:shadow-[0_24px_55px_rgba(23,23,23,0.08)]"
+    >
+      <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[24px] bg-[#f7edf0] p-6">
+        <span className="absolute right-4 top-4 rounded-[10px] border border-white/70 bg-white/85 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#d94763] backdrop-blur-sm">
+          Available
+        </span>
+
+        <img
+          src={preview}
+          alt={template.name}
+          className="h-[82%] w-[82%] object-contain transition duration-500 group-hover:scale-[1.035]"
+        />
+      </div>
+
+      <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#d94763]">
+              {
+                presentation.category
+              }
+            </p>
+
+            <h3 className="mt-1.5 truncate text-xl font-black tracking-[-0.035em] text-[#171717]">
+              {template.name}
+            </h3>
+          </div>
+
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-black/[0.08] bg-white text-base font-medium text-black/45 transition group-hover:border-[#d94763]/25 group-hover:bg-[#fff1f4] group-hover:text-[#d94763]">
+            →
+          </span>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-base font-black text-[#171717]">
+            {formatVnd(
+              price
+            )}
+          </span>
+
+          {discount > 0 && (
+            <>
+              <span className="text-xs text-black/28 line-through">
+                {formatVnd(
+                  template.basePrice
+                )}
+              </span>
+
+              <span className="rounded-[8px] bg-[#fdecef] px-2 py-1 text-[9px] font-bold text-[#c93f59]">
+                -{discount}%
+              </span>
+            </>
+          )}
+        </div>
+
+        <p className="mt-3 line-clamp-2 text-sm leading-6 text-black/48">
+          {
+            presentation.description
+          }
+        </p>
+      </div>
+    </motion.button>
+  );
+};
+
 export const HomePage: React.FC<
   HomePageProps
 > = ({
   onOpenLoveTemplate,
+  onOpenTemplate,
   onTrackOrder,
 }) => {
-  const [template, setTemplate] =
+  const [
+    template,
+    setTemplate,
+  ] =
     useState<TemplateConfig>(
       DEFAULT_LOVE_TEMPLATE_CONFIG
+    );
+
+  const [
+    dynamicTemplates,
+    setDynamicTemplates,
+  ] =
+    useState<TemplateConfig[]>(
+      []
     );
 
   useEffect(() => {
     void getPublicTemplateConfig()
       .then(setTemplate);
+  }, []);
+
+  useEffect(() => {
+    let active =
+      true;
+
+    const loadTemplates =
+      async () => {
+        try {
+          const snapshot =
+            await getDocs(
+              query(
+                collection(
+                  db,
+                  'templates'
+                ),
+                where(
+                  'status',
+                  '==',
+                  'available'
+                ),
+                limit(50)
+              )
+            );
+
+          if (!active) {
+            return;
+          }
+
+          const next =
+            snapshot.docs
+              .map(
+                (
+                  item
+                ) =>
+                  normalizeTemplateConfig({
+                    ...item.data(),
+                    id:
+                      item.id,
+                  })
+              )
+              .filter(
+                (
+                  item
+                ) =>
+                  item.id !==
+                    'love-01' &&
+                  item.status ===
+                    'available' &&
+                  Boolean(
+                    item.visualEditor
+                      ?.scenes
+                      ?.length
+                  )
+              )
+              .sort(
+                (
+                  left,
+                  right
+                ) =>
+                  left.name.localeCompare(
+                    right.name,
+                    'vi'
+                  )
+              );
+
+          setDynamicTemplates(
+            next
+          );
+        } catch (
+          error
+        ) {
+          console.warn(
+            'Public template catalog:',
+            error
+          );
+
+          if (active) {
+            setDynamicTemplates(
+              []
+            );
+          }
+        }
+      };
+
+    void loadTemplates();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const effectivePrice =
@@ -80,13 +342,6 @@ export const HomePage: React.FC<
     getTemplateDiscountPercent(
       template
     );
-
-  const formatVnd = (
-    amount: number
-  ) =>
-    new Intl.NumberFormat(
-      'vi-VN'
-    ).format(amount) + 'đ';
 
   const scrollToSection = (
     sectionId: string
@@ -195,17 +450,27 @@ export const HomePage: React.FC<
               }
               className="rounded-[12px] px-2.5 py-2.5 text-[11px] font-bold text-black/48 transition hover:bg-black/[0.04] hover:text-black sm:px-3 sm:text-xs"
             >
-              <span className="sm:hidden">Đơn</span>
-              <span className="hidden sm:inline">Tra cứu</span>
+              <span className="sm:hidden">
+                Đơn
+              </span>
+              <span className="hidden sm:inline">
+                Tra cứu
+              </span>
             </button>
 
             <button
               type="button"
-              onClick={onOpenLoveTemplate}
+              onClick={
+                onOpenLoveTemplate
+              }
               className="rounded-[12px] bg-[#171717] px-3 py-2.5 text-[11px] font-bold text-white transition hover:bg-[#e64a67] sm:px-5 sm:text-sm"
             >
-              <span className="sm:hidden">Template</span>
-              <span className="hidden sm:inline">Xem template</span>
+              <span className="sm:hidden">
+                Template
+              </span>
+              <span className="hidden sm:inline">
+                Xem template
+              </span>
             </button>
           </div>
         </div>
@@ -292,7 +557,9 @@ export const HomePage: React.FC<
               >
                 <button
                   type="button"
-                  onClick={onOpenLoveTemplate}
+                  onClick={
+                    onOpenLoveTemplate
+                  }
                   className="w-full rounded-[14px] bg-[#d94763] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#c83b56] sm:w-auto"
                 >
                   Xem Love Story 01
@@ -453,139 +720,100 @@ export const HomePage: React.FC<
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <motion.button
-                type="button"
-                disabled={
-                  template.status !==
-                  'available'
-                }
-                style={{
-                  display: template.visible
-                    ? undefined
-                    : 'none',
-                }}
-                onClick={onOpenLoveTemplate}
-                whileHover={{
-                  y: -5,
-                }}
-                transition={{
-                  duration: 0.2,
-                }}
-                className="group overflow-hidden rounded-[30px] border border-black/[0.07] bg-[#fffafb] p-2 text-left shadow-[0_12px_35px_rgba(23,23,23,0.04)] transition hover:border-black/[0.12] hover:shadow-[0_24px_55px_rgba(23,23,23,0.08)]"
-              >
-                <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[24px] bg-[#fae8ec] p-8">
-                  <span className="absolute right-4 top-4 rounded-[10px] border border-white/70 bg-white/80 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#d94763] backdrop-blur-sm">
-                    {template.status ===
-                    'available'
-                      ? 'Available'
-                      : 'Paused'}
-                  </span>
+              {template.status ===
+                'available' && (
+                <motion.button
+                  type="button"
+                  onClick={
+                    onOpenLoveTemplate
+                  }
+                  whileHover={{
+                    y: -5,
+                  }}
+                  transition={{
+                    duration: 0.2,
+                  }}
+                  className="group overflow-hidden rounded-[30px] border border-black/[0.07] bg-[#fffafb] p-2 text-left shadow-[0_12px_35px_rgba(23,23,23,0.04)] transition hover:border-black/[0.12] hover:shadow-[0_24px_55px_rgba(23,23,23,0.08)]"
+                >
+                  <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[24px] bg-[#fae8ec] p-8">
+                    <span className="absolute right-4 top-4 rounded-[10px] border border-white/70 bg-white/80 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#d94763] backdrop-blur-sm">
+                      Available
+                    </span>
 
-                  <img
-                    src="/images/gifts/success.gif"
-                    alt="Love template"
-                    className="h-[66%] w-[66%] object-contain transition duration-500 group-hover:scale-[1.045]"
-                  />
-                </div>
+                    <img
+                      src="/images/gifts/success.gif"
+                      alt="Love template"
+                      className="h-[66%] w-[66%] object-contain transition duration-500 group-hover:scale-[1.045]"
+                    />
+                  </div>
 
-                <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#d94763]">
-                        Love
-                      </p>
+                  <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#d94763]">
+                          Love
+                        </p>
 
-                      <h3 className="mt-1.5 text-xl font-black tracking-[-0.035em] text-[#171717]">
-                        Love Story 01
-                      </h3>
+                        <h3 className="mt-1.5 text-xl font-black tracking-[-0.035em] text-[#171717]">
+                          Love Story 01
+                        </h3>
+                      </div>
+
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-black/[0.08] bg-white text-base font-medium text-black/45 transition group-hover:border-[#d94763]/25 group-hover:bg-[#fff1f4] group-hover:text-[#d94763]">
+                        →
+                      </span>
                     </div>
 
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-black/[0.08] bg-white text-base font-medium text-black/45 transition group-hover:border-[#d94763]/25 group-hover:bg-[#fff1f4] group-hover:text-[#d94763]">
-                      →
-                    </span>
-                  </div>
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <span className="text-base font-black text-[#171717]">
+                        {formatVnd(
+                          effectivePrice
+                        )}
+                      </span>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <span className="text-base font-black text-[#171717]">
-                      {formatVnd(
-                        effectivePrice
+                      {discount > 0 && (
+                        <>
+                          <span className="text-xs text-black/28 line-through">
+                            {formatVnd(
+                              template.basePrice
+                            )}
+                          </span>
+
+                          <span className="rounded-[8px] bg-[#fdecef] px-2 py-1 text-[9px] font-bold text-[#c93f59]">
+                            -{discount}%
+                          </span>
+                        </>
                       )}
-                    </span>
+                    </div>
 
-                    {discount > 0 && (
-                      <>
-                        <span className="text-xs text-black/28 line-through">
-                          {formatVnd(
-                            template.basePrice
-                          )}
-                        </span>
-
-                        <span className="rounded-[8px] bg-[#fdecef] px-2 py-1 text-[9px] font-bold text-[#c93f59]">
-                          -{discount}%
-                        </span>
-                      </>
-                    )}
+                    <p className="mt-3 max-w-[31ch] text-sm leading-6 text-black/48">
+                      YES/NO tương tác, album ảnh,
+                      đĩa nhạc và một bức thư riêng
+                      dành cho người ấy.
+                    </p>
                   </div>
+                </motion.button>
+              )}
 
-                  <p className="mt-3 max-w-[31ch] text-sm leading-6 text-black/48">
-                    YES/NO tương tác, album ảnh,
-                    đĩa nhạc và một bức thư riêng
-                    dành cho người ấy.
-                  </p>
-                </div>
-              </motion.button>
-
-              <div className="overflow-hidden rounded-[30px] border border-black/[0.06] bg-[#fbfbfa] p-2 shadow-[0_12px_35px_rgba(23,23,23,0.025)]">
-                <div className="flex aspect-[4/3] items-end justify-between rounded-[24px] bg-[#fff3dd] p-6">
-                  <span className="text-[72px] font-black leading-none tracking-[-0.08em] text-[#bf7c2d]/22">
-                    02
-                  </span>
-
-                  <span className="pb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-black/28">
-                    Coming soon
-                  </span>
-                </div>
-
-                <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-black/28">
-                    Birthday
-                  </p>
-
-                  <h3 className="mt-1.5 text-xl font-black tracking-[-0.035em] text-black/58">
-                    Birthday Story
-                  </h3>
-
-                  <p className="mt-3 text-sm text-black/32">
-                    Sắp ra mắt
-                  </p>
-                </div>
-              </div>
-
-              <div className="overflow-hidden rounded-[30px] border border-black/[0.06] bg-[#fbfbfa] p-2 shadow-[0_12px_35px_rgba(23,23,23,0.025)]">
-                <div className="flex aspect-[4/3] items-end justify-between rounded-[24px] bg-[#f1edff] p-6">
-                  <span className="text-[72px] font-black leading-none tracking-[-0.08em] text-[#745cb9]/20">
-                    03
-                  </span>
-
-                  <span className="pb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-black/28">
-                    Coming soon
-                  </span>
-                </div>
-
-                <div className="px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-black/28">
-                    Anniversary
-                  </p>
-
-                  <h3 className="mt-1.5 text-xl font-black tracking-[-0.035em] text-black/58">
-                    Anniversary Story
-                  </h3>
-
-                  <p className="mt-3 text-sm text-black/32">
-                    Sắp ra mắt
-                  </p>
-                </div>
-              </div>
+              {dynamicTemplates.map(
+                (
+                  item
+                ) => (
+                  <DynamicTemplateCard
+                    key={
+                      item.id
+                    }
+                    template={
+                      item
+                    }
+                    onOpen={() =>
+                      onOpenTemplate(
+                        item.id
+                      )
+                    }
+                  />
+                )
+              )}
             </div>
           </div>
         </section>
@@ -689,7 +917,9 @@ export const HomePage: React.FC<
 
             <button
               type="button"
-              onClick={onOpenLoveTemplate}
+              onClick={
+                onOpenLoveTemplate
+              }
               className="mt-7 rounded-[14px] bg-[#d94763] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#c83b56]"
             >
               Mở Love Story 01

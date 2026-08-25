@@ -13,6 +13,10 @@ import {
 
 import { LoveConfig } from '../types';
 
+import type {
+  GiftConfigType,
+} from './giftSchema';
+
 import {
   DEFAULT_LOVE_TEMPLATE_CONFIG,
   getEffectiveTemplatePrice,
@@ -37,7 +41,18 @@ export interface CheckoutCustomer {
 
 export interface SavedGiftDocument {
   id: string;
-  config: LoveConfig;
+
+  /**
+   * Gift config is intentionally unknown at the persistence boundary.
+   * Renderer code must narrow it using configType/schemaVersion.
+   * Legacy orders may not have schema metadata yet.
+   */
+  config: unknown;
+
+  configType?: GiftConfigType;
+  schemaVersion?: number;
+  templateRevision?: string;
+
   createdAt: unknown;
   updatedAt: unknown;
   publishedAt?: unknown;
@@ -49,6 +64,7 @@ export interface SavedGiftDocument {
   status: GiftStatus;
   isPublished: boolean;
   templateId?: string;
+  templateName?: string;
   price?: number;
   currency?: string;
   paymentStatus?: PaymentStatus;
@@ -90,8 +106,8 @@ const getCurrentLoveTemplatePrice =
     const template =
       await getRequiredPublicTemplateConfig();
 
+    // `status` is now the single source of truth for sale availability.
     if (
-      !template.visible ||
       template.status !==
         'available'
     ) {

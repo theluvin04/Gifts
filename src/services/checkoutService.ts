@@ -29,6 +29,15 @@ import {
   resolveAllTemplateAssetUrls,
 } from '../templates/assets';
 
+import {
+  reserveUniqueOrderCode,
+} from './orderCodeService';
+
+import {
+  GIFT_SCHEMA_VERSION,
+  createTemplateRevision,
+} from './giftSchema';
+
 const TEMPLATE_ID =
   'love-01';
 
@@ -61,7 +70,6 @@ const getPricingFromTemplate = (
     typeof DEFAULT_LOVE_TEMPLATE_CONFIG
 ): CheckoutPricing => {
   if (
-    !template.visible ||
     template.status !==
       'available'
   ) {
@@ -124,37 +132,6 @@ const generateSecureGiftId = (
       ]
   ).join('');
 };
-
-const generateOrderNumber = () => {
-  const bytes =
-    new Uint32Array(1);
-
-  crypto.getRandomValues(
-    bytes
-  );
-
-  return String(
-    1000 +
-      (
-        bytes[0] %
-        9000
-      )
-  );
-};
-
-const createCheckoutIdentity =
-  (): CheckoutIdentity => {
-    const orderNumber =
-      generateOrderNumber();
-
-    return {
-      giftId:
-        generateSecureGiftId(),
-      orderNumber,
-      orderCode:
-        `Dearly${orderNumber}`,
-    };
-  };
 
 const loadImage = (
   src: string
@@ -388,8 +365,8 @@ export const createBankTransferOrder =
   ): Promise<
     CreateBankTransferOrderResult
   > => {
-    const identity =
-      createCheckoutIdentity();
+    const giftId =
+      generateSecureGiftId();
 
     try {
       const [
@@ -412,6 +389,24 @@ export const createBankTransferOrder =
           template
         );
 
+      // Claim a unique 4-digit order code before creating the gift.
+      // A collision is rejected by /orderCodes and automatically retried.
+      const {
+        orderNumber,
+        orderCode,
+      } = await reserveUniqueOrderCode({
+        giftId,
+        creatorId:
+          user.uid,
+      });
+
+      const identity:
+        CheckoutIdentity = {
+          giftId,
+          orderNumber,
+          orderCode,
+        };
+
       // Snapshot mẫu gốc tại thời điểm thanh toán.
       // Admin đổi template sau này sẽ không làm đổi gift đã bán.
       cleanConfig.design =
@@ -422,6 +417,16 @@ export const createBankTransferOrder =
           template.assets,
           cleanConfig.assetSelections
         );
+
+      const templateRevision =
+        createTemplateRevision({
+          templateId:
+            TEMPLATE_ID,
+          design:
+            template.design,
+          assets:
+            template.assets,
+        });
 
       const now =
         serverTimestamp();
@@ -437,6 +442,11 @@ export const createBankTransferOrder =
             identity.giftId,
           config:
             cleanConfig,
+          configType:
+            'love-v1',
+          schemaVersion:
+            GIFT_SCHEMA_VERSION,
+          templateRevision,
           senderName:
             cleanConfig.couple
               .senderName ||

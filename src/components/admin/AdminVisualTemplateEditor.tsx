@@ -121,6 +121,10 @@ interface Props {
     config:
       TemplateVisualEditorConfig
   ) => void;
+
+  dirty?: boolean;
+  saving?: boolean;
+  onSave?: () => void;
 }
 
 type ChangeMode =
@@ -191,6 +195,9 @@ export const AdminVisualTemplateEditor:
 React.FC<Props> = ({
   config,
   onChange,
+  dirty = false,
+  saving = false,
+  onSave,
 }) => {
   const [
     selectedSceneId,
@@ -282,14 +289,14 @@ React.FC<Props> = ({
         typeof window !==
           'undefined' &&
         window.matchMedia(
-          '(max-width: 1199px)'
+          '(max-width: 1399px)'
         ).matches
     );
 
   useEffect(() => {
     const media =
       window.matchMedia(
-        '(max-width: 1199px)'
+        '(max-width: 1399px)'
       );
 
     const update =
@@ -312,6 +319,18 @@ React.FC<Props> = ({
         update
       );
   }, []);
+
+
+  useEffect(() => {
+    if (!compactViewport) {
+      return;
+    }
+
+    // Laptop/tablet: giữ canvas rộng. Panel mở theo drawer khi cần,
+    // không xếp thành các khối dài phía trên/dưới canvas.
+    setLayersOpen(false);
+    setInspectorOpen(false);
+  }, [compactViewport]);
 
   const [
     assetPickerTarget,
@@ -1418,14 +1437,11 @@ React.FC<Props> = ({
               )
                 ? {
                     ...element,
+                    // Group chỉ là quan hệ giữa các element.
+                    // Tuyệt đối không đụng frame của device còn lại:
+                    // group ở PC phải giữ nguyên mobileFrame đã chỉnh,
+                    // group ở Mobile cũng giữ nguyên frame PC.
                     groupId,
-                    ...(device ===
-                    'desktop'
-                      ? {
-                          mobileFrame:
-                            undefined,
-                        }
-                      : {}),
                   }
                 : element
           ),
@@ -2682,6 +2698,58 @@ React.FC<Props> = ({
       ? 'desktop'
       : device;
 
+  const renderLayersPanel = () => (
+    <LayersPanel
+      scene={scene}
+      selectedElementIds={selectedElementIds}
+      onSelectionChange={setSelectedElementIds}
+      onToggleVisible={toggleElementVisible}
+      onToggleLock={toggleElementLock}
+    />
+  );
+
+  const renderInspectorPanel = () =>
+    groupedSelection ? (
+      <GroupInspector
+        elements={selectedElements}
+        scenes={config.scenes}
+        currentSceneId={scene.id}
+        onActionChange={updateGroupedSelectionAction}
+        onUngroup={ungroupSelected}
+        onDuplicate={duplicateSelected}
+        onDelete={deleteSelected}
+      />
+    ) : (
+      <InspectorPanel
+        scene={scene}
+        elements={selectedElements}
+        device={device}
+        scenes={config.scenes}
+        onSceneChange={updateScenePatch}
+        onElementChange={updateElement}
+        onFrameChange={updateElementFrame}
+        onNhân bản={duplicateSelected}
+        onDelete={deleteSelected}
+        onLayerUp={() =>
+          moveLayer('forward')
+        }
+        onLayerDown={() =>
+          moveLayer('backward')
+        }
+        onToggleLock={toggleSelectedLock}
+        onOpenAssetLibrary={(target) =>
+          setAssetPickerTarget(
+            target.kind === 'background'
+              ? { kind: 'background' }
+              : {
+                  kind: 'element',
+                  elementId: target.elementId,
+                }
+          )
+        }
+      />
+    );
+
   return (
     <>
       <div
@@ -2692,7 +2760,7 @@ React.FC<Props> = ({
             : 'rounded-[14px] border border-black/8 p-2 sm:p-3',
         ].join(' ')}
       >
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-[11px] border border-black/7 bg-white px-3 py-2">
+        <div className="flex min-w-0 items-center justify-between gap-3 rounded-[11px] border border-black/7 bg-white px-3 py-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-xs font-black sm:text-sm">
@@ -2700,7 +2768,7 @@ React.FC<Props> = ({
               </h3>
 
               <span className="rounded-full bg-[#f4e9ec] px-2 py-1 text-[8px] font-black text-[#a63550]">
-                CANVA MINI
+                VISUAL EDITOR
               </span>
             </div>
 
@@ -2711,7 +2779,7 @@ React.FC<Props> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <TogglePill
               active={
                 device ===
@@ -2798,12 +2866,16 @@ React.FC<Props> = ({
 
             <button
               type="button"
-              onClick={() =>
+              onClick={() => {
                 setLayersOpen(
                   (value) =>
                     !value
-                )
-              }
+                );
+
+                if (compactViewport) {
+                  setInspectorOpen(false);
+                }
+              }}
               className={[
                 'rounded-[8px] border px-2.5 py-2 text-[9px] font-black',
                 layersOpen
@@ -2816,12 +2888,16 @@ React.FC<Props> = ({
 
             <button
               type="button"
-              onClick={() =>
+              onClick={() => {
                 setInspectorOpen(
                   (value) =>
                     !value
-                )
-              }
+                );
+
+                if (compactViewport) {
+                  setLayersOpen(false);
+                }
+              }}
               className={[
                 'rounded-[8px] border px-2.5 py-2 text-[9px] font-black',
                 inspectorOpen
@@ -2846,6 +2922,26 @@ React.FC<Props> = ({
                 ? 'Thu nhỏ'
                 : 'Toàn màn hình'}
             </button>
+
+            {onSave && (
+              <button
+                type="button"
+                disabled={saving || !dirty}
+                onClick={onSave}
+                className={[
+                  'shrink-0 rounded-[8px] px-3 py-2 text-[9px] font-black transition disabled:cursor-default',
+                  dirty
+                    ? 'bg-[#b83e57] text-white hover:bg-[#9f3048]'
+                    : 'border border-emerald-100 bg-emerald-50 text-emerald-700',
+                ].join(' ')}
+              >
+                {saving
+                  ? 'Đang lưu...'
+                  : dirty
+                    ? 'Lưu thay đổi'
+                    : 'Đã lưu ✓'}
+              </button>
+            )}
 
             <button
               type="button"
@@ -2873,8 +2969,8 @@ React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-black/7 bg-white p-2">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <div className="mt-2 flex min-w-0 items-center gap-2 rounded-[10px] border border-black/7 bg-white p-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <select
               value={
                 scene.id
@@ -2972,27 +3068,6 @@ React.FC<Props> = ({
                 : 'Đặt làm trang đầu'}
             </button>
           </div>
-
-          <label className="flex shrink-0 items-center gap-2 text-[10px] font-bold text-black/50">
-            <input
-              type="checkbox"
-              checked={
-                config.enabled
-              }
-              onChange={(
-                event
-              ) =>
-                updateConfig({
-                  enabled:
-                    event.target
-                      .checked,
-                })
-              }
-              className="h-4 w-4 accent-[#b83e57]"
-            />
-
-            Bật hiển thị động
-          </label>
         </div>
 
         <EditorToolbar
@@ -3072,7 +3147,7 @@ React.FC<Props> = ({
           }
         />
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <MultiSelectPopover
             elements={scene.elements}
             selectedIds={selectedElementIds}
@@ -3231,25 +3306,9 @@ React.FC<Props> = ({
                     .join(' '),
           }}
         >
-          {layersOpen && (
-          <LayersPanel
-            scene={
-              scene
-            }
-            selectedElementIds={
-              selectedElementIds
-            }
-            onSelectionChange={
-              setSelectedElementIds
-            }
-            onToggleVisible={
-              toggleElementVisible
-            }
-            onToggleLock={
-              toggleElementLock
-            }
-          />
-          )}
+          {layersOpen &&
+            !compactViewport &&
+            renderLayersPanel()}
 
           <div
             className={[
@@ -3341,97 +3400,74 @@ React.FC<Props> = ({
             />
           </div>
 
-          {inspectorOpen && (
-            groupedSelection
-              ? (
-                <GroupInspector
-                  elements={
-                    selectedElements
-                  }
-                  scenes={
-                    config.scenes
-                  }
-                  currentSceneId={
-                    scene.id
-                  }
-                  onActionChange={
-                    updateGroupedSelectionAction
-                  }
-                  onUngroup={
-                    ungroupSelected
-                  }
-                  onDuplicate={
-                    duplicateSelected
-                  }
-                  onDelete={
-                    deleteSelected
-                  }
-                />
-              )
-              : (
-                <InspectorPanel
-                  scene={
-                    scene
-                  }
-                  elements={
-                    selectedElements
-                  }
-                  device={
-                    device
-                  }
-                  scenes={
-                    config.scenes
-                  }
-                  onSceneChange={
-                    updateScenePatch
-                  }
-                  onElementChange={
-                    updateElement
-                  }
-                  onFrameChange={
-                    updateElementFrame
-                  }
-                  onNhân bản={
-                    duplicateSelected
-                  }
-                  onDelete={
-                    deleteSelected
-                  }
-                  onLayerUp={() =>
-                    moveLayer(
-                      'forward'
-                    )
-                  }
-                  onLayerDown={() =>
-                    moveLayer(
-                      'backward'
-                    )
-                  }
-                  onToggleLock={
-                    toggleSelectedLock
-                  }
-                  onOpenAssetLibrary={(
-                    target
-                  ) =>
-                    setAssetPickerTarget(
-                      target.kind ===
-                        'background'
-                        ? {
-                            kind:
-                              'background',
-                          }
-                        : {
-                            kind:
-                              'element',
-                            elementId:
-                              target.elementId,
-                          }
-                    )
-                  }
-                />
-              )
-          )}
+          {inspectorOpen &&
+            !compactViewport &&
+            renderInspectorPanel()}
         </div>
+
+        {compactViewport && layersOpen && (
+          <>
+            <button
+              type="button"
+              aria-label="Đóng bảng lớp"
+              onClick={() => setLayersOpen(false)}
+              className="fixed inset-0 z-[118] bg-black/20 backdrop-blur-[1px]"
+            />
+
+            <div className="fixed bottom-3 left-3 top-3 z-[119] flex w-[min(330px,calc(100vw-24px))] min-w-0 flex-col overflow-hidden rounded-[16px] border border-black/10 bg-white p-2 shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
+              <div className="mb-2 flex items-center justify-between gap-3 px-2 py-1">
+                <div>
+                  <p className="text-xs font-black">Lớp</p>
+                  <p className="mt-0.5 text-[9px] text-black/30">
+                    Chọn, ẩn và khóa đối tượng
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLayersOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-black/8 text-sm font-black text-black/45"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {renderLayersPanel()}
+              </div>
+            </div>
+          </>
+        )}
+
+        {compactViewport && inspectorOpen && (
+          <>
+            <button
+              type="button"
+              aria-label="Đóng bảng thuộc tính"
+              onClick={() => setInspectorOpen(false)}
+              className="fixed inset-0 z-[118] bg-black/20 backdrop-blur-[1px]"
+            />
+
+            <div className="fixed bottom-3 right-3 top-3 z-[119] flex w-[min(360px,calc(100vw-24px))] min-w-0 flex-col overflow-hidden rounded-[16px] border border-black/10 bg-white p-2 shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
+              <div className="mb-2 flex items-center justify-between gap-3 px-2 py-1">
+                <div>
+                  <p className="text-xs font-black">Thuộc tính</p>
+                  <p className="mt-0.5 text-[9px] text-black/30">
+                    Chỉnh đối tượng hoặc trang đang chọn
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInspectorOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-black/8 text-sm font-black text-black/45"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {renderInspectorPanel()}
+              </div>
+            </div>
+          </>
+        )}
 
         {!fullscreen && (
         <div className="mt-2 rounded-[9px] border border-[#cf5068]/10 bg-[#fff9fa] px-3 py-2 text-[9px] leading-4 text-black/35">

@@ -7,7 +7,6 @@ import { CartPage } from './components/CartPage';
 import { TrackOrderPage } from './components/TrackOrderPage';
 import { DynamicVisualTemplatePage } from './components/DynamicVisualTemplatePage';
 import { DynamicVisualCheckoutPage } from './components/DynamicVisualCheckoutPage';
-import { DynamicTemplateCatalogPortal } from './components/DynamicTemplateCatalogPortal';
 import { AdminOrdersPage } from './components/admin/AdminOrdersPage';
 import { AdminOrderDetailPage } from './components/admin/AdminOrderDetailPage';
 import { BRAND } from './config/brand';
@@ -124,20 +123,17 @@ export default function App() {
     const template = getTemplateModule(DEFAULT_TEMPLATE_ID);
 
     return (
-      <>
-        <HomePage
-          onOpenLoveTemplate={() =>
-            navigate(template?.paths.product || '/')
-          }
-          onTrackOrder={() => navigate('/track-order')}
-        />
-
-        <DynamicTemplateCatalogPortal
-          onOpenTemplate={(templateId) =>
-            navigate(`/products/${templateId}`)
-          }
-        />
-      </>
+      <HomePage
+        onOpenLoveTemplate={() =>
+          navigate(template?.paths.product || '/')
+        }
+        onOpenTemplate={(templateId) =>
+          navigate(`/products/${templateId}`)
+        }
+        onTrackOrder={() =>
+          navigate('/track-order')
+        }
+      />
     );
   }
 

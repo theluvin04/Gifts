@@ -424,23 +424,17 @@ React.FC<Props> = ({
 
                       <span className={[
                         'shrink-0 rounded-full px-2 py-1 text-[8px] font-black',
-                        item.visible &&
                         item.status === 'available'
                           ? 'bg-emerald-50 text-emerald-700'
-                          : item.visible
+                          : item.status === 'coming_soon'
                             ? 'bg-amber-50 text-amber-700'
                             : 'bg-black/[0.04] text-black/35',
                       ].join(' ')}>
-                        {item.visible &&
-                        item.status === 'available'
+                        {item.status === 'available'
                           ? 'Đang bán'
-                          : item.visible &&
-                              item.status === 'coming_soon'
+                          : item.status === 'coming_soon'
                             ? 'Sắp ra mắt'
-                            : item.visible &&
-                                item.status === 'paused'
-                              ? 'Tạm dừng'
-                              : 'Đang ẩn'}
+                            : 'Tạm dừng'}
                       </span>
                     </div>
 
@@ -502,7 +496,7 @@ React.FC<Props> = ({
 
   return (
     <div className="space-y-4">
-      <section className="rounded-[18px] border border-black/8 bg-white p-4 sm:p-5">
+      <section className="rounded-[16px] border border-black/8 bg-white p-3.5 sm:p-4">
         <button
           type="button"
           disabled={saving || catalogBusy}
@@ -512,7 +506,7 @@ React.FC<Props> = ({
           ← Tất cả template
         </button>
 
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end">
           <div className="min-w-0 flex-1">
             <div className="mb-2 flex items-center justify-between gap-3">
               <label className="text-[10px] font-bold uppercase tracking-[0.1em] text-black/35">
@@ -538,7 +532,7 @@ React.FC<Props> = ({
                   event.target.value
                 )
               }
-              className="w-full rounded-[11px] border border-black/10 bg-[#faf9f8] px-3.5 py-3 text-sm font-bold outline-none focus:border-[#cf5068] disabled:opacity-50 xl:max-w-[520px]"
+              className="w-full rounded-[11px] border border-black/10 bg-[#faf9f8] px-3.5 py-2.5 text-sm font-bold outline-none transition focus:border-[#cf5068] focus:ring-2 focus:ring-[#cf5068]/10 disabled:opacity-50 xl:max-w-[520px]"
             >
               {sortedTemplates.map(
                 (item) => (
@@ -574,9 +568,11 @@ React.FC<Props> = ({
               )}
               <span>•</span>
               <span>
-                {template.visible
-                  ? 'Đang hiển thị'
-                  : 'Đang ẩn'}
+                {template.status === 'available'
+                  ? 'Đang bán'
+                  : template.status === 'coming_soon'
+                    ? 'Sắp ra mắt'
+                    : 'Tạm dừng'}
               </span>
             </div>
           </div>
@@ -591,7 +587,7 @@ React.FC<Props> = ({
                   'noopener,noreferrer'
                 )
               }
-              className="rounded-[10px] border border-[#cf5068]/20 bg-[#fff7f9] px-3.5 py-2.5 text-[10px] font-black text-[#a73551]"
+              className="order-2 rounded-[10px] border border-[#cf5068]/20 bg-[#fff7f9] px-3.5 py-2.5 text-[10px] font-black text-[#a73551] transition hover:bg-[#f9e9ee] xl:order-none"
             >
               Xem mẫu ↗
             </button>
@@ -602,7 +598,7 @@ React.FC<Props> = ({
               onClick={() =>
                 openCreate('blank')
               }
-              className="rounded-[10px] border border-black/10 bg-white px-3.5 py-2.5 text-[10px] font-bold text-black/55 disabled:opacity-40"
+              className="order-3 rounded-[10px] border border-black/10 bg-white px-3.5 py-2.5 text-[10px] font-bold text-black/55 transition hover:bg-black/[0.03] disabled:opacity-40 xl:order-none"
             >
               + Template mới
             </button>
@@ -615,7 +611,7 @@ React.FC<Props> = ({
                   'duplicate'
                 )
               }
-              className="rounded-[10px] border border-black/10 bg-white px-3.5 py-2.5 text-[10px] font-bold text-black/55 disabled:opacity-40"
+              className="order-4 rounded-[10px] border border-black/10 bg-white px-3.5 py-2.5 text-[10px] font-bold text-black/55 transition hover:bg-black/[0.03] disabled:opacity-40 xl:order-none"
             >
               Nhân bản
             </button>
@@ -628,7 +624,7 @@ React.FC<Props> = ({
                 onClick={() =>
                   void handleDelete()
                 }
-                className="rounded-[10px] border border-red-100 bg-white px-3 py-2.5 text-[10px] font-bold text-red-500 disabled:opacity-40"
+                className="order-5 rounded-[10px] border border-red-100 bg-white px-3 py-2.5 text-[10px] font-bold text-red-500 transition hover:bg-red-50 disabled:opacity-40 xl:order-none"
               >
                 Xóa
               </button>
@@ -642,7 +638,7 @@ React.FC<Props> = ({
               }
               onClick={onSave}
               className={[
-                'min-w-[105px] rounded-[10px] px-4 py-2.5 text-[10px] font-black transition disabled:cursor-default',
+                'order-1 min-h-10 min-w-[118px] rounded-[10px] px-4 py-2.5 text-[10px] font-black transition disabled:cursor-default xl:order-none',
                 dirty
                   ? 'bg-[#191919] text-white hover:bg-[#b83e57]'
                   : saved
@@ -668,8 +664,8 @@ React.FC<Props> = ({
         )}
       </section>
 
-      <section className="rounded-[18px] border border-black/8 bg-white p-2">
-        <div className="grid gap-1 sm:grid-cols-4">
+      <section className="rounded-[16px] border border-black/8 bg-white p-1.5 sm:p-2">
+        <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-4 sm:overflow-visible">
           {SECTIONS.map(
             (item) => (
               <button
@@ -679,7 +675,7 @@ React.FC<Props> = ({
                   setSection(item.key)
                 }
                 className={[
-                  'rounded-[12px] px-3 py-3 text-left transition',
+                  'min-w-[116px] shrink-0 rounded-[11px] px-3 py-2.5 text-left transition sm:min-w-0 sm:py-3',
                   section === item.key
                     ? 'bg-[#f7ecef] text-[#a93650]'
                     : 'text-black/45 hover:bg-black/[0.025] hover:text-black/70',
@@ -696,6 +692,37 @@ React.FC<Props> = ({
           )}
         </div>
       </section>
+
+      {dirty && (
+        <div className="fixed inset-x-3 bottom-3 z-[90] mx-auto flex max-w-[560px] items-center gap-2 rounded-[16px] border border-amber-200/80 bg-white/96 p-2.5 shadow-[0_18px_55px_rgba(45,25,25,0.16)] backdrop-blur-xl lg:left-auto lg:right-5 lg:mx-0 lg:w-auto lg:max-w-none">
+          <div className="hidden min-w-0 flex-1 px-2 sm:block lg:max-w-[220px]">
+            <p className="text-[10px] font-black text-amber-700">
+              Có thay đổi chưa lưu
+            </p>
+            <p className="mt-0.5 truncate text-[9px] text-black/35">
+              {template.name}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled={saving}
+            onClick={onDiscardChanges}
+            className="min-h-10 rounded-[10px] border border-black/10 bg-white px-3 text-[10px] font-bold text-black/45 transition hover:bg-black/[0.03] disabled:opacity-40"
+          >
+            Bỏ thay đổi
+          </button>
+
+          <button
+            type="button"
+            disabled={saving}
+            onClick={onSave}
+            className="min-h-10 rounded-[10px] bg-[#191919] px-4 text-[10px] font-black text-white transition hover:bg-[#b83e57] disabled:opacity-50"
+          >
+            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+          </button>
+        </div>
+      )}
 
       {section === 'selling' && (
         <SellingEditor
@@ -719,6 +746,9 @@ React.FC<Props> = ({
               visualEditor,
             })
           }
+          dirty={dirty}
+          saving={saving}
+          onSave={onSave}
         />
       )}
 
@@ -800,7 +830,7 @@ React.FC<{
         Thông tin bán hàng
       </h2>
       <p className="mt-1 text-[11px] leading-5 text-black/38">
-        Chỉ giữ các trường cần dùng thường xuyên khi quản lý template.
+        Trạng thái quyết định trực tiếp việc template có được mở bán trên storefront hay không.
       </p>
     </div>
 
@@ -830,24 +860,15 @@ React.FC<{
               event.target.value as
                 TemplateConfig['status'];
 
-            const visualEditor =
-              template.visualEditor ||
-              DEFAULT_LOVE_VISUAL_EDITOR_CONFIG;
-
             onChange({
               ...template,
               status,
+              // `visible` chỉ còn là field tương thích dữ liệu cũ.
+              // Trạng thái là nguồn quyết định duy nhất:
+              // available = storefront + mua được,
+              // coming_soon / paused = không mở bán.
               visible:
-                status === 'available'
-                  ? true
-                  : template.visible,
-              visualEditor:
-                status === 'available'
-                  ? {
-                      ...visualEditor,
-                      enabled: true,
-                    }
-                  : template.visualEditor,
+                status === 'available',
             });
           }}
           className={inputClass}
@@ -937,17 +958,6 @@ React.FC<{
           }
         />
 
-        <ToggleRow
-          label="Hiển thị trên storefront"
-          description="Tắt để ẩn template khỏi khu vực bán hàng."
-          checked={template.visible}
-          onChange={(checked) =>
-            onChange({
-              ...template,
-              visible: checked,
-            })
-          }
-        />
       </div>
     </div>
   </section>

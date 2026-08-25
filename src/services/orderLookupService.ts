@@ -1,12 +1,8 @@
 import {
-  collection,
   deleteDoc,
   doc,
-  getDocs,
-  limit,
-  query,
+  getDoc,
   setDoc,
-  where,
 } from 'firebase/firestore';
 
 import {
@@ -147,7 +143,7 @@ export const hashPhoneForLookup =
       normalizePhone(phone);
 
     if (
-      !/^\d{9,12}$/.test(
+      !/^0?\d{9,11}$/.test(
         normalized
       )
     ) {
@@ -170,16 +166,16 @@ const buildLookupId = async (
       orderCode
     );
 
+  if (!normalizedCode) {
+    throw new Error(
+      'Mã đơn không hợp lệ. Ví dụ: Dearly8888.'
+    );
+  }
+
   const phoneHash =
     await hashPhoneForLookup(
       phone
     );
-
-  if (!normalizedCode) {
-    throw new Error(
-      'Mã đơn không hợp lệ.'
-    );
-  }
 
   return {
     id:
@@ -436,92 +432,68 @@ export const deletePublicOrderLookupFromGift =
     );
   };
 
-const mapSnapshot = (
-  snapshot:
-    Awaited<
-      ReturnType<
-        typeof getDocs
-      >
-    >
-) => {
-  return snapshot.docs
-    .map(
-      (item) =>
-        item.data() as
-          PublicOrderLookupRecord
-    )
-    .sort(
-      (left, right) =>
-        right.createdAtMs -
-        left.createdAtMs
-    );
-};
-
+/**
+ * Public tracking deliberately accepts BOTH fields.
+ * The lookup id is deterministic from order code + phone hash,
+ * so the client performs one exact document read instead of
+ * listing/querying the public collection.
+ */
 export const searchPublicOrders =
   async (
-    rawValue: string
+    rawOrderCode: string,
+    rawPhone: string
   ): Promise<
     PublicOrderLookupRecord[]
   > => {
-    const value =
-      rawValue.trim();
-
-    if (!value) {
+    if (
+      !rawOrderCode.trim() ||
+      !rawPhone.trim()
+    ) {
       throw new Error(
-        'Nhập số điện thoại hoặc mã đơn.'
+        'Nhập cả mã đơn và số điện thoại.'
       );
     }
 
-    const orderCode =
-      normalizeOrderCode(
-        value
-      );
-
-    if (orderCode) {
-      const snapshot =
-        await getDocs(
-          query(
-            collection(
-              db,
-              LOOKUP_COLLECTION
-            ),
-            where(
-              'orderCodeLower',
-              '==',
-              orderCode
-                .toLowerCase()
-            ),
-            limit(10)
-          )
-        );
-
-      return mapSnapshot(
-        snapshot
-      );
-    }
-
-    const phoneHash =
-      await hashPhoneForLookup(
-        value
+    const {
+      id,
+      normalizedCode,
+      phoneHash,
+    } =
+      await buildLookupId(
+        rawOrderCode,
+        rawPhone
       );
 
     const snapshot =
-      await getDocs(
-        query(
-          collection(
-            db,
-            LOOKUP_COLLECTION
-          ),
-          where(
-            'phoneHash',
-            '==',
-            phoneHash
-          ),
-          limit(20)
+      await getDoc(
+        doc(
+          db,
+          LOOKUP_COLLECTION,
+          id
         )
       );
 
-    return mapSnapshot(
-      snapshot
-    );
+    if (
+      !snapshot.exists()
+    ) {
+      return [];
+    }
+
+    const record =
+      snapshot.data() as
+        PublicOrderLookupRecord;
+
+    // Defensive check in case an old/malformed record occupies the id.
+    if (
+      record.orderCode !==
+        normalizedCode ||
+      record.phoneHash !==
+        phoneHash
+    ) {
+      return [];
+    }
+
+    return [
+      record,
+    ];
   };

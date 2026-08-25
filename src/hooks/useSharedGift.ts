@@ -20,11 +20,21 @@ import type {
   TemplateVisualEditorConfig,
 } from '../templates/visualEditor';
 
+import {
+  getGiftSchemaMetadata,
+  type GiftConfigType,
+} from '../services/giftSchema';
+
 export interface SharedGiftState {
   giftId: string;
   templateId: string;
   config: unknown;
   dynamicVisual: boolean;
+  configType:
+    GiftConfigType |
+    'legacy';
+  schemaVersion: number;
+  templateRevision: string;
 }
 
 const isVisualEditorConfig = (
@@ -126,11 +136,47 @@ export const useSharedGift = (
               templateId
             );
 
+          const schema =
+            getGiftSchemaMetadata(
+              gift
+            );
+
+          if (
+            schema.kind ===
+              'invalid'
+          ) {
+            setGiftError(
+              'Phiên bản dữ liệu món quà không được hỗ trợ.'
+            );
+            return;
+          }
+
           let dynamicVisual =
             false;
 
-          if (template) {
+          if (
+            schema.kind ===
+              'visual-v1'
+          ) {
             if (
+              !isVisualEditorConfig(
+                gift.config
+              )
+            ) {
+              setGiftError(
+                'Dữ liệu template động không hợp lệ.'
+              );
+              return;
+            }
+
+            dynamicVisual =
+              true;
+          } else if (
+            schema.kind ===
+              'love-v1'
+          ) {
+            if (
+              !template ||
               !template.validateConfig(
                 gift.config
               )
@@ -141,19 +187,34 @@ export const useSharedGift = (
               return;
             }
           } else {
-            if (
-              !isVisualEditorConfig(
-                gift.config
-              )
-            ) {
-              setGiftError(
-                'Template của món quà này chưa được hỗ trợ.'
-              );
-              return;
-            }
+            // Compatibility for gifts sold before configType/schemaVersion
+            // were added. New gifts never use this guessing path.
+            if (template) {
+              if (
+                !template.validateConfig(
+                  gift.config
+                )
+              ) {
+                setGiftError(
+                  'Dữ liệu món quà không hợp lệ.'
+                );
+                return;
+              }
+            } else {
+              if (
+                !isVisualEditorConfig(
+                  gift.config
+                )
+              ) {
+                setGiftError(
+                  'Template của món quà này chưa được hỗ trợ.'
+                );
+                return;
+              }
 
-            dynamicVisual =
-              true;
+              dynamicVisual =
+                true;
+            }
           }
 
           setSharedGift({
@@ -163,6 +224,15 @@ export const useSharedGift = (
             config:
               gift.config,
             dynamicVisual,
+            configType:
+              schema.kind ===
+                'legacy'
+                ? 'legacy'
+                : schema.kind,
+            schemaVersion:
+              schema.schemaVersion,
+            templateRevision:
+              schema.templateRevision,
           });
 
           const cleanPath =

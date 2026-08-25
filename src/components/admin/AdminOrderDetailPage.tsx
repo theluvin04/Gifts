@@ -132,11 +132,18 @@ React.FC<Props> = ({
     copied,
     setCopied,
   ] =
-    useState(false);
+    useState<
+      | ''
+      | 'gift'
+      | 'reference'
+      | 'phone'
+    >('');
 
   const loadPage =
     async () => {
-      setIsLoading(true);
+      setIsLoading(
+        true
+      );
       setError('');
 
       try {
@@ -151,7 +158,9 @@ React.FC<Props> = ({
           !nextSession
             .isAdmin
         ) {
-          setOrder(null);
+          setOrder(
+            null
+          );
           return;
         }
 
@@ -177,16 +186,30 @@ React.FC<Props> = ({
 
   const refreshOrder =
     async () => {
-      setOrder(
-        await getAdminOrderById(
-          giftId
-        )
-      );
+      setError('');
+
+      try {
+        setOrder(
+          await getAdminOrderById(
+            giftId
+          )
+        );
+      } catch (
+        refreshError: any
+      ) {
+        setError(
+          getErrorMessage(
+            refreshError
+          )
+        );
+      }
     };
 
   useEffect(() => {
     void loadPage();
-  }, [giftId]);
+  }, [
+    giftId,
+  ]);
 
   const runAction =
     async (
@@ -196,7 +219,9 @@ React.FC<Props> = ({
         () =>
           Promise<void>
     ) => {
-      setAction(name);
+      setAction(
+        name
+      );
       setError('');
 
       try {
@@ -215,31 +240,33 @@ React.FC<Props> = ({
       }
     };
 
-  const copyGiftLink =
-    async () => {
-      if (!order) {
-        return;
-      }
-
+  const copyText =
+    async (
+      key:
+        | 'gift'
+        | 'reference'
+        | 'phone',
+      value: string
+    ) => {
       try {
-        await navigator
-          .clipboard
-          .writeText(
-            `${window.location.origin}/gift/${order.id}`
-          );
+        await navigator.clipboard.writeText(
+          value
+        );
 
-        setCopied(true);
+        setCopied(
+          key
+        );
 
         window.setTimeout(
           () =>
             setCopied(
-              false
+              ''
             ),
           1600
         );
       } catch {
         setError(
-          'Không thể tự copy link.'
+          'Không thể tự copy.'
         );
       }
     };
@@ -250,9 +277,19 @@ React.FC<Props> = ({
         return;
       }
 
+      const warning =
+        isPaidOrder(
+          order
+        )
+          ? '\n\nĐơn này ĐÃ THANH TOÁN.'
+          : order.status ===
+              'published'
+            ? '\n\nGift này đang được publish.'
+            : '';
+
       if (
         !window.confirm(
-          `Xóa vĩnh viễn ${getOrderCode(order)}?`
+          `Xóa vĩnh viễn ${getOrderCode(order)}?${warning}\n\nHành động này không thể hoàn tác.`
         )
       ) {
         return;
@@ -357,7 +394,7 @@ React.FC<Props> = ({
             onClick={
               onBack
             }
-            className="mt-5 rounded-[10px] bg-[#191919] px-4 py-3 text-xs font-bold text-white"
+            className="mt-5 min-h-11 rounded-[10px] bg-[#191919] px-4 text-xs font-bold text-white"
           >
             Về danh sách đơn
           </button>
@@ -367,60 +404,136 @@ React.FC<Props> = ({
   }
 
   const paid =
-    isPaidOrder(order);
+    isPaidOrder(
+      order
+    );
 
   const published =
     order.status ===
-    'published';
+    'published' ||
+    order.isPublished ===
+      true;
+
+  const waiting =
+    order.paymentStatus ===
+    'waiting_bank_transfer';
 
   const code =
-    getOrderCode(order);
+    getOrderCode(
+      order
+    );
 
   const config =
-    order.config;
+    order.config as any;
 
   const giftUrl =
-    `/gift/${order.id}`;
+    `${window.location.origin}/gift/${order.id}`;
+
+  const paymentReference =
+    order.paymentReference ||
+    code;
+
+  const needsAction =
+    waiting &&
+    !paid;
 
   return (
-    <div className="min-h-[100svh] bg-[#f6f5f3] text-[#191919]">
+    <div className="min-h-[100svh] bg-[#f6f5f3] pb-24 text-[#191919] sm:pb-8">
       <header className="sticky top-0 z-40 border-b border-black/8 bg-white/95 backdrop-blur-xl">
-        <div className="mx-auto flex min-h-[62px] max-w-[1200px] items-center justify-between gap-3 px-3 sm:px-6">
+        <div className="mx-auto grid min-h-[64px] max-w-[1240px] grid-cols-[44px_minmax(0,1fr)_44px] items-center px-3 sm:grid-cols-[1fr_auto_1fr] sm:px-6">
           <button
             type="button"
             onClick={
               onBack
             }
-            className="inline-flex items-center gap-2 text-xs font-bold text-black/45 hover:text-[#b83e57]"
+            className="inline-flex min-h-10 items-center gap-2 text-xs font-bold text-black/45 hover:text-[#b83e57]"
           >
             <ArrowLeft className="h-4 w-4" />
-
             <span className="hidden sm:inline">
               Danh sách đơn
             </span>
           </button>
 
-          <p className="font-mono text-sm font-black text-[#b83e57]">
-            {code}
-          </p>
+          <div className="min-w-0 text-center">
+            <p className="font-mono text-sm font-black text-[#b83e57]">
+              {code}
+            </p>
+            <p className="mt-0.5 hidden text-[9px] text-black/30 sm:block">
+              Chi tiết đơn hàng
+            </p>
+          </div>
 
           <button
             type="button"
+            disabled={
+              action !== ''
+            }
             onClick={() =>
               void refreshOrder()
             }
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-black/8 text-black/40"
+            className="ml-auto flex h-10 w-10 items-center justify-center rounded-full border border-black/8 bg-white text-black/40 transition hover:text-[#b83e57] disabled:opacity-40"
+            title="Làm mới đơn"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw className="h-4 w-4" />
           </button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1200px] px-3 py-5 sm:px-6 sm:py-7">
-        <section className="rounded-[18px] border border-black/8 bg-white p-5">
-          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
-            <div>
-              <div className="flex flex-wrap gap-2">
+      <main className="mx-auto max-w-[1240px] px-3 py-4 sm:px-6 sm:py-6">
+        {needsAction && (
+          <section className="mb-4 overflow-hidden rounded-[18px] border border-amber-200 bg-amber-50 shadow-[0_10px_30px_rgba(180,120,20,0.08)]">
+            <div className="p-4 sm:flex sm:items-center sm:justify-between sm:gap-5 sm:p-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-amber-800">
+                    Cần xử lý
+                  </p>
+                </div>
+
+                <h1 className="mt-2 text-xl font-black tracking-[-0.03em] text-amber-950">
+                  Khách đang chờ xác nhận chuyển khoản
+                </h1>
+
+                <p className="mt-1 text-xs leading-5 text-amber-900/65">
+                  Kiểm tra tiền vào tài khoản. Chỉ bấm xác nhận khi giao dịch đã khớp.
+                </p>
+              </div>
+
+              <PrimaryAction
+                label="Xác nhận CK & Publish"
+                loading={
+                  action ===
+                  'confirm'
+                }
+                disabled={
+                  action !== ''
+                }
+                prominent
+                onClick={() =>
+                  void runAction(
+                    'confirm',
+                    () =>
+                      confirmAdminBankPayment(
+                        order.id
+                      )
+                  )
+                }
+              />
+            </div>
+          </section>
+        )}
+
+        {error && (
+          <div className="mb-4 rounded-[13px] border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+            {error}
+          </div>
+        )}
+
+        <section className="rounded-[19px] border border-black/8 bg-white p-4 sm:p-5">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-start">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <StatusPill
                   label={
                     getPaymentLabel(
@@ -430,9 +543,7 @@ React.FC<Props> = ({
                   tone={
                     paid
                       ? 'green'
-                      : order
-                          .paymentStatus ===
-                        'waiting_bank_transfer'
+                      : waiting
                         ? 'amber'
                         : 'gray'
                   }
@@ -450,31 +561,64 @@ React.FC<Props> = ({
                       : 'gray'
                   }
                 />
+
+                <span className="rounded-full bg-black/[0.035] px-2.5 py-1 text-[9px] font-bold text-black/35">
+                  {order.templateId ||
+                    'love-01'}
+                </span>
               </div>
 
-              <h1 className="mt-4 text-2xl font-black tracking-[-0.04em]">
+              <h1 className="mt-4 text-2xl font-black tracking-[-0.04em] sm:text-3xl">
                 {order.customer
                   ?.fullName ||
                   'Chưa có tên khách'}
               </h1>
 
-              <p className="mt-1 text-sm text-black/45">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-black/45">
+                <span>
+                  {order.customer
+                    ?.phone ||
+                    'Chưa có SĐT'}
+                </span>
+
                 {order.customer
-                  ?.phone ||
-                  'Chưa có SĐT'}
-                {' · '}
-                {order.customer
-                  ?.email ||
-                  'Chưa có email'}
-              </p>
+                  ?.phone && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void copyText(
+                        'phone',
+                        order.customer!
+                          .phone
+                      )
+                    }
+                    className="font-bold text-[#b83e57]"
+                  >
+                    {copied ===
+                    'phone'
+                      ? 'Đã copy'
+                      : 'Copy SĐT'}
+                  </button>
+                )}
+
+                <span className="hidden sm:inline">
+                  ·
+                </span>
+
+                <span className="break-all">
+                  {order.customer
+                    ?.email ||
+                    'Chưa có email'}
+                </span>
+              </div>
             </div>
 
-            <div className="lg:text-right">
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-black/30">
+            <div className="rounded-[15px] bg-[#faf9f8] p-4 lg:text-right">
+              <p className="text-[9px] font-black uppercase tracking-[0.1em] text-black/30">
                 Tổng đơn
               </p>
 
-              <p className="mt-1 text-2xl font-black">
+              <p className="mt-1 text-2xl font-black tracking-[-0.04em]">
                 {typeof order.price ===
                 'number'
                   ? formatVnd(
@@ -483,7 +627,7 @@ React.FC<Props> = ({
                   : '—'}
               </p>
 
-              <p className="mt-1 text-[10px] text-black/35">
+              <p className="mt-1 text-[10px] leading-5 text-black/35">
                 {formatDateTime(
                   order.createdAtMs
                 )}
@@ -491,189 +635,285 @@ React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="mt-5 border-t border-black/7 pt-4">
-            <div className="flex flex-wrap gap-2">
-              {!paid &&
-              order.paymentStatus ===
-                'waiting_bank_transfer' && (
-                <PrimaryAction
-                  label="Xác nhận CK & Publish"
-                  loading={
-                    action ===
-                    'confirm'
-                  }
-                  disabled={
-                    action !== ''
-                  }
-                  onClick={() =>
-                    void runAction(
-                      'confirm',
-                      () =>
-                        confirmAdminBankPayment(
-                          order.id
-                        )
-                    )
-                  }
-                />
-              )}
+          <div className="mt-5 grid gap-2 border-t border-black/7 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+            {!paid &&
+            !waiting && (
+              <PrimaryAction
+                label="Đánh dấu đã thanh toán"
+                loading={
+                  action ===
+                  'paid'
+                }
+                disabled={
+                  action !== ''
+                }
+                onClick={() =>
+                  void runAction(
+                    'paid',
+                    () =>
+                      markAdminOrderPaid(
+                        order.id
+                      )
+                  )
+                }
+              />
+            )}
 
-              {!paid &&
-              order.paymentStatus !==
-                'waiting_bank_transfer' && (
-                <PrimaryAction
-                  label="Đánh dấu đã thanh toán"
-                  loading={
-                    action ===
-                    'paid'
-                  }
-                  disabled={
-                    action !== ''
-                  }
-                  onClick={() =>
-                    void runAction(
-                      'paid',
-                      () =>
-                        markAdminOrderPaid(
-                          order.id
-                        )
-                    )
-                  }
-                />
-              )}
+            {paid &&
+            !published && (
+              <PrimaryAction
+                label="Publish gift"
+                loading={
+                  action ===
+                  'publish'
+                }
+                disabled={
+                  action !== ''
+                }
+                onClick={() =>
+                  void runAction(
+                    'publish',
+                    () =>
+                      setAdminGiftPublished(
+                        order.id,
+                        true
+                      )
+                  )
+                }
+              />
+            )}
 
-              {paid &&
-              !published && (
-                <PrimaryAction
-                  label="Publish gift"
-                  loading={
-                    action ===
-                    'publish'
-                  }
-                  disabled={
-                    action !== ''
-                  }
-                  onClick={() =>
-                    void runAction(
-                      'publish',
-                      () =>
-                        setAdminGiftPublished(
-                          order.id,
-                          true
-                        )
-                    )
-                  }
-                />
-              )}
+            {published && (
+              <a
+                href={
+                  giftUrl
+                }
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[11px] bg-[#191919] px-4 text-xs font-black text-white"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Mở gift
+              </a>
+            )}
 
-              {published && (
-                <a
-                  href={
-                    giftUrl
-                  }
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#191919] px-4 py-2.5 text-xs font-bold text-white"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Mở gift
-                </a>
+            <button
+              type="button"
+              onClick={() =>
+                void copyText(
+                  'gift',
+                  giftUrl
+                )
+              }
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[11px] border border-black/10 bg-white px-4 text-xs font-bold text-black/55"
+            >
+              {copied ===
+              'gift' ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Copy className="h-4 w-4" />
               )}
+              {copied ===
+              'gift'
+                ? 'Đã copy link'
+                : 'Copy link gift'}
+            </button>
 
+            {published && (
               <button
                 type="button"
-                onClick={() =>
-                  void copyGiftLink()
+                disabled={
+                  action !== ''
                 }
-                className="inline-flex items-center gap-1.5 rounded-[10px] border border-black/10 bg-white px-3.5 py-2.5 text-xs font-bold text-black/50"
+                onClick={() =>
+                  void runAction(
+                    'unpublish',
+                    () =>
+                      setAdminGiftPublished(
+                        order.id,
+                        false
+                      )
+                  )
+                }
+                className="min-h-11 rounded-[11px] border border-black/10 bg-white px-4 text-xs font-bold text-black/45 disabled:opacity-40"
               >
-                {copied ? (
-                  <Check className="h-3.5 w-3.5" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5" />
-                )}
-
-                {copied
-                  ? 'Đã copy'
-                  : 'Copy link'}
+                {action ===
+                'unpublish'
+                  ? 'Đang unpublish...'
+                  : 'Unpublish'}
               </button>
-
-              {published && (
-                <button
-                  type="button"
-                  disabled={
-                    action !== ''
-                  }
-                  onClick={() =>
-                    void runAction(
-                      'unpublish',
-                      () =>
-                        setAdminGiftPublished(
-                          order.id,
-                          false
-                        )
-                    )
-                  }
-                  className="rounded-[10px] border border-black/10 px-3.5 py-2.5 text-xs font-bold text-black/40"
-                >
-                  Unpublish
-                </button>
-              )}
-            </div>
+            )}
           </div>
         </section>
 
-        {error && (
-          <div className="mt-4 rounded-[12px] bg-red-50 px-4 py-3 text-xs font-semibold text-red-600">
-            {error}
-          </div>
-        )}
+        <div className="mt-4 grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
+          <aside className="space-y-4">
+            <section className="rounded-[18px] border border-black/8 bg-white p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-black">
+                  Thanh toán & đối soát
+                </h2>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
-          <section className="rounded-[18px] border border-black/8 bg-white p-5">
-            <h2 className="text-sm font-black">
-              Thông tin đơn
-            </h2>
+                <StatusPill
+                  label={
+                    paid
+                      ? 'Đã trả'
+                      : waiting
+                        ? 'Đang chờ'
+                        : 'Chưa trả'
+                  }
+                  tone={
+                    paid
+                      ? 'green'
+                      : waiting
+                        ? 'amber'
+                        : 'gray'
+                  }
+                />
+              </div>
 
-            <div className="mt-4">
-              <DetailRow
-                label="Mã đơn"
-                value={
-                  code
+              <div className="mt-3">
+                <CopyDetailRow
+                  label="Nội dung CK"
+                  value={
+                    paymentReference
+                  }
+                  copied={
+                    copied ===
+                    'reference'
+                  }
+                  onCopy={() =>
+                    void copyText(
+                      'reference',
+                      paymentReference
+                    )
+                  }
+                />
+
+                <DetailRow
+                  label="Đã thanh toán lúc"
+                  value={
+                    order.paidAtMs
+                      ? formatDateTime(
+                          order.paidAtMs
+                        )
+                      : 'Chưa xác nhận'
+                  }
+                />
+
+                <DetailRow
+                  label="Phương thức"
+                  value={
+                    order.paymentMethod ===
+                    'bank_transfer'
+                      ? 'Chuyển khoản ngân hàng'
+                      : order.paymentMethod ||
+                        '—'
+                  }
+                />
+              </div>
+            </section>
+
+            <section className="rounded-[18px] border border-black/8 bg-white p-4 sm:p-5">
+              <h2 className="text-sm font-black">
+                Thông tin gift
+              </h2>
+
+              <div className="mt-3">
+                <DetailRow
+                  label="Mã đơn"
+                  value={
+                    code
+                  }
+                />
+
+                <DetailRow
+                  label="Template"
+                  value={
+                    order.templateId ||
+                    'love-01'
+                  }
+                />
+
+                <DetailRow
+                  label="Người gửi"
+                  value={
+                    order.senderName ||
+                    '—'
+                  }
+                />
+
+                <DetailRow
+                  label="Người nhận"
+                  value={
+                    order.receiverName ||
+                    '—'
+                  }
+                />
+
+                <DetailRow
+                  label="Gift ID"
+                  value={
+                    order.id
+                  }
+                  mono
+                />
+              </div>
+            </section>
+
+            <section className="rounded-[18px] border border-red-100 bg-white p-4">
+              <p className="text-xs font-black text-red-600">
+                Khu vực nguy hiểm
+              </p>
+
+              <p className="mt-1 text-[10px] leading-5 text-black/35">
+                Xóa đơn sẽ xóa dữ liệu gift và không thể hoàn tác.
+              </p>
+
+              <button
+                type="button"
+                disabled={
+                  action !== ''
+                }
+                onClick={() =>
+                  void handleDelete()
+                }
+                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-[10px] border border-red-100 bg-red-50 px-3 text-[11px] font-black text-red-600 disabled:opacity-40"
+              >
+                {action ===
+                'delete' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Xóa vĩnh viễn đơn
+              </button>
+            </section>
+          </aside>
+
+          <section className="min-w-0 space-y-3">
+            <ContentDetails
+              title="Nội dung khách đã đặt"
+              subtitle={
+                Array.isArray(
+                  config?.scenes
+                )
+                  ? `${config.scenes.length} scene`
+                  : 'Love template'
+              }
+              open
+            >
+              <OrderContentSummary
+                config={
+                  config
                 }
               />
+            </ContentDetails>
 
-              <DetailRow
-                label="Template"
-                value={
-                  order.templateId ||
-                  'love-01'
-                }
-              />
-
-              <DetailRow
-                label="Người gửi"
-                value={
-                  order.senderName ||
-                  '—'
-                }
-              />
-
-              <DetailRow
-                label="Người nhận"
-                value={
-                  order.receiverName ||
-                  '—'
-                }
-              />
-
-              <DetailRow
-                label="Nội dung CK"
-                value={
-                  order.paymentReference ||
-                  code
-                }
-              />
-
+            <ContentDetails
+              title="Dữ liệu kỹ thuật"
+              subtitle="Chỉ mở khi cần kiểm tra lỗi"
+            >
               <DetailRow
                 label="Gift ID"
                 value={
@@ -683,277 +923,305 @@ React.FC<Props> = ({
               />
 
               <DetailRow
-                label="Đã thanh toán lúc"
+                label="Template ID"
+                value={
+                  order.templateId ||
+                  'love-01'
+                }
+                mono
+              />
+
+              <DetailRow
+                label="Payment status"
+                value={
+                  order.paymentStatus ||
+                  'unpaid'
+                }
+                mono
+              />
+
+              <DetailRow
+                label="Gift status"
+                value={
+                  order.status ||
+                  'draft'
+                }
+                mono
+              />
+
+              <DetailRow
+                label="Tạo lúc"
                 value={
                   formatDateTime(
-                    order.paidAtMs
+                    order.createdAtMs
                   )
                 }
               />
-            </div>
 
-            <button
-              type="button"
-              disabled={
-                action !== ''
-              }
-              onClick={() =>
-                void handleDelete()
-              }
-              className="mt-6 inline-flex items-center gap-1.5 text-[10px] font-bold text-red-500"
-            >
-              {action ===
-              'delete' ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" />
-              )}
-
-              Xóa đơn
-            </button>
-          </section>
-
-          <section className="space-y-3">
-            {Array.isArray(config?.scenes) && config.scenes.length > 0 ? (
-              <>
-                <ContentDetails
-                  title={`Visual Editor Scenes (${config.scenes.length})`}
-                  open
-                >
-                  <div className="space-y-4">
-                    {config.scenes.map((scene: any, sIdx: number) => {
-                      const elements = Array.isArray(scene.elements) ? scene.elements : [];
-                      return (
-                        <div
-                          key={scene.id || sIdx}
-                          className="rounded-[12px] border border-black/8 bg-[#faf9f8] p-3.5"
-                        >
-                          <div className="flex items-center justify-between border-b border-black/6 pb-2">
-                            <div>
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-black/30">
-                                Scene {sIdx + 1}
-                              </span>
-                              <h3 className="text-xs font-bold text-black/80">
-                                {scene.name || `Scene ${sIdx + 1}`}
-                              </h3>
-                            </div>
-                            <span className="rounded-md bg-white px-2 py-0.5 text-[10px] font-semibold text-black/50 border border-black/6">
-                              {elements.length} elements
-                            </span>
-                          </div>
-
-                          <div className="mt-3 space-y-2">
-                            {elements.map((el: any, eIdx: number) => (
-                              <div
-                                key={el.id || eIdx}
-                                className="flex items-start gap-2.5 rounded-[8px] bg-white p-2.5 text-xs border border-black/4"
-                              >
-                                <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-rose-600">
-                                  {el.type}
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                  {el.type === 'text' && (
-                                    <p className="line-clamp-2 text-xs text-black/70">
-                                      {el.content || '—'}
-                                    </p>
-                                  )}
-                                  {el.type === 'image' && (
-                                    <div className="flex items-center gap-2">
-                                      {el.src ? (
-                                        <img
-                                          src={el.src}
-                                          alt=""
-                                          className="h-10 w-10 rounded object-cover border border-black/8"
-                                        />
-                                      ) : (
-                                        <span className="text-[10px] text-black/30">Không có ảnh</span>
-                                      )}
-                                      <span className="truncate text-[10px] text-black/40">
-                                        {el.alt || 'Image element'}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {el.type === 'button' && (
-                                    <div className="flex items-center gap-2 text-xs">
-                                      <span className="font-semibold text-black/80">
-                                        {el.label || 'Nút bấm'}
-                                      </span>
-                                      {el.action && (
-                                        <span className="text-[10px] text-black/40">
-                                          → {el.action.type}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                  {el.type !== 'text' && el.type !== 'image' && el.type !== 'button' && (
-                                    <p className="text-[11px] text-black/60">
-                                      {JSON.stringify(el)}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </ContentDetails>
-
-                {config.audio?.url && (
-                  <ContentDetails title="Nhạc nền" open>
-                    <DetailRow label="Audio URL" value={config.audio.url} />
-                    {config.audio.title && (
-                      <DetailRow label="Tên bài hát" value={config.audio.title} />
-                    )}
-                  </ContentDetails>
-                )}
-              </>
-            ) : (
-              <>
-                <ContentDetails
-                  title="Nội dung cơ bản"
-                  open
-                >
-                  <DetailRow
-                    label="Câu hỏi"
-                    value={
-                      config?.proposal?.question || '—'
-                    }
-                  />
-
-                  <DetailRow
-                    label="Nút YES"
-                    value={
-                      config?.proposal?.yesBtnText || '—'
-                    }
-                  />
-
-                  <DetailRow
-                    label="Biệt danh"
-                    value={
-                      config?.couple?.nickname ||
-                      '—'
-                    }
-                  />
-                </ContentDetails>
-
-                {config?.gifts?.gift1?.photos && (
-                  <ContentDetails
-                    title={`Ảnh kỷ niệm (${config.gifts.gift1.photos.length || 0})`}
-                  >
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {(config.gifts.gift1.photos || []).map(
-                        (
-                          photo: any,
-                          index: number
-                        ) => (
-                          <div
-                            key={
-                              photo?.id ||
-                              index
-                            }
-                            className="overflow-hidden rounded-[10px] bg-[#f4f1f1]"
-                          >
-                            {photo?.url ? (
-                              <img
-                                src={
-                                  photo.url
-                                }
-                                alt=""
-                                className="aspect-square w-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex aspect-square items-center justify-center text-[10px] text-black/25">
-                                Trống
-                              </div>
-                            )}
-
-                            <p className="px-2 py-1.5 text-[9px] font-bold text-black/35">
-                              Ảnh{' '}
-                              {index +
-                                1}
-                            </p>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </ContentDetails>
-                )}
-
-                {config?.gifts?.gift2?.playlist && (
-                  <ContentDetails
-                    title={`Playlist (${config.gifts.gift2.playlist.length || 0})`}
-                  >
-                    <div className="divide-y divide-black/6">
-                      {(config.gifts.gift2.playlist || []).map(
-                        (
-                          track: any,
-                          index: number
-                        ) => (
-                          <div
-                            key={
-                              track?.id ||
-                              index
-                            }
-                            className="py-3 first:pt-0 last:pb-0"
-                          >
-                            <p className="text-xs font-bold">
-                              {track?.title ||
-                                `Bài ${index + 1}`}
-                            </p>
-
-                            <p className="mt-1 text-[10px] text-black/35">
-                              {track?.artist ||
-                                '—'}
-                            </p>
-
-                            {track?.youtubeUrl && (
-                              <p className="mt-1 truncate text-[9px] text-black/25">
-                                {track.youtubeUrl}
-                              </p>
-                            )}
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </ContentDetails>
-                )}
-
-                {config?.gifts?.gift3?.letter && (
-                  <ContentDetails
-                    title="Bức thư"
-                  >
-                    <p className="text-xs font-bold text-[#b83e57]">
-                      {
-                        config.gifts.gift3.letter.salutation || '—'
-                      }
-                    </p>
-
-                    <div className="mt-3 space-y-2">
-                      {(config.gifts.gift3.letter.paragraphs || []).map(
-                        (
-                          paragraph: string,
-                          index: number
-                        ) => (
-                          <p
-                            key={
-                              index
-                            }
-                            className="text-xs leading-5 text-black/55"
-                          >
-                            {paragraph}
-                          </p>
-                        )
-                      )}
-                    </div>
-                  </ContentDetails>
-                )}
-              </>
-            )}
+              <DetailRow
+                label="Cập nhật"
+                value={
+                  formatDateTime(
+                    order.updatedAtMs
+                  )
+                }
+              />
+            </ContentDetails>
           </section>
         </div>
       </main>
+
+      {needsAction && (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-amber-200 bg-white/95 p-3 backdrop-blur-xl sm:hidden">
+          <PrimaryAction
+            label="Xác nhận CK & Publish"
+            loading={
+              action ===
+              'confirm'
+            }
+            disabled={
+              action !== ''
+            }
+            prominent
+            fullWidth
+            onClick={() =>
+              void runAction(
+                'confirm',
+                () =>
+                  confirmAdminBankPayment(
+                    order.id
+                  )
+              )
+            }
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+const OrderContentSummary:
+React.FC<{
+  config: any;
+}> = ({
+  config,
+}) => {
+  if (
+    Array.isArray(
+      config?.scenes
+    )
+  ) {
+    return (
+      <div className="space-y-3">
+        {config.scenes.map(
+          (
+            scene: any,
+            index: number
+          ) => {
+            const elements =
+              Array.isArray(
+                scene?.elements
+              )
+                ? scene.elements
+                : [];
+
+            const textElements =
+              elements.filter(
+                (element: any) =>
+                  element?.type ===
+                    'text' ||
+                  element?.type ===
+                    'button'
+              );
+
+            return (
+              <div
+                key={
+                  scene?.id ||
+                  index
+                }
+                className="rounded-[13px] border border-black/7 bg-[#faf9f8] p-3.5"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-[0.09em] text-black/28">
+                      Scene {index + 1}
+                    </p>
+                    <p className="mt-1 truncate text-xs font-black text-black/65">
+                      {scene?.title ||
+                        scene?.name ||
+                        scene?.id ||
+                        `Scene ${index + 1}`}
+                    </p>
+                  </div>
+
+                  <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[9px] font-bold text-black/35">
+                    {
+                      elements.length
+                    }{' '}
+                    element
+                  </span>
+                </div>
+
+                {textElements.length >
+                  0 && (
+                  <div className="mt-3 space-y-2 border-t border-black/6 pt-3">
+                    {textElements
+                      .slice(
+                        0,
+                        6
+                      )
+                      .map(
+                        (
+                          element: any,
+                          elementIndex: number
+                        ) => (
+                          <div
+                            key={
+                              element?.id ||
+                              elementIndex
+                            }
+                            className="rounded-[10px] bg-white px-3 py-2.5"
+                          >
+                            <p className="text-[9px] font-bold uppercase text-black/25">
+                              {element?.type ===
+                              'button'
+                                ? 'Nút'
+                                : 'Chữ'}
+                            </p>
+                            <p className="mt-1 break-words text-xs font-semibold leading-5 text-black/60">
+                              {element?.text ||
+                                element?.label ||
+                                '—'}
+                            </p>
+                          </div>
+                        )
+                      )}
+
+                    {textElements.length >
+                      6 && (
+                      <p className="text-[10px] text-black/30">
+                        +{' '}
+                        {textElements.length -
+                          6}{' '}
+                        nội dung khác
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          }
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <SummaryBlock
+        title="Thông tin chính"
+      >
+        <DetailRow
+          label="Câu hỏi"
+          value={
+            config?.proposal
+              ?.question ||
+            '—'
+          }
+        />
+
+        <DetailRow
+          label="Nút YES"
+          value={
+            config?.proposal
+              ?.yesBtnText ||
+            '—'
+          }
+        />
+
+        <DetailRow
+          label="Biệt danh"
+          value={
+            config?.couple
+              ?.nickname ||
+            '—'
+          }
+        />
+      </SummaryBlock>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <CountCard
+          label="Ảnh"
+          value={
+            config?.gifts
+              ?.gift1?.photos
+              ?.length ||
+            0
+          }
+        />
+        <CountCard
+          label="Bài hát"
+          value={
+            config?.gifts
+              ?.gift2
+              ?.playlist
+              ?.length ||
+            0
+          }
+        />
+        <CountCard
+          label="Đoạn thư"
+          value={
+            config?.gifts
+              ?.gift3?.letter
+              ?.paragraphs
+              ?.length ||
+            0
+          }
+        />
+      </div>
+
+      {config?.gifts
+        ?.gift3?.letter && (
+        <SummaryBlock
+          title="Bức thư"
+        >
+          <p className="text-xs font-black text-[#b83e57]">
+            {config.gifts
+              .gift3.letter
+              .salutation ||
+              '—'}
+          </p>
+
+          <div className="mt-3 space-y-2">
+            {(
+              config.gifts
+                .gift3.letter
+                .paragraphs ||
+              []
+            ).map(
+              (
+                paragraph:
+                  string,
+                index:
+                  number
+              ) => (
+                <p
+                  key={
+                    index
+                  }
+                  className="text-xs leading-5 text-black/55"
+                >
+                  {
+                    paragraph
+                  }
+                </p>
+              )
+            )}
+          </div>
+        </SummaryBlock>
+      )}
     </div>
   );
 };
@@ -981,12 +1249,12 @@ React.FC<{
         onClick={
           onBackHome
         }
-        className="text-xs font-bold text-black/40"
+        className="min-h-10 text-xs font-bold text-black/40"
       >
         ← Về trang chủ
       </button>
 
-      <h1 className="mt-7 text-2xl font-black">
+      <h1 className="mt-6 text-2xl font-black">
         {title}
       </h1>
 
@@ -1005,7 +1273,7 @@ React.FC<{
         onClick={
           onAction
         }
-        className="mt-6 w-full rounded-[12px] bg-[#191919] px-4 py-3 text-sm font-bold text-white"
+        className="mt-6 min-h-12 w-full rounded-[12px] bg-[#191919] px-4 text-sm font-bold text-white"
       >
         {buttonLabel}
       </button>
@@ -1018,11 +1286,15 @@ React.FC<{
   label: string;
   loading: boolean;
   disabled: boolean;
+  prominent?: boolean;
+  fullWidth?: boolean;
   onClick: () => void;
 }> = ({
   label,
   loading,
   disabled,
+  prominent = false,
+  fullWidth = false,
   onClick,
 }) => (
   <button
@@ -1033,12 +1305,19 @@ React.FC<{
     onClick={
       onClick
     }
-    className="inline-flex items-center gap-2 rounded-[10px] bg-[#b83e57] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+    className={[
+      'inline-flex min-h-11 items-center justify-center gap-2 rounded-[11px] px-4 text-xs font-black text-white transition disabled:opacity-50',
+      prominent
+        ? 'bg-amber-600 shadow-[0_8px_20px_rgba(180,120,20,0.18)] hover:bg-amber-700'
+        : 'bg-[#b83e57] hover:bg-[#a9344c]',
+      fullWidth
+        ? 'w-full'
+        : '',
+    ].join(' ')}
   >
     {loading && (
-      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      <Loader2 className="h-4 w-4 animate-spin" />
     )}
-
     {label}
   </button>
 );
@@ -1056,7 +1335,7 @@ React.FC<{
 }) => (
   <span
     className={[
-      'rounded-full px-2.5 py-1 text-[9px] font-bold',
+      'rounded-full px-2.5 py-1 text-[9px] font-black',
       tone ===
       'green'
         ? 'bg-emerald-50 text-emerald-700'
@@ -1081,7 +1360,7 @@ React.FC<{
   mono = false,
 }) => (
   <div className="border-b border-black/6 py-3 last:border-b-0">
-    <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/28">
+    <p className="text-[9px] font-black uppercase tracking-[0.09em] text-black/28">
       {label}
     </p>
 
@@ -1098,26 +1377,78 @@ React.FC<{
   </div>
 );
 
+const CopyDetailRow:
+React.FC<{
+  label: string;
+  value: string;
+  copied: boolean;
+  onCopy: () => void;
+}> = ({
+  label,
+  value,
+  copied,
+  onCopy,
+}) => (
+  <div className="flex items-center gap-3 border-b border-black/6 py-3">
+    <div className="min-w-0 flex-1">
+      <p className="text-[9px] font-black uppercase tracking-[0.09em] text-black/28">
+        {label}
+      </p>
+      <p className="mt-1 break-all font-mono text-sm font-black text-[#b83e57]">
+        {value}
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={
+        onCopy
+      }
+      className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-[9px] border border-black/8 bg-white px-2.5 text-[10px] font-black text-black/45"
+    >
+      {copied ? (
+        <Check className="h-3.5 w-3.5" />
+      ) : (
+        <Copy className="h-3.5 w-3.5" />
+      )}
+      {copied
+        ? 'Đã copy'
+        : 'Copy'}
+    </button>
+  </div>
+);
+
 const ContentDetails:
 React.FC<{
   title: string;
+  subtitle?: string;
   open?: boolean;
   children:
     React.ReactNode;
 }> = ({
   title,
+  subtitle,
   open = false,
   children,
 }) => (
   <details
-    open={open}
-    className="group rounded-[18px] border border-black/8 bg-white"
+    open={
+      open
+    }
+    className="group overflow-hidden rounded-[18px] border border-black/8 bg-white"
   >
-    <summary className="cursor-pointer list-none px-5 py-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-black">
-          {title}
-        </h2>
+    <summary className="cursor-pointer list-none px-4 py-4 sm:px-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-black">
+            {title}
+          </h2>
+          {subtitle && (
+            <p className="mt-1 text-[10px] text-black/30">
+              {subtitle}
+            </p>
+          )}
+        </div>
 
         <span className="text-lg text-black/25 transition group-open:rotate-45">
           +
@@ -1125,8 +1456,45 @@ React.FC<{
       </div>
     </summary>
 
-    <div className="border-t border-black/6 px-5 py-4">
+    <div className="border-t border-black/6 px-4 py-4 sm:px-5">
       {children}
     </div>
   </details>
+);
+
+const SummaryBlock:
+React.FC<{
+  title: string;
+  children:
+    React.ReactNode;
+}> = ({
+  title,
+  children,
+}) => (
+  <div className="rounded-[13px] border border-black/7 bg-[#faf9f8] p-3.5">
+    <p className="text-xs font-black text-black/65">
+      {title}
+    </p>
+    <div className="mt-2">
+      {children}
+    </div>
+  </div>
+);
+
+const CountCard:
+React.FC<{
+  label: string;
+  value: number;
+}> = ({
+  label,
+  value,
+}) => (
+  <div className="rounded-[13px] border border-black/7 bg-[#faf9f8] p-3.5">
+    <p className="text-[9px] font-black uppercase tracking-[0.08em] text-black/28">
+      {label}
+    </p>
+    <p className="mt-1 text-xl font-black text-black/65">
+      {value}
+    </p>
+  </div>
 );

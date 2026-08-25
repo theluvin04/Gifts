@@ -26,15 +26,14 @@ interface TrackOrderPageProps {
 
 const formatVnd = (
   amount: number
-) => {
-  return new Intl.NumberFormat(
+) =>
+  new Intl.NumberFormat(
     'vi-VN',
     {
       style: 'currency',
       currency: 'VND',
     }
   ).format(amount);
-};
 
 const formatDate = (
   value: number
@@ -120,6 +119,9 @@ const getStatusInfo = (
   };
 };
 
+const inputClass =
+  'w-full rounded-[14px] border border-black/[0.07] bg-[#faf8f7] px-4 py-3.5 text-sm font-semibold text-black/70 outline-none transition placeholder:font-medium placeholder:text-black/25 focus:border-[#c9435d]/35 focus:bg-white';
+
 export const TrackOrderPage:
 React.FC<
   TrackOrderPageProps
@@ -127,8 +129,13 @@ React.FC<
   onBackHome,
 }) => {
   const [
-    keyword,
-    setKeyword,
+    orderCode,
+    setOrderCode,
+  ] = useState('');
+
+  const [
+    phone,
+    setPhone,
   ] = useState('');
 
   const [
@@ -166,7 +173,8 @@ React.FC<
       try {
         const result =
           await searchPublicOrders(
-            keyword
+            orderCode,
+            phone
           );
 
         setOrders(result);
@@ -197,7 +205,6 @@ React.FC<
             className="inline-flex h-10 w-10 items-center justify-center rounded-full text-black/55 transition hover:bg-black/[0.04] hover:text-[#c9435d] sm:w-fit sm:justify-start sm:gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-
             <span className="hidden text-sm font-bold sm:inline">
               Trang chủ
             </span>
@@ -225,7 +232,7 @@ React.FC<
           </h1>
 
           <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-black/45">
-            Nhập số điện thoại đã đặt hàng hoặc mã đơn dạng Dearly8888.
+            Nhập đúng mã đơn và số điện thoại đã dùng khi thanh toán.
           </p>
         </section>
 
@@ -233,47 +240,79 @@ React.FC<
           onSubmit={
             handleSearch
           }
-          className="mx-auto mt-7 max-w-2xl rounded-[24px] border border-black/[0.06] bg-white p-3 shadow-[0_18px_55px_rgba(60,25,35,0.06)] sm:flex sm:gap-2 sm:p-2"
+          className="mx-auto mt-7 max-w-2xl rounded-[24px] border border-black/[0.06] bg-white p-4 shadow-[0_18px_55px_rgba(60,25,35,0.06)] sm:p-5"
         >
-          <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[16px] bg-[#faf8f7] px-4">
-            <Search className="h-4 w-4 shrink-0 text-black/28" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label>
+              <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/35">
+                Mã đơn
+              </span>
+              <input
+                value={
+                  orderCode
+                }
+                onChange={(
+                  event
+                ) =>
+                  setOrderCode(
+                    event.target
+                      .value
+                  )
+                }
+                placeholder="Dearly8888"
+                autoComplete="off"
+                className={
+                  inputClass
+                }
+              />
+            </label>
 
-            <input
-              value={
-                keyword
-              }
-              onChange={(
-                event
-              ) =>
-                setKeyword(
-                  event.target
-                    .value
-                )
-              }
-              placeholder="SĐT hoặc Dearly8888"
-              className="min-w-0 flex-1 bg-transparent py-3.5 text-sm font-semibold text-black/70 outline-none placeholder:font-medium placeholder:text-black/25"
-            />
+            <label>
+              <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.08em] text-black/35">
+                Số điện thoại
+              </span>
+              <input
+                value={
+                  phone
+                }
+                onChange={(
+                  event
+                ) =>
+                  setPhone(
+                    event.target
+                      .value
+                  )
+                }
+                placeholder="09xxxxxxxx"
+                inputMode="tel"
+                autoComplete="tel"
+                className={
+                  inputClass
+                }
+              />
+            </label>
           </div>
 
           <button
             type="submit"
             disabled={
-              isSearching
+              isSearching ||
+              !orderCode.trim() ||
+              !phone.trim()
             }
-            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-[16px] bg-[#c9435d] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#b83951] disabled:opacity-60 sm:mt-0 sm:w-auto"
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-[14px] bg-[#c9435d] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#b83951] disabled:cursor-not-allowed disabled:opacity-45"
           >
             {isSearching ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Search className="h-4 w-4" />
             )}
-
             Tra cứu
           </button>
         </form>
 
         <p className="mx-auto mt-3 max-w-2xl text-center text-[10px] leading-5 text-black/30">
-          Trang tra cứu không hiển thị tên, email, số điện thoại hoặc link riêng của món quà.
+          Cần khớp cả hai thông tin. Trang này không hiển thị email, SĐT hoặc link riêng của món quà.
         </p>
 
         {error && (
@@ -294,7 +333,7 @@ React.FC<
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-black/42">
-              Kiểm tra lại số điện thoại hoặc mã Dearly#### rồi thử lại.
+              Kiểm tra lại cả mã đơn và số điện thoại rồi thử lại.
             </p>
           </section>
         )}
@@ -340,7 +379,6 @@ React.FC<
                         ].join(' ')}
                       >
                         <StatusIcon className="h-3.5 w-3.5" />
-
                         {
                           status.label
                         }
