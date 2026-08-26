@@ -1,0 +1,24 @@
+{
+  "fonts": [
+    {
+      "label": "SVN Gilroy",
+      "family": "SVN Gilroy",
+      "group": "Font riêng",
+      "fallback": "sans-serif",
+      "sources": [
+        {
+          "src": "/fonts/custom/SVN-Gilroy-Regular.woff2",
+          "format": "woff2",
+          "weight": 400,
+          "style": "normal"
+        },
+        {
+          "src": "/fonts/custom/SVN-Gilroy-Bold.woff2",
+          "format": "woff2",
+          "weight": 700,
+          "style": "normal"
+        }
+      ]
+    }
+  ]
+}
