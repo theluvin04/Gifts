@@ -1189,7 +1189,9 @@ const normalizeElement = (
     data.type ===
       'shape' ||
     data.type ===
-      'photo-frame'
+      'photo-frame' ||
+    data.type ===
+      'youtube'
       ? data.type
       : null;
 
@@ -1492,6 +1494,75 @@ const normalizeElement = (
               borderRadius:
                 18,
             },
+    };
+  }
+
+  if (
+    type ===
+    'youtube'
+  ) {
+    return {
+      ...base,
+
+      type: 'youtube',
+
+      youtubeUrl:
+        safeString(
+          data.youtubeUrl,
+          'https://www.youtube.com/watch?v=jfKfPfyJRdk',
+          2000
+        ),
+
+      mobileYoutubeUrl:
+        safeString(
+          data.mobileYoutubeUrl,
+          '',
+          2000
+        ) || undefined,
+
+      title:
+        safeString(
+          data.title,
+          'Nhạc nền',
+          300
+        ),
+
+      mobileTitle:
+        typeof data.mobileTitle === 'string'
+          ? safeString(
+              data.mobileTitle,
+              '',
+              300
+            )
+          : undefined,
+
+      youtubeStyle:
+        data.youtubeStyle &&
+        typeof data.youtubeStyle === 'object'
+          ? {
+              ...data.youtubeStyle,
+            }
+          : {
+              borderRadius: 16,
+              borderWidth: 0,
+              borderColor: '#ffffff',
+              borderStyle: 'solid',
+              boxShadow: '0 16px 36px rgba(0,0,0,0.22)',
+              autoplay: false,
+              loop: true,
+              mute: false,
+              controls: true,
+              frameTheme: 'youtube',
+              showTitle: true,
+            },
+
+      mobileYoutubeStyle:
+        data.mobileYoutubeStyle &&
+        typeof data.mobileYoutubeStyle === 'object'
+          ? {
+              ...data.mobileYoutubeStyle,
+            }
+          : undefined,
     };
   }
 
