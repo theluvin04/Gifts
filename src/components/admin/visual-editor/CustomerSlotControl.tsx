@@ -3,6 +3,7 @@ import type { SceneElement } from '../../../engine';
 import {
   CustomerSlotKind,
   encodeCustomerSlot,
+  getCustomerImageSlotCount,
   getCustomerSlot,
 } from '../../../templates/customerSlots';
 
@@ -16,6 +17,7 @@ export const CustomerSlotControl: React.FC<Props> = ({ element, onChange }) => {
   const canImage = element.type === 'image' || element.type === 'photo-frame';
   const canText = element.type === 'text' || element.type === 'button';
   const canYouTube = element.type === 'custom' && element.slot === 'youtube';
+  const imageCount = canImage ? getCustomerImageSlotCount(element) : 1;
 
   if (!canImage && !canText && !canYouTube) return null;
 
@@ -45,7 +47,7 @@ export const CustomerSlotControl: React.FC<Props> = ({ element, onChange }) => {
             slot.kind === 'image' ? 'bg-[#fff0f4] text-[#a73551]' : 'text-black/35 hover:bg-[#f5f2f1]',
           ].join(' ')}
         >
-          Ảnh
+          Ảnh{imageCount > 1 ? ` ×${imageCount}` : ''}
         </button>
       )}
       {canText && (

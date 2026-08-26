@@ -9,7 +9,11 @@ import {
   type TemplateConfig,
 } from '../services/templateService';
 import type { TemplateVisualEditorConfig } from '../templates/visualEditor';
-import { getCustomerSlot } from '../templates/customerSlots';
+import {
+  getCustomerImageSources,
+  getCustomerSlot,
+  replaceCustomerImageSlot,
+} from '../templates/customerSlots';
 import {
   PersonalizePageShell,
   PersonalizeInput,
@@ -78,6 +82,13 @@ const mergeCustomerValues = (
           return {
             ...element,
             src: savedElement.src,
+            mobileSrc: savedElement.mobileSrc,
+            ...(element.type === 'photo-frame' && savedElement.type === 'photo-frame'
+              ? {
+                  photos: savedElement.photos,
+                  mobilePhotos: savedElement.mobilePhotos,
+                }
+              : {}),
             alt: savedElement.alt,
           } as SceneElement;
         }
@@ -670,10 +681,10 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
             <div className="grid gap-4">
               {activeCustomerScene.slots.map(
                 ({ sceneId, element, slot }, index) => {
-                  const imageSrc =
-                    element.type === 'image' || element.type === 'photo-frame'
-                      ? element.src
-                      : '';
+                  const imageSources =
+                    slot.kind === 'image'
+                      ? getCustomerImageSources(element)
+                      : [];
 
                   return (
                     <div
@@ -729,51 +740,51 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
                               `Ảnh ${index + 1}`}
                           </p>
 
-                          <div className="flex items-center gap-3">
-                            {imageSrc && (
-                              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[10px] border border-black/10 bg-white shadow-xs">
-                                <img
-                                  src={imageSrc}
-                                  alt="Preview"
-                                  className="h-full w-full object-cover"
+                          <div className={imageSources.length > 1 ? 'grid grid-cols-2 gap-2.5' : ''}>
+                            {imageSources.map((imageSrc, photoIndex) => (
+                              <label
+                                key={photoIndex}
+                                className="flex min-h-[76px] cursor-pointer items-center gap-3 rounded-[11px] border border-dashed border-[#c9435d]/30 bg-white p-2.5 text-xs font-black text-[#b83e57] transition hover:bg-[#fff5f7]"
+                              >
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-black/[0.04] text-[10px] text-black/25">
+                                  {imageSrc ? (
+                                    <img
+                                      src={imageSrc}
+                                      alt={`Ảnh ${photoIndex + 1}`}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    `Ảnh ${photoIndex + 1}`
+                                  )}
+                                </div>
+                                <span className="min-w-0">
+                                  {imageSrc ? 'Thay ảnh' : 'Chọn ảnh'} {imageSources.length > 1 ? photoIndex + 1 : ''}
+                                </span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(event) => {
+                                    const file = event.target.files?.[0];
+                                    if (!file) return;
+
+                                    readImage(file, (url) =>
+                                      updateElement(
+                                        sceneId,
+                                        element.id,
+                                        (current) =>
+                                          replaceCustomerImageSlot(
+                                            current,
+                                            photoIndex,
+                                            url,
+                                            file.name
+                                          )
+                                      )
+                                    );
+                                  }}
                                 />
-                              </div>
-                            )}
-
-                            <label className="flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-[11px] border border-dashed border-[#c9435d]/30 bg-white px-4 text-xs font-black text-[#b83e57] transition hover:bg-[#fff5f7]">
-                              {imageSrc ? 'Thay đổi ảnh khác' : 'Chọn ảnh'}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(event) => {
-                                  const file =
-                                    event.target.files?.[0];
-                                  if (!file) return;
-
-                                  readImage(file, (url) =>
-                                    updateElement(
-                                      sceneId,
-                                      element.id,
-                                      (current) => {
-                                        if (
-                                          current.type === 'image' ||
-                                          current.type === 'photo-frame'
-                                        ) {
-                                          return {
-                                            ...current,
-                                            src: url,
-                                            alt: file.name,
-                                          } as SceneElement;
-                                        }
-
-                                        return current;
-                                      }
-                                    )
-                                  );
-                                }}
-                              />
-                            </label>
+                              </label>
+                            ))}
                           </div>
                         </div>
                       )}

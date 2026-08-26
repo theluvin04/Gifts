@@ -147,6 +147,8 @@ type AssetPickerTarget =
         'element';
       elementId:
         string;
+      photoIndex?:
+        number;
     };
 
 const LONG_PAGE_MOBILE_WIDTH =
@@ -1195,9 +1197,24 @@ React.FC<Props> = ({
 
             return {
               ...element,
-              ...(device === 'mobile'
-                ? { mobileSrc: asset.url }
-                : { src: asset.url }),
+              ...(element.type === 'photo-frame' &&
+              typeof assetPickerTarget.photoIndex === 'number'
+                ? device === 'mobile'
+                  ? {
+                      mobilePhotos: Object.assign(
+                        [...(element.mobilePhotos || element.photos || [])],
+                        { [assetPickerTarget.photoIndex]: asset.url }
+                      ),
+                    }
+                  : {
+                      photos: Object.assign(
+                        [...(element.photos || [])],
+                        { [assetPickerTarget.photoIndex]: asset.url }
+                      ),
+                    }
+                : device === 'mobile'
+                  ? { mobileSrc: asset.url }
+                  : { src: asset.url }),
               name:
                 element.name ||
                 asset.name,
@@ -3630,6 +3647,8 @@ React.FC<Props> = ({
                               'element',
                             elementId:
                               target.elementId,
+                            photoIndex:
+                              target.photoIndex,
                           }
                     )
                   }

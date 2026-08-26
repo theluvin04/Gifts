@@ -4,7 +4,11 @@ import { VisualSceneExperience } from '../../../engine';
 import type { SceneElement } from '../../../engine';
 import type { TemplateVisualEditorConfig } from '../../../templates/visualEditor';
 import { cloneValue } from './editorUtils';
-import { getCustomerSlot } from '../../../templates/customerSlots';
+import {
+  getCustomerImageSources,
+  getCustomerSlot,
+  replaceCustomerImageSlot,
+} from '../../../templates/customerSlots';
 
 interface Props {
   config: TemplateVisualEditorConfig;
@@ -78,26 +82,33 @@ export const CustomerPreviewOverlay: React.FC<Props> = ({ config, onClose }) => 
                     />
                   )}
                   {slot.kind === 'image' && (
-                    <label className="mt-2 block cursor-pointer rounded-[9px] border border-dashed border-[#cf5068]/25 bg-white p-2.5 text-center text-[9px] font-black text-[#a73551]">
-                      Thay ảnh
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          if (!file) return;
-                          readImage(file, (url) =>
-                            updateElement(sceneId, element.id, (current) => {
-                              if (current.type === 'image' || current.type === 'photo-frame') {
-                                return { ...current, src: url, alt: file.name } as SceneElement;
-                              }
-                              return current;
-                            })
-                          );
-                        }}
-                      />
-                    </label>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {getCustomerImageSources(element).map((imageSrc, photoIndex) => (
+                        <label
+                          key={photoIndex}
+                          className="cursor-pointer rounded-[9px] border border-dashed border-[#cf5068]/25 bg-white p-2 text-center text-[9px] font-black text-[#a73551]"
+                        >
+                          <span className="block">{imageSrc ? 'Thay' : 'Chọn'} ảnh {photoIndex + 1}</span>
+                          {imageSrc && (
+                            <img src={imageSrc} alt="" className="mx-auto mt-1.5 h-12 w-12 rounded object-cover" />
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              if (!file) return;
+                              readImage(file, (url) =>
+                                updateElement(sceneId, element.id, (current) =>
+                                  replaceCustomerImageSlot(current, photoIndex, url, file.name)
+                                )
+                              );
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
                   )}
                   {slot.kind === 'youtube' && element.type === 'custom' && (
                     <input

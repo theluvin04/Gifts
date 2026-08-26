@@ -24,6 +24,80 @@ export const getCustomerSlot = (element: SceneElement): {
   };
 };
 
+export const getCustomerImageSlotCount = (
+  element: SceneElement
+) => {
+  if (element.type !== 'photo-frame') return 1;
+
+  const style = element.frameStyle || {};
+  const layout = style.layout;
+  const inferred =
+    layout === 'strip-vertical-4' ||
+    layout === 'strip-horizontal-4' ||
+    layout === 'grid-2x2'
+      ? 4
+      : layout === 'strip-vertical-3'
+        ? 3
+        : layout === 'strip-vertical-2'
+          ? 2
+          : 1;
+
+  return Math.max(
+    1,
+    Math.min(12, style.photoCount || inferred)
+  );
+};
+
+export const getCustomerImageSources = (
+  element: SceneElement
+) => {
+  if (element.type !== 'photo-frame') {
+    return element.type === 'image' || element.type === 'decor'
+      ? [element.src || '']
+      : [''];
+  }
+
+  const count = getCustomerImageSlotCount(element);
+  const photos = element.photos || [];
+
+  return Array.from(
+    { length: count },
+    (_, index) => photos[index] || (index === 0 ? element.src : '')
+  );
+};
+
+export const replaceCustomerImageSlot = (
+  element: SceneElement,
+  slotIndex: number,
+  src: string,
+  alt?: string
+): SceneElement => {
+  if (element.type === 'image' || element.type === 'decor') {
+    return {
+      ...element,
+      src,
+      mobileSrc: src,
+      alt: alt || element.alt,
+    };
+  }
+
+  if (element.type !== 'photo-frame') return element;
+
+  const count = getCustomerImageSlotCount(element);
+  const safeIndex = Math.max(0, Math.min(count - 1, slotIndex));
+  const photos = getCustomerImageSources(element);
+  photos[safeIndex] = src;
+
+  return {
+    ...element,
+    src: safeIndex === 0 ? src : element.src,
+    mobileSrc: safeIndex === 0 ? src : element.mobileSrc,
+    photos,
+    mobilePhotos: [...photos],
+    alt: alt || element.alt,
+  };
+};
+
 export const encodeCustomerSlot = (
   element: SceneElement,
   kind: CustomerSlotKind,

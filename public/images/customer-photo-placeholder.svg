@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 824 375" role="img" aria-labelledby="title desc">
+  <title id="title">Ảnh chờ khách thay</title>
+  <desc id="desc">Khung ảnh màu xám với biểu tượng phong cảnh màu trắng.</desc>
+  <rect width="824" height="375" fill="#bdbdbd"/>
+  <rect x="269" y="75" width="286" height="224" rx="3" fill="#fff"/>
+  <rect x="286" y="91" width="252" height="190" fill="#bdbdbd"/>
+  <path d="M309 258l54-68 20 24 47-65 85 109z" fill="#fff"/>
+</svg>

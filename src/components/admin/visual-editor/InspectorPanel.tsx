@@ -45,6 +45,9 @@ import {
   type DiscoveredFontOption,
 } from './fontDiscovery';
 
+const CUSTOMER_PHOTO_PLACEHOLDER =
+  '/images/customer-photo-placeholder.svg';
+
 interface Props {
   scene:
     SceneCanvasDefinition;
@@ -106,6 +109,8 @@ interface Props {
             'element';
           elementId:
             string;
+          photoIndex?:
+            number;
         }
   ) => void;
 }
@@ -1012,7 +1017,13 @@ React.FC<{
               onChange
             }
             onOpenAssetLibrary={
-              onOpenAssetLibrary
+              (photoIndex) =>
+                onOpenAssetLibrary({
+                  kind: 'element',
+                  elementId:
+                    element.id,
+                  photoIndex,
+                })
             }
           />
         )}
@@ -1030,7 +1041,13 @@ React.FC<{
               onChange
             }
             onOpenAssetLibrary={
-              onOpenAssetLibrary
+              (photoIndex) =>
+                onOpenAssetLibrary({
+                  kind: 'element',
+                  elementId:
+                    element.id,
+                  photoIndex,
+                })
             }
           />
         )}
@@ -2465,7 +2482,7 @@ React.FC<{
   ) => void;
 
   onOpenAssetLibrary:
-    () => void;
+    (photoIndex?: number) => void;
 }> = ({
   element,
   onChange,
@@ -2528,6 +2545,26 @@ React.FC<{
           onOpenAssetLibrary
         }
       />
+
+      <button
+        type="button"
+        onClick={() =>
+          onChange(
+            (current) =>
+              current.type === 'image' || current.type === 'decor'
+                ? {
+                    ...current,
+                    src: CUSTOMER_PHOTO_PLACEHOLDER,
+                    mobileSrc: CUSTOMER_PHOTO_PLACEHOLDER,
+                    alt: 'Ảnh chờ khách thay',
+                  }
+                : current
+          )
+        }
+        className="w-full rounded-[9px] border border-dashed border-[#cf5068]/30 bg-[#fff7f9] px-3 py-2 text-[9px] font-black text-[#a73551] transition hover:bg-[#f9e9ed]"
+      >
+        Đặt thành ảnh chờ khách thay
+      </button>
 
       <SelectInput
         label="Cách hiển thị"
@@ -2663,7 +2700,7 @@ React.FC<{
   ) => void;
 
   onOpenAssetLibrary:
-    () => void;
+    (photoIndex?: number) => void;
 }> = ({
   element,
   device,
@@ -2684,6 +2721,35 @@ React.FC<{
     device === 'mobile'
       ? element.mobileSrc || element.src
       : element.src;
+
+  const layout =
+    style.layout ||
+    'single';
+  const photoCount =
+    Math.max(
+      1,
+      style.photoCount ||
+        (layout === 'strip-vertical-4' ||
+        layout === 'strip-horizontal-4' ||
+        layout === 'grid-2x2'
+          ? 4
+          : layout === 'strip-vertical-3'
+            ? 3
+            : layout === 'strip-vertical-2'
+              ? 2
+              : 1)
+    );
+  const photoSources =
+    Array.from(
+      { length: photoCount },
+      (_, index) => {
+        const photos =
+          device === 'mobile'
+            ? element.mobilePhotos || element.photos || []
+            : element.photos || [];
+        return photos[index] || (index === 0 ? source : '');
+      }
+    );
 
   const caption =
     device === 'mobile'
@@ -2719,18 +2785,92 @@ React.FC<{
         SceneElement)
     );
 
+  const setPlaceholder = (
+    photoIndex?: number
+  ) =>
+    onChange(
+      (current) => {
+        if (current.type !== 'photo-frame') return current;
+
+        if (typeof photoIndex !== 'number') {
+          return {
+            ...current,
+            src: CUSTOMER_PHOTO_PLACEHOLDER,
+            mobileSrc: CUSTOMER_PHOTO_PLACEHOLDER,
+          };
+        }
+
+        const nextPhotos = Array.from(
+          { length: photoCount },
+          (_, index) =>
+            index === photoIndex
+              ? CUSTOMER_PHOTO_PLACEHOLDER
+              : photoSources[index] || ''
+        );
+
+        return {
+          ...current,
+          src: photoIndex === 0 ? CUSTOMER_PHOTO_PLACEHOLDER : current.src,
+          mobileSrc: photoIndex === 0 ? CUSTOMER_PHOTO_PLACEHOLDER : current.mobileSrc,
+          photos: nextPhotos,
+          mobilePhotos: [...nextPhotos],
+        };
+      }
+    );
+
   return (
     <>
-      <AssetPickerButton
-        label={
-          source
-            ? 'Thay ảnh trong khung'
-            : 'Chọn ảnh cho khung'
-        }
-        onClick={
-          onOpenAssetLibrary
-        }
-      />
+      {photoCount === 1 ? (
+        <div className="space-y-2">
+          <AssetPickerButton
+            label={source ? 'Thay ảnh trong khung' : 'Chọn ảnh cho khung'}
+            onClick={() => onOpenAssetLibrary()}
+          />
+          <button
+            type="button"
+            onClick={() => setPlaceholder()}
+            className="w-full rounded-[9px] border border-dashed border-[#cf5068]/30 bg-[#fff7f9] px-3 py-2 text-[9px] font-black text-[#a73551]"
+          >
+            Đặt thành ảnh chờ khách thay
+          </button>
+        </div>
+      ) : (
+        <div>
+          <p className="mb-2 text-[8px] font-black uppercase tracking-[0.1em] text-black/30">
+            Ảnh trong khung · {photoCount} ô
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {photoSources.map((photoSource, photoIndex) => (
+              <div
+                key={photoIndex}
+                className="overflow-hidden rounded-[9px] border border-[#cf5068]/20 bg-[#fff7f9] p-2 text-left text-[8px] font-black text-[#a73551]"
+              >
+                <button
+                  type="button"
+                  onClick={() => onOpenAssetLibrary(photoIndex)}
+                  className="block w-full text-left"
+                >
+                  <span className="mb-1.5 block">{photoSource ? 'Thay' : 'Chọn'} ảnh {photoIndex + 1}</span>
+                <span className="flex aspect-video items-center justify-center overflow-hidden rounded-[6px] bg-black/[0.05] text-black/25">
+                  {photoSource ? (
+                    <img src={photoSource} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    `Ô ${photoIndex + 1}`
+                  )}
+                </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlaceholder(photoIndex)}
+                  className="mt-1.5 w-full rounded-[6px] border border-dashed border-[#cf5068]/25 bg-white px-1.5 py-1.5 text-[7px] font-black text-[#a73551]"
+                >
+                  Ảnh chờ khách
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <button
         type="button"
