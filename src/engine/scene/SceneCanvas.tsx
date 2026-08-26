@@ -270,7 +270,10 @@ React.FC<
           minHeight:
             longPage
               ? undefined
-              : scene.minHeight,
+              : scene.pageMode ===
+                  'screen'
+                ? undefined
+                : scene.minHeight,
           overflow:
             scene.overflow ||
             'hidden',

@@ -105,6 +105,8 @@ React.FC<
   mobileOverride,
   onSceneChange,
 }) => {
+  const rootRef =
+    React.useRef<HTMLDivElement>(null);
   const validInitial =
     scenes.some(
       (scene) =>
@@ -202,6 +204,29 @@ React.FC<
       controller.scene
     ) ||
     scenes[0];
+
+  React.useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root || !currentScene) return;
+
+    if (viewportContained) {
+      let parent = root.parentElement;
+
+      while (parent) {
+        const overflowY =
+          window.getComputedStyle(parent).overflowY;
+
+        if (overflowY === 'auto' || overflowY === 'scroll') {
+          parent.scrollTop = 0;
+          return;
+        }
+
+        parent = parent.parentElement;
+      }
+    }
+
+    window.scrollTo({top: 0, left: 0, behavior: 'auto'});
+  }, [currentScene?.id, viewportContained]);
 
   if (
     !currentScene
@@ -305,6 +330,7 @@ React.FC<
 
   return (
     <div
+      ref={rootRef}
       className={[
         'w-full min-w-0',
         className,
@@ -334,6 +360,9 @@ React.FC<
             }}
             mobileOverride={
               mobileOverride
+            }
+            viewportContained={
+              viewportContained
             }
           />
         </SceneTransition>

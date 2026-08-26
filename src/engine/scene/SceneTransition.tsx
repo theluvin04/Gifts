@@ -207,17 +207,9 @@ React.FC<
     transitions.fade ||
     transitions.none;
 
-  const mode =
-    config.preset ===
-    'crossfade' ||
-    config.preset ===
-    'none'
-      ? 'sync'
-      : 'sync';
-
   return (
     <AnimatePresence
-      mode={mode}
+      mode="popLayout"
       // Do not suppress the first render. `initial={false}` is inherited by
       // nested Motion elements and makes every entrance effect jump straight
       // to its final state in Preview and on the published first scene.
@@ -247,7 +239,7 @@ React.FC<
             'easeOut',
         }}
         className={[
-          'w-full min-w-0',
+          'relative w-full min-w-0',
           className,
         ].join(' ')}
       >
