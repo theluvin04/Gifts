@@ -1,5 +1,7 @@
 import React, {
+  useLayoutEffect,
   useMemo,
+  useRef,
 } from 'react';
 
 import type {
@@ -49,6 +51,9 @@ React.FC<
   containViewport = false,
   onSceneChange,
 }) => {
+  const rootRef =
+    useRef<HTMLDivElement>(null);
+
   const validInitial =
     scenes.some(
       (scene) =>
@@ -87,6 +92,77 @@ React.FC<
       controller.scene
     ) ||
     scenes[0];
+
+  useLayoutEffect(() => {
+    if (!currentScene) {
+      return;
+    }
+
+    const resetScroll = () => {
+      if (containViewport) {
+        let parent =
+          rootRef.current
+            ?.parentElement ||
+          null;
+
+        while (parent) {
+          const overflowY =
+            window.getComputedStyle(
+              parent
+            ).overflowY;
+
+          if (
+            overflowY ===
+              'auto' ||
+            overflowY ===
+              'scroll'
+          ) {
+            parent.scrollTop = 0;
+            return;
+          }
+
+          parent =
+            parent.parentElement;
+        }
+      }
+
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    resetScroll();
+
+    const frame =
+      window.requestAnimationFrame(
+        resetScroll
+      );
+    const timeout =
+      window.setTimeout(
+        resetScroll,
+        Math.max(
+          0,
+          currentScene
+            .transition
+            ?.durationMs ||
+            0
+        ) + 50
+      );
+
+    return () => {
+      window.cancelAnimationFrame(
+        frame
+      );
+      window.clearTimeout(
+        timeout
+      );
+    };
+  }, [
+    containViewport,
+    currentScene?.id,
+    currentScene?.transition
+      ?.durationMs,
+  ]);
 
   if (
     !currentScene
@@ -176,6 +252,7 @@ React.FC<
 
   return (
     <div
+      ref={rootRef}
       className={[
         'w-full min-w-0',
         className,
