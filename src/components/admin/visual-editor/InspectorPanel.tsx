@@ -13,9 +13,11 @@ import type {
   SceneElement,
   SceneElementAction,
   SceneElementFrame,
+  SceneImageShape,
 } from '../../../engine';
 
 import {
+  IMAGE_SHAPE_PRESETS,
   PHOTO_FRAME_PRESETS,
   getPhotoFramePreset,
   resolvePhotoFrameStyle,
@@ -2484,198 +2486,426 @@ React.FC<{
   );
 };
 
-const ImageControls:
-React.FC<{
-  element:
-    Extract<
-      SceneElement,
-      {
-        type:
-          'image' |
-          'decor';
-      }
-    >;
-
+const ImageControls: React.FC<{
+  element: Extract<
+    SceneElement,
+    {
+      type: 'image' | 'decor';
+    }
+  >;
   onChange: (
-    updater: (
-      element:
-        SceneElement
-    ) =>
-      SceneElement
+    updater: (element: SceneElement) => SceneElement
   ) => void;
-
-  onOpenAssetLibrary:
-    () => void;
+  onOpenAssetLibrary: () => void;
 }> = ({
   element,
   onChange,
   onOpenAssetLibrary,
 }) => {
-  const style =
-    element.imageStyle ||
-    {};
+  const style = element.imageStyle || {};
+  const currentShape = style.shape || 'rectangle';
 
   const patchStyle = (
-    next:
-      Record<
-        string,
-        unknown
-      >
+    next: Record<string, unknown>
   ) =>
     onChange(
-      (current) => ({
-        ...current,
-        imageStyle: {
-          ...(
-            current.type ===
-              'image' ||
-            current.type ===
-              'decor'
-              ? current
-                  .imageStyle
-              : {}
-          ),
-          ...next,
-        },
-      } as
-        SceneElement)
+      (current) =>
+        ({
+          ...current,
+          imageStyle: {
+            ...(current.type === 'image' || current.type === 'decor'
+              ? current.imageStyle
+              : {}),
+            ...next,
+          },
+        } as SceneElement)
     );
+
+  const BORDER_COLORS = [
+    { label: 'Trắng', value: '#ffffff' },
+    { label: 'Đen', value: '#191919' },
+    { label: 'Đỏ nhung', value: '#b83e57' },
+    { label: 'Hồng pastel', value: '#fca5a5' },
+    { label: 'Vàng gold', value: '#f59e0b' },
+    { label: 'Xanh ngọc', value: '#14b8a6' },
+    { label: 'Tím mộng mơ', value: '#a855f7' },
+    { label: 'Bạc', value: '#94a3b8' },
+  ];
+
+  const BG_COLORS = [
+    { label: 'Trong suốt', value: 'transparent' },
+    { label: 'Trắng', value: '#ffffff' },
+    { label: 'Kem sáng', value: '#fffdf8' },
+    { label: 'Đen tối', value: '#191919' },
+    { label: 'Hồng phấn', value: '#ffe4e6' },
+    { label: 'Đỏ trầm', value: '#450a0a' },
+  ];
+
+  const SHADOW_PRESETS = [
+    { label: 'Không bóng', value: '' },
+    { label: 'Bóng nhẹ', value: '0 4px 14px rgba(0,0,0,0.08)' },
+    { label: 'Bóng sâu 3D', value: '0 16px 36px rgba(0,0,0,0.22)' },
+    { label: 'Phát sáng Gold', value: '0 0 22px rgba(245,158,11,0.5)' },
+    { label: 'Phát sáng Hồng', value: '0 0 22px rgba(244,63,94,0.5)' },
+    { label: 'Phát sáng Trắng', value: '0 0 20px rgba(255,255,255,0.7)' },
+  ];
 
   return (
     <>
+      <AssetPickerButton
+        label={element.src ? 'Thay đổi ảnh từ kho tài nguyên' : 'Chọn ảnh từ kho tài nguyên'}
+        onClick={onOpenAssetLibrary}
+      />
+
       <TextInput
-        label="Ảnh / đường dẫn"
-        value={
-          element.src
-        }
-        placeholder="/images/..."
-        onChange={(
-          src
-        ) =>
+        label="Ảnh / đường dẫn URL"
+        value={element.src}
+        placeholder="/images/... hoặc https://..."
+        onChange={(src) =>
           onChange(
-            (current) => ({
-              ...current,
-              src,
-            } as
-              SceneElement)
+            (current) =>
+              ({
+                ...current,
+                src,
+              } as SceneElement)
           )
         }
       />
 
-      <AssetPickerButton
-        label="Chọn từ kho tài nguyên"
-        onClick={
-          onOpenAssetLibrary
-        }
-      />
+      {/* 1. Kiểu dáng & Loại ô ảnh */}
+      <div className="mt-3 rounded-[9px] border border-black/7 bg-[#faf9f8] p-2.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[9px] font-bold text-black/60">
+            Loại ô & Hình dáng ô ảnh
+          </span>
+          <span className="text-[8px] font-black text-[#b83e57]">
+            {IMAGE_SHAPE_PRESETS.find((p) => p.value === currentShape)?.label || 'Vuông'}
+          </span>
+        </div>
 
-      <SelectInput
-        label="Cách hiển thị"
-        value={
-          style.objectFit ||
-          'contain'
-        }
-        options={[
-          {
-            value:
-              'contain',
-            label:
-              'Vừa khung',
-          },
-          {
-            value:
-              'cover',
-            label:
-              'Phủ kín',
-          },
-          {
-            value:
-              'fill',
-            label:
-              'Kéo đầy khung',
-          },
-        ]}
-        onChange={(
-          objectFit
-        ) =>
-          patchStyle({
-            objectFit,
-          })
-        }
-      />
-
-      <div className="grid grid-cols-2 gap-2">
-        <NumberInput
-          label="Bo góc"
-          value={
-            style.borderRadius ||
-            0
-          }
-          min={0}
-          max={999}
-          step={1}
-          suffix="px"
-          onChange={(
-            borderRadius
-          ) =>
-            patchStyle({
-              borderRadius,
-            })
-          }
-        />
-
-        <NumberInput
-          label="Viền"
-          value={
-            style.borderWidth ||
-            0
-          }
-          min={0}
-          max={30}
-          step={1}
-          suffix="px"
-          onChange={(
-            borderWidth
-          ) =>
-            patchStyle({
-              borderWidth,
-            })
-          }
-        />
+        <div className="grid grid-cols-4 gap-1.5">
+          {IMAGE_SHAPE_PRESETS.map((preset) => {
+            const active = currentShape === preset.value;
+            return (
+              <button
+                key={preset.value}
+                type="button"
+                title={preset.description}
+                onClick={() => {
+                  patchStyle({
+                    shape: preset.value,
+                    borderRadius:
+                      preset.value === 'rounded'
+                        ? (style.borderRadius && style.borderRadius > 0 ? style.borderRadius : 16)
+                        : preset.value === 'circle'
+                          ? 9999
+                          : preset.value === 'rectangle'
+                            ? 0
+                            : style.borderRadius,
+                  });
+                }}
+                className={`flex flex-col items-center justify-center rounded-[8px] border p-1.5 text-center transition ${
+                  active
+                    ? 'border-[#b83e57] bg-[#fff0f4] text-[#b83e57] shadow-sm ring-1 ring-[#b83e57]/40'
+                    : 'border-black/7 bg-white text-black/60 hover:bg-black/5'
+                }`}
+              >
+                <span className="text-[14px] leading-none">{preset.icon}</span>
+                <span className="mt-1 line-clamp-1 text-[8px] font-bold">
+                  {preset.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <ColorInput
-        label="Màu viền"
-        value={
-          style.borderColor ||
-          '#ffffff'
-        }
-        onChange={(
-          borderColor
-        ) =>
-          patchStyle({
-            borderColor,
-          })
-        }
-      />
+      {/* 2. Bo góc (hiển thị khi dùng vuông hoặc bo góc) */}
+      {(currentShape === 'rounded' || currentShape === 'rectangle') && (
+        <div className="mt-2.5 rounded-[9px] border border-black/7 bg-[#faf9f8] p-2.5">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-[9px] font-bold text-black/60">
+              Bán kính bo góc (Corner Radius)
+            </span>
+            <span className="font-mono text-[9px] font-bold text-[#b83e57]">
+              {style.borderRadius || 0}px
+            </span>
+          </div>
 
-      <TextInput
-        label="Bóng đổ"
-        value={
-          style.boxShadow ||
-          ''
-        }
-        placeholder="0 12px 30px rgba(...)"
-        onChange={(
-          boxShadow
-        ) =>
-          patchStyle({
-            boxShadow:
-              boxShadow ||
-              undefined,
-          })
-        }
-      />
+          <input
+            type="range"
+            value={style.borderRadius || 0}
+            min={0}
+            max={120}
+            step={1}
+            onChange={(event) =>
+              patchStyle({
+                borderRadius: Number(event.target.value),
+                shape: Number(event.target.value) === 0 ? 'rectangle' : 'rounded',
+              })
+            }
+            className="w-full accent-[#b83e57]"
+          />
+
+          <div className="mt-2 flex flex-wrap items-center gap-1">
+            {[
+              { label: '0px (Nhọn)', value: 0 },
+              { label: '8px', value: 8 },
+              { label: '16px', value: 16 },
+              { label: '24px', value: 24 },
+              { label: '36px', value: 36 },
+              { label: 'Tròn', value: 9999 },
+            ].map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() =>
+                  patchStyle({
+                    borderRadius: item.value,
+                    shape: item.value === 0 ? 'rectangle' : item.value >= 9999 ? 'circle' : 'rounded',
+                  })
+                }
+                className={`rounded-[6px] px-2 py-1 text-[8px] font-bold transition ${
+                  style.borderRadius === item.value
+                    ? 'bg-[#b83e57] text-white shadow-sm'
+                    : 'border border-black/10 bg-white text-black/50 hover:bg-black/5'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Viền & Stroke */}
+      <div className="mt-2.5 rounded-[9px] border border-black/7 bg-[#faf9f8] p-2.5">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[9px] font-bold text-black/60">
+            Viền & Stroke (Đường viền ô ảnh)
+          </span>
+          <span className="font-mono text-[9px] font-bold text-[#b83e57]">
+            {style.borderWidth ? `${style.borderWidth}px (${style.borderStyle || 'solid'})` : '0px (Không viền)'}
+          </span>
+        </div>
+
+        {/* Độ dày viền */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-[8px] font-bold text-black/40">
+            <span>Độ dày viền (Stroke Width)</span>
+            <span>{style.borderWidth || 0}px</span>
+          </div>
+          <input
+            type="range"
+            value={style.borderWidth || 0}
+            min={0}
+            max={30}
+            step={1}
+            onChange={(event) =>
+              patchStyle({
+                borderWidth: Number(event.target.value),
+                borderStyle: style.borderStyle || 'solid',
+              })
+            }
+            className="w-full accent-[#b83e57]"
+          />
+          <div className="flex flex-wrap gap-1">
+            {[0, 1, 2, 4, 6, 8, 12, 16].map((w) => (
+              <button
+                key={w}
+                type="button"
+                onClick={() =>
+                  patchStyle({
+                    borderWidth: w,
+                    borderStyle: style.borderStyle || 'solid',
+                  })
+                }
+                className={`rounded-[5px] px-2 py-0.5 text-[8px] font-bold transition ${
+                  (style.borderWidth || 0) === w
+                    ? 'bg-[#b83e57] text-white shadow-sm'
+                    : 'border border-black/10 bg-white text-black/50 hover:bg-black/5'
+                }`}
+              >
+                {w === 0 ? 'Tắt' : `${w}px`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Kiểu viền */}
+        {(style.borderWidth ?? 0) > 0 && (
+          <div className="mt-3 space-y-1">
+            <span className="text-[8px] font-bold text-black/40">Kiểu nét viền</span>
+            <div className="grid grid-cols-3 gap-1">
+              {[
+                { value: 'solid', label: 'Nét liền ──' },
+                { value: 'dashed', label: 'Nét đứt ╌╌' },
+                { value: 'dotted', label: 'Nét chấm •••' },
+                { value: 'double', label: 'Nét đôi ══' },
+                { value: 'groove', label: 'Rãnh chìm' },
+                { value: 'ridge', label: 'Gờ nổi' },
+              ].map((st) => (
+                <button
+                  key={st.value}
+                  type="button"
+                  onClick={() => patchStyle({ borderStyle: st.value })}
+                  className={`rounded-[6px] border py-1 text-center text-[8px] font-bold transition ${
+                    (style.borderStyle || 'solid') === st.value
+                      ? 'border-[#b83e57] bg-[#fff0f4] text-[#b83e57] shadow-sm'
+                      : 'border-black/10 bg-white text-black/50 hover:bg-black/5'
+                  }`}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Màu viền */}
+        <div className="mt-3 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[8px] font-bold text-black/40">Màu viền (Stroke Color)</span>
+            <div className="flex items-center gap-1.5">
+              <span
+                className="h-3.5 w-3.5 rounded-full border border-black/20 shadow-sm"
+                style={{ backgroundColor: style.borderColor || '#ffffff' }}
+              />
+              <span className="font-mono text-[8px] font-bold text-black/60">
+                {style.borderColor || '#ffffff'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={
+                style.borderColor && style.borderColor.startsWith('#')
+                  ? style.borderColor.slice(0, 7)
+                  : '#ffffff'
+              }
+              onChange={(e) => patchStyle({ borderColor: e.target.value })}
+              className="h-7 w-9 cursor-pointer rounded-[6px] border border-black/10 bg-white p-0.5"
+            />
+            <input
+              type="text"
+              value={style.borderColor || '#ffffff'}
+              onChange={(e) => patchStyle({ borderColor: e.target.value })}
+              placeholder="#ffffff"
+              className="w-full rounded-[6px] border border-black/10 bg-white px-2 py-1 font-mono text-[9px] font-bold text-black/80"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-1 pt-1">
+            {BORDER_COLORS.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                title={c.label}
+                onClick={() => patchStyle({ borderColor: c.value })}
+                className="flex items-center gap-1 rounded-[5px] border border-black/10 bg-white px-1.5 py-0.5 text-[8px] font-bold text-black/60 hover:bg-black/5"
+              >
+                <span
+                  className="h-2.5 w-2.5 rounded-full border border-black/20"
+                  style={{ backgroundColor: c.value }}
+                />
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Màu nền ô ảnh & Cách hiển thị */}
+      <div className="mt-2.5 grid grid-cols-2 gap-2">
+        <SelectInput
+          label="Cách hiển thị ảnh"
+          value={style.objectFit || 'contain'}
+          options={[
+            { value: 'contain', label: 'Vừa khung (Contain)' },
+            { value: 'cover', label: 'Phủ kín (Cover)' },
+            { value: 'fill', label: 'Kéo đầy (Fill)' },
+          ]}
+          onChange={(objectFit) => patchStyle({ objectFit })}
+        />
+
+        <div>
+          <label className="mb-1 block text-[9px] font-bold text-black/60">
+            Màu nền lót ô
+          </label>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="color"
+              value={
+                style.background && style.background.startsWith('#')
+                  ? style.background.slice(0, 7)
+                  : '#ffffff'
+              }
+              onChange={(e) => patchStyle({ background: e.target.value })}
+              className="h-7 w-8 cursor-pointer rounded-[6px] border border-black/10 bg-white p-0.5"
+            />
+            <input
+              type="text"
+              value={style.background || ''}
+              placeholder="transparent"
+              onChange={(e) => patchStyle({ background: e.target.value || undefined })}
+              className="w-full rounded-[6px] border border-black/10 bg-white px-2 py-1 font-mono text-[9px] font-bold text-black/80"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Quick BG Swatches */}
+      <div className="flex flex-wrap gap-1">
+        {BG_COLORS.map((c) => (
+          <button
+            key={c.value}
+            type="button"
+            onClick={() => patchStyle({ background: c.value === 'transparent' ? undefined : c.value })}
+            className="flex items-center gap-1 rounded-[5px] border border-black/10 bg-white px-1.5 py-0.5 text-[8px] font-bold text-black/60 hover:bg-black/5"
+          >
+            <span
+              className="h-2.5 w-2.5 rounded-full border border-black/20"
+              style={{ backgroundColor: c.value === 'transparent' ? '#fff' : c.value }}
+            />
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 5. Bóng đổ & Hiệu ứng */}
+      <div className="mt-2.5 rounded-[9px] border border-black/7 bg-[#faf9f8] p-2.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[9px] font-bold text-black/60">
+            Bóng đổ & Hiệu ứng phát sáng
+          </span>
+        </div>
+
+        <TextInput
+          label="Mã bóng đổ CSS"
+          value={style.boxShadow || ''}
+          placeholder="0 12px 30px rgba(0,0,0,0.18)"
+          onChange={(boxShadow) => patchStyle({ boxShadow: boxShadow || undefined })}
+        />
+
+        <div className="mt-2 flex flex-wrap gap-1">
+          {SHADOW_PRESETS.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              onClick={() => patchStyle({ boxShadow: p.value || undefined })}
+              className={`rounded-[5px] px-2 py-1 text-[8px] font-bold transition ${
+                (style.boxShadow || '') === p.value
+                  ? 'bg-[#b83e57] text-white shadow-sm'
+                  : 'border border-black/10 bg-white text-black/50 hover:bg-black/5'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </>
   );
 };

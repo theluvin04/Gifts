@@ -245,7 +245,7 @@ export const setElementFrameForDevice =
       SceneElement;
   };
 
-const getAnchorFactors = (
+export const getAnchorFactors = (
   anchor:
     SceneElementFrame[
       'anchor'

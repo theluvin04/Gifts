@@ -72,11 +72,25 @@ export interface SceneTextStyle {
   curvature?: number;
 }
 
+export type SceneImageShape =
+  | 'rectangle'
+  | 'rounded'
+  | 'circle'
+  | 'diamond'
+  | 'hexagon'
+  | 'octagon'
+  | 'bevel'
+  | 'ticket'
+  | 'badge'
+  | 'star'
+  | 'heart'
+  | 'triangle';
+
 export interface SceneImageStyle {
   objectFit?:
-    'cover' |
-    'contain' |
-    'fill';
+    | 'cover'
+    | 'contain'
+    | 'fill';
 
   borderRadius?: number;
 
@@ -87,6 +101,21 @@ export interface SceneImageStyle {
   borderColor?: string;
 
   borderWidth?: number;
+
+  borderStyle?:
+    | 'solid'
+    | 'dashed'
+    | 'dotted'
+    | 'double'
+    | 'groove'
+    | 'ridge'
+    | 'none';
+
+  shape?: SceneImageShape;
+
+  clipPath?: string;
+
+  opacity?: number;
 }
 
 export interface SceneButtonStyle

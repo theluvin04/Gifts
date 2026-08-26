@@ -26,6 +26,10 @@ import {
   CurvedText,
 } from './CurvedText';
 
+import {
+  ImageShapeRenderer,
+} from './ImageShapeRenderer';
+
 const getAnchorTransform = (
   anchor:
     SceneElementFrame[
@@ -312,37 +316,10 @@ React.FC<
         }
 
         return (
-          <img
-            src={
-              source
-            }
-            alt={
-              element.alt ||
-              ''
-            }
-            draggable={
-              false
-            }
-            style={{
-              objectFit:
-                style.objectFit ||
-                'contain',
-              borderRadius:
-                style.borderRadius,
-              boxShadow:
-                style.boxShadow,
-              background:
-                style.background,
-              borderColor:
-                style.borderColor,
-              borderWidth:
-                style.borderWidth,
-              borderStyle:
-                style.borderWidth
-                  ? 'solid'
-                  : undefined,
-            }}
-            className="h-full w-full select-none"
+          <ImageShapeRenderer
+            src={source}
+            alt={element.alt || ''}
+            style={style}
           />
         );
       }

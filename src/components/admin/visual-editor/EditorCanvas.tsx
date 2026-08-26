@@ -15,6 +15,7 @@ import {
   AnimatedElement,
   AnimatedTextContent,
   CurvedText,
+  ImageShapeRenderer,
   isTextRevealPreset,
   resolvePhotoFrameStyle,
 } from '../../../engine';
@@ -23,6 +24,7 @@ import {
   anchorTranslate,
   clamp,
   DeviceMode,
+  getAnchorFactors,
   getEffectiveFrame,
   getGroupedSelectionIds,
 } from './editorUtils';
@@ -464,6 +466,12 @@ React.FC<Props> = ({
       mode:
         | 'drag'
         | 'resize'
+        | 'resize-nw'
+        | 'resize-ne'
+        | 'resize-sw'
+        | 'resize-se'
+        | 'resize-top'
+        | 'resize-bottom'
         | 'resize-left'
         | 'resize-right'
         | 'rotate'
@@ -731,115 +739,208 @@ React.FC<Props> = ({
             return;
           }
 
-          if (
-            mode ===
-            'resize'
-          ) {
-            const preserveRatio =
-              !moveEvent.altKey;
+          const initialHeight =
+            typeof frame.height === 'number' && frame.height > 0
+              ? frame.height
+              : targetRect && canvasRect.height > 0
+                ? (targetRect.height / canvasRect.height) * 100
+                : Math.max(8, frame.width * 0.4);
 
-            const relativeX =
-              dxPercent /
-              Math.max(
-                0.001,
-                frame.width
-              );
+          const factors = getAnchorFactors(frame.anchor);
 
-            const relativeY =
-              typeof frame.height ===
-                'number'
-                ? dyPercent /
-                  Math.max(
-                    0.001,
-                    frame.height
-                  )
-                : relativeX;
-
-            const scaleDelta =
-              Math.abs(
-                relativeY
-              ) >
-              Math.abs(
-                relativeX
-              )
-                ? relativeY
-                : relativeX;
-
-            const width =
-              clamp(
-                preserveRatio
-                  ? frame.width *
-                    (1 + scaleDelta)
-                  : frame.width +
-                    dxPercent,
-                1,
-                200
-              );
-
-            const height =
-              typeof frame.height ===
-              'number'
-                ? clamp(
-                    preserveRatio
-                      ? frame.height *
-                        (1 + scaleDelta)
-                      : frame.height +
-                        dyPercent,
-                    1,
-                    200
-                  )
-                : frame.height;
+          // Horizontal edge: Left
+          if (mode === 'resize-left') {
+            const requestedWidth = frame.width - dxPercent;
+            const width = clamp(requestedWidth, 1, 200);
+            const widthDelta = width - frame.width;
+            const x = frame.x - (1 - factors.x) * widthDelta;
 
             onFramesChange({
               [element.id]: {
                 ...frame,
+                x: clamp(x, -100, 200),
+                width,
+              },
+            });
+            return;
+          }
+
+          // Horizontal edge: Right
+          if (mode === 'resize-right') {
+            const requestedWidth = frame.width + dxPercent;
+            const width = clamp(requestedWidth, 1, 200);
+            const widthDelta = width - frame.width;
+            const x = frame.x + factors.x * widthDelta;
+
+            onFramesChange({
+              [element.id]: {
+                ...frame,
+                x: clamp(x, -100, 200),
+                width,
+              },
+            });
+            return;
+          }
+
+          // Vertical edge: Top
+          if (mode === 'resize-top') {
+            const requestedHeight = initialHeight - dyPercent;
+            const height = clamp(requestedHeight, 1, 200);
+            const heightDelta = height - initialHeight;
+            const y = frame.y - (1 - factors.y) * heightDelta;
+
+            onFramesChange({
+              [element.id]: {
+                ...frame,
+                y: clamp(y, -100, 200),
+                height,
+              },
+            });
+            return;
+          }
+
+          // Vertical edge: Bottom
+          if (mode === 'resize-bottom') {
+            const requestedHeight = initialHeight + dyPercent;
+            const height = clamp(requestedHeight, 1, 200);
+            const heightDelta = height - initialHeight;
+            const y = frame.y + factors.y * heightDelta;
+
+            onFramesChange({
+              [element.id]: {
+                ...frame,
+                y: clamp(y, -100, 200),
+                height,
+              },
+            });
+            return;
+          }
+
+          // Corner: Top-Left (NW)
+          if (mode === 'resize-nw') {
+            let width: number;
+            let height: number;
+            if (moveEvent.shiftKey) {
+              const scaleDelta =
+                Math.abs(-dxPercent / frame.width) > Math.abs(-dyPercent / initialHeight)
+                  ? -dxPercent / frame.width
+                  : -dyPercent / initialHeight;
+              width = clamp(frame.width * (1 + scaleDelta), 1, 200);
+              height = clamp(initialHeight * (1 + scaleDelta), 1, 200);
+            } else {
+              width = clamp(frame.width - dxPercent, 1, 200);
+              height = clamp(initialHeight - dyPercent, 1, 200);
+            }
+            const widthDelta = width - frame.width;
+            const heightDelta = height - initialHeight;
+            const x = frame.x - (1 - factors.x) * widthDelta;
+            const y = frame.y - (1 - factors.y) * heightDelta;
+
+            onFramesChange({
+              [element.id]: {
+                ...frame,
+                x: clamp(x, -100, 200),
+                y: clamp(y, -100, 200),
                 width,
                 height,
               },
             });
-
             return;
           }
 
-          if (
-            mode === 'resize-left' ||
-            mode === 'resize-right'
-          ) {
-            const requestedWidth =
-              mode === 'resize-right'
-                ? frame.width + dxPercent
-                : frame.width - dxPercent;
-            const width =
-              clamp(
-                requestedWidth,
-                1,
-                200
-              );
-            const widthDelta =
-              width - frame.width;
-            const anchor =
-              frame.anchor || 'top-left';
-            const horizontalAnchor =
-              anchor.includes('right')
-                ? 1
-                : anchor.includes('center') ||
-                    anchor === 'center'
-                  ? 0.5
-                  : 0;
-            const x =
-              mode === 'resize-right'
-                ? frame.x + horizontalAnchor * widthDelta
-                : frame.x - (1 - horizontalAnchor) * widthDelta;
+          // Corner: Top-Right (NE)
+          if (mode === 'resize-ne') {
+            let width: number;
+            let height: number;
+            if (moveEvent.shiftKey) {
+              const scaleDelta =
+                Math.abs(dxPercent / frame.width) > Math.abs(-dyPercent / initialHeight)
+                  ? dxPercent / frame.width
+                  : -dyPercent / initialHeight;
+              width = clamp(frame.width * (1 + scaleDelta), 1, 200);
+              height = clamp(initialHeight * (1 + scaleDelta), 1, 200);
+            } else {
+              width = clamp(frame.width + dxPercent, 1, 200);
+              height = clamp(initialHeight - dyPercent, 1, 200);
+            }
+            const widthDelta = width - frame.width;
+            const heightDelta = height - initialHeight;
+            const x = frame.x + factors.x * widthDelta;
+            const y = frame.y - (1 - factors.y) * heightDelta;
 
             onFramesChange({
               [element.id]: {
                 ...frame,
-                x:
-                  clamp(x, -100, 200),
+                x: clamp(x, -100, 200),
+                y: clamp(y, -100, 200),
                 width,
+                height,
               },
             });
+            return;
+          }
 
+          // Corner: Bottom-Left (SW)
+          if (mode === 'resize-sw') {
+            let width: number;
+            let height: number;
+            if (moveEvent.shiftKey) {
+              const scaleDelta =
+                Math.abs(-dxPercent / frame.width) > Math.abs(dyPercent / initialHeight)
+                  ? -dxPercent / frame.width
+                  : dyPercent / initialHeight;
+              width = clamp(frame.width * (1 + scaleDelta), 1, 200);
+              height = clamp(initialHeight * (1 + scaleDelta), 1, 200);
+            } else {
+              width = clamp(frame.width - dxPercent, 1, 200);
+              height = clamp(initialHeight + dyPercent, 1, 200);
+            }
+            const widthDelta = width - frame.width;
+            const heightDelta = height - initialHeight;
+            const x = frame.x - (1 - factors.x) * widthDelta;
+            const y = frame.y + factors.y * heightDelta;
+
+            onFramesChange({
+              [element.id]: {
+                ...frame,
+                x: clamp(x, -100, 200),
+                y: clamp(y, -100, 200),
+                width,
+                height,
+              },
+            });
+            return;
+          }
+
+          // Corner: Bottom-Right (SE or default resize)
+          if (mode === 'resize-se' || mode === 'resize') {
+            let width: number;
+            let height: number;
+            if (moveEvent.shiftKey) {
+              const scaleDelta =
+                Math.abs(dxPercent / frame.width) > Math.abs(dyPercent / initialHeight)
+                  ? dxPercent / frame.width
+                  : dyPercent / initialHeight;
+              width = clamp(frame.width * (1 + scaleDelta), 1, 200);
+              height = clamp(initialHeight * (1 + scaleDelta), 1, 200);
+            } else {
+              width = clamp(frame.width + dxPercent, 1, 200);
+              height = clamp(initialHeight + dyPercent, 1, 200);
+            }
+            const widthDelta = width - frame.width;
+            const heightDelta = height - initialHeight;
+            const x = frame.x + factors.x * widthDelta;
+            const y = frame.y + factors.y * heightDelta;
+
+            onFramesChange({
+              [element.id]: {
+                ...frame,
+                x: clamp(x, -100, 200),
+                y: clamp(y, -100, 200),
+                width,
+                height,
+              },
+            });
             return;
           }
 
@@ -1518,6 +1619,12 @@ React.FC<{
     mode:
       | 'drag'
       | 'resize'
+      | 'resize-nw'
+      | 'resize-ne'
+      | 'resize-sw'
+      | 'resize-se'
+      | 'resize-top'
+      | 'resize-bottom'
       | 'resize-left'
       | 'resize-right'
       | 'rotate'
@@ -1690,62 +1797,102 @@ React.FC<{
       !multiSelection &&
       !element.locked && (
         <>
+          {/* Dashed selection border outline */}
           <div className="pointer-events-none absolute -inset-[5px] border border-dashed border-[#ff245a]/60" />
+
+          {/* 4 Corner resize handles (NW, NE, SW, SE) */}
+          <button
+            type="button"
+            aria-label="Kéo góc trên trái"
+            title="Kéo co giãn cả 2 chiều (Góc trên trái)"
+            onPointerDown={(event) =>
+              onPointerOperation(event, 'resize-nw')
+            }
+            className="absolute -left-2 -top-2 z-50 h-4 w-4 cursor-nwse-resize rounded-full border-2 border-white bg-[#ff245a] shadow transition-transform hover:scale-125"
+          />
+
+          <button
+            type="button"
+            aria-label="Kéo góc trên phải"
+            title="Kéo co giãn cả 2 chiều (Góc trên phải)"
+            onPointerDown={(event) =>
+              onPointerOperation(event, 'resize-ne')
+            }
+            className="absolute -right-2 -top-2 z-50 h-4 w-4 cursor-nesw-resize rounded-full border-2 border-white bg-[#ff245a] shadow transition-transform hover:scale-125"
+          />
+
+          <button
+            type="button"
+            aria-label="Kéo góc dưới trái"
+            title="Kéo co giãn cả 2 chiều (Góc dưới trái)"
+            onPointerDown={(event) =>
+              onPointerOperation(event, 'resize-sw')
+            }
+            className="absolute -bottom-2 -left-2 z-50 h-4 w-4 cursor-nesw-resize rounded-full border-2 border-white bg-[#ff245a] shadow transition-transform hover:scale-125"
+          />
+
+          <button
+            type="button"
+            aria-label="Kéo góc dưới phải"
+            title="Kéo co giãn cả 2 chiều (Góc dưới phải)"
+            onPointerDown={(event) =>
+              onPointerOperation(event, 'resize-se')
+            }
+            className="absolute -bottom-2 -right-2 z-50 h-4 w-4 cursor-nwse-resize rounded-full border-2 border-white bg-[#ff245a] shadow transition-transform hover:scale-125"
+          />
+
+          {/* 4 Edge resize handles (Top, Bottom, Left, Right) */}
+          <button
+            type="button"
+            aria-label="Kéo chiều dọc phía trên"
+            title="Kéo riêng chiều dọc (Trên)"
+            onPointerDown={(event) =>
+              onPointerOperation(event, 'resize-top')
+            }
+            className="absolute left-1/2 -top-2 z-50 h-3.5 w-8 -translate-x-1/2 cursor-ns-resize rounded-full border-2 border-white bg-[#ff245a] shadow transition-transform hover:scale-110"
+          />
+
+          <button
+            type="button"
+            aria-label="Kéo chiều dọc phía dưới"
+            title="Kéo riêng chiều dọc (Dưới)"
+            onPointerDown={(event) =>
+              onPointerOperation(event, 'resize-bottom')
+            }
+            className="absolute left-1/2 -bottom-2 z-50 h-3.5 w-8 -translate-x-1/2 cursor-ns-resize rounded-full border-2 border-white bg-[#ff245a] shadow transition-transform hover:scale-110"
+          />
 
           <button
             type="button"
             aria-label="Kéo rộng sang trái"
-            title="Kéo riêng chiều ngang"
+            title="Kéo riêng chiều ngang (Trái)"
             onPointerDown={(event) =>
-              onPointerOperation(
-                event,
-                'resize-left'
-              )
+              onPointerOperation(event, 'resize-left')
             }
-            className="absolute -left-2 top-1/2 z-50 h-7 w-4 -translate-y-1/2 cursor-ew-resize rounded-full border-2 border-white bg-[#ff245a] shadow"
+            className="absolute -left-2 top-1/2 z-50 h-8 w-3.5 -translate-y-1/2 cursor-ew-resize rounded-full border-2 border-white bg-[#ff245a] shadow transition-transform hover:scale-110"
           />
 
           <button
             type="button"
             aria-label="Kéo rộng sang phải"
-            title="Kéo riêng chiều ngang"
+            title="Kéo riêng chiều ngang (Phải)"
             onPointerDown={(event) =>
-              onPointerOperation(
-                event,
-                'resize-right'
-              )
+              onPointerOperation(event, 'resize-right')
             }
-            className="absolute -right-2 top-1/2 z-50 h-7 w-4 -translate-y-1/2 cursor-ew-resize rounded-full border-2 border-white bg-[#ff245a] shadow"
+            className="absolute -right-2 top-1/2 z-50 h-8 w-3.5 -translate-y-1/2 cursor-ew-resize rounded-full border-2 border-white bg-[#ff245a] shadow transition-transform hover:scale-110"
           />
 
-          <button
-            type="button"
-            aria-label="Co giãn"
-            onPointerDown={(
-              event
-            ) =>
-              onPointerOperation(
-                event,
-                'resize'
-              )
-            }
-            className="absolute -bottom-2.5 -right-2.5 z-50 h-5 w-5 cursor-nwse-resize rounded-full border-2 border-white bg-[#ff245a] shadow"
-          />
-
+          {/* Rotation Handle */}
           <div className="pointer-events-none absolute -top-8 left-1/2 h-7 w-px -translate-x-1/2 bg-[#ff245a]/60" />
 
           <button
             type="button"
             aria-label="Xoay"
-            onPointerDown={(
-              event
-            ) =>
-              onPointerOperation(
-                event,
-                'rotate'
-              )
+            title="Xoay đối tượng (Giữ Shift để bước xoay 15°)"
+            onPointerDown={(event) =>
+              onPointerOperation(event, 'rotate')
             }
-            className="absolute -top-10 left-1/2 z-50 h-5 w-5 -translate-x-1/2 cursor-grab rounded-full border-2 border-white bg-[#191919] shadow active:cursor-grabbing"
+            className="absolute -top-10 left-1/2 z-50 h-5 w-5 -translate-x-1/2 cursor-grab rounded-full border-2 border-white bg-[#191919] shadow transition-transform hover:scale-125 active:cursor-grabbing"
           />
         </>
       )}
@@ -1860,51 +2007,17 @@ React.FC<{
         ? element.mobileSrc || element.src
         : element.src;
 
-    if (
-      !source
-    ) {
-      return (
-        <div className="flex h-full min-h-16 w-full items-center justify-center rounded-[8px] border border-dashed border-black/15 bg-white/70 px-2 text-center text-[9px] font-bold text-black/30">
-          Chọn ảnh từ kho tài nguyên
-        </div>
-      );
-    }
-
     return (
-      <img
-        src={
-          source
-        }
+      <ImageShapeRenderer
+        src={source}
         alt=""
-        draggable={
-          false
+        style={style}
+        isEditor={true}
+        placeholder={
+          <div className="flex h-full min-h-16 w-full items-center justify-center border border-dashed border-black/15 bg-white/70 px-2 text-center text-[9px] font-bold text-black/30">
+            Chọn ảnh từ kho tài nguyên
+          </div>
         }
-        style={{
-          objectFit:
-            style.objectFit ||
-            'contain',
-
-          borderRadius:
-            style.borderRadius,
-
-          boxShadow:
-            style.boxShadow,
-
-          background:
-            style.background,
-
-          borderColor:
-            style.borderColor,
-
-          borderWidth:
-            style.borderWidth,
-
-          borderStyle:
-            style.borderWidth
-              ? 'solid'
-              : undefined,
-        }}
-        className="h-full w-full select-none"
       />
     );
   }

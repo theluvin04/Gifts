@@ -63,6 +63,7 @@ export type {
   SceneElementFrame,
   SceneElementType,
   SceneImageElement,
+  SceneImageShape,
   SceneImageStyle,
   ScenePhotoFrameElement,
   ScenePhotoFramePreset,
@@ -94,6 +95,15 @@ export {
 export {
   CurvedText,
 } from './scene/CurvedText';
+
+export {
+  ImageShapeRenderer,
+} from './scene/ImageShapeRenderer';
+
+export {
+  IMAGE_SHAPE_PRESETS,
+  getImageShapeDefinition,
+} from './scene/imageShapeUtils';
 
 export {
   PHOTO_FRAME_PRESETS,
