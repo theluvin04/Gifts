@@ -1183,7 +1183,11 @@ const normalizeElement = (
     data.type ===
       'shape' ||
     data.type ===
-      'photo-frame'
+      'photo-frame' ||
+    data.type ===
+      'custom' ||
+    data.type ===
+      'youtube'
       ? data.type
       : null;
 
@@ -1486,6 +1490,54 @@ const normalizeElement = (
               borderRadius:
                 18,
             },
+    };
+  }
+
+  if (
+    type ===
+    'custom'
+  ) {
+    return {
+      ...base,
+      type: 'custom',
+      slot: safeString(data.slot, 'youtube', 120),
+      data:
+        data.data &&
+        typeof data.data ===
+          'object'
+          ? {
+              ...data.data,
+            }
+          : {
+              youtubeUrl:
+                safeString(
+                  data.youtubeUrl,
+                  '',
+                  2000
+                ),
+            },
+    };
+  }
+
+  if (
+    type ===
+    'youtube'
+  ) {
+    return {
+      ...base,
+      type: 'custom',
+      slot: 'youtube',
+      name:
+        base.name ||
+        `Video YouTube ${index + 1}`,
+      data: {
+        youtubeUrl:
+          safeString(
+            data.youtubeUrl,
+            '',
+            2000
+          ),
+      },
     };
   }
 
