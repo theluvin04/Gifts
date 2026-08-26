@@ -101,6 +101,7 @@ extends SceneTextStyle {
 
 export type SceneShapeKind =
   | 'rectangle'
+  | 'square'
   | 'circle'
   | 'line';
 

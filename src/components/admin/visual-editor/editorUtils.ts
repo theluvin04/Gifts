@@ -171,6 +171,13 @@ export const getElementLabel = (
 
     if (
       kind ===
+      'square'
+    ) {
+      return 'Hình vuông';
+    }
+
+    if (
+      kind ===
       'line'
     ) {
       return 'Đường kẻ';

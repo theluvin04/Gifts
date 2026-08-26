@@ -3100,6 +3100,12 @@ React.FC<{
           },
           {
             value:
+              'square',
+            label:
+              'Hình vuông',
+          },
+          {
+            value:
               'circle',
             label:
               'Hình tròn / elip',

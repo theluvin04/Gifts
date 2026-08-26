@@ -952,7 +952,10 @@ React.FC<Props> = ({
       | 'button'
       | 'decor'
       | 'shape'
-      | 'photo-frame'
+      | 'photo-frame',
+    configure?: (
+      element: SceneElement
+    ) => void
   ) => {
     if (!scene) {
       return null;
@@ -992,6 +995,10 @@ React.FC<Props> = ({
                 : createDecorElement(
                     count
                   );
+
+    configure?.(
+      element
+    );
 
     const maxZ =
       Math.max(
@@ -1039,6 +1046,50 @@ React.FC<Props> = ({
     () => {
       addElement(
         'photo-frame'
+      );
+    };
+
+  const addSquare =
+    () => {
+      if (!scene) {
+        return;
+      }
+
+      const desktopWidth =
+        scene.maxWidth || 1200;
+      const desktopHeight =
+        isLongPageScene(scene)
+          ? scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT
+          : desktopWidth / (scene.aspectRatio || 16 / 9);
+      const mobileHeight =
+        isLongPageScene(scene)
+          ? scene.mobileMinHeight || scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT
+          : LONG_PAGE_MOBILE_WIDTH / (9 / 16);
+      const desktopWidthPercent = 18;
+      const mobileWidthPercent = 32;
+
+      addElement(
+        'shape',
+        (element) => {
+          if (element.type !== 'shape') return;
+
+          element.name = 'Hình vuông';
+          element.frame = {
+            ...element.frame,
+            width: desktopWidthPercent,
+            height: desktopWidthPercent * desktopWidth / desktopHeight,
+          };
+          element.mobileFrame = {
+            ...element.mobileFrame,
+            width: mobileWidthPercent,
+            height: mobileWidthPercent * LONG_PAGE_MOBILE_WIDTH / mobileHeight,
+          };
+          element.shapeStyle = {
+            ...element.shapeStyle,
+            kind: 'square',
+            borderRadius: 0,
+          };
+        }
       );
     };
 
@@ -3371,6 +3422,11 @@ React.FC<Props> = ({
                 'shape'
               )
             }
+          />
+
+          <AddElementButton
+            label="+ Hình vuông"
+            onClick={addSquare}
           />
 
           <AddElementButton
