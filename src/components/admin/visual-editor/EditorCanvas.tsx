@@ -463,6 +463,8 @@ React.FC<Props> = ({
       mode:
         | 'drag'
         | 'resize'
+        | 'resize-left'
+        | 'resize-right'
         | 'rotate'
     ) => {
       if (
@@ -792,6 +794,48 @@ React.FC<Props> = ({
                 ...frame,
                 width,
                 height,
+              },
+            });
+
+            return;
+          }
+
+          if (
+            mode === 'resize-left' ||
+            mode === 'resize-right'
+          ) {
+            const requestedWidth =
+              mode === 'resize-right'
+                ? frame.width + dxPercent
+                : frame.width - dxPercent;
+            const width =
+              clamp(
+                requestedWidth,
+                1,
+                200
+              );
+            const widthDelta =
+              width - frame.width;
+            const anchor =
+              frame.anchor || 'top-left';
+            const horizontalAnchor =
+              anchor.includes('right')
+                ? 1
+                : anchor.includes('center') ||
+                    anchor === 'center'
+                  ? 0.5
+                  : 0;
+            const x =
+              mode === 'resize-right'
+                ? frame.x + horizontalAnchor * widthDelta
+                : frame.x - (1 - horizontalAnchor) * widthDelta;
+
+            onFramesChange({
+              [element.id]: {
+                ...frame,
+                x:
+                  clamp(x, -100, 200),
+                width,
               },
             });
 
@@ -1473,6 +1517,8 @@ React.FC<{
     mode:
       | 'drag'
       | 'resize'
+      | 'resize-left'
+      | 'resize-right'
       | 'rotate'
   ) => void;
 }> = ({
@@ -1644,6 +1690,32 @@ React.FC<{
       !element.locked && (
         <>
           <div className="pointer-events-none absolute -inset-[5px] border border-dashed border-[#ff245a]/60" />
+
+          <button
+            type="button"
+            aria-label="Kéo rộng sang trái"
+            title="Kéo riêng chiều ngang"
+            onPointerDown={(event) =>
+              onPointerOperation(
+                event,
+                'resize-left'
+              )
+            }
+            className="absolute -left-2 top-1/2 z-50 h-7 w-4 -translate-y-1/2 cursor-ew-resize rounded-full border-2 border-white bg-[#ff245a] shadow"
+          />
+
+          <button
+            type="button"
+            aria-label="Kéo rộng sang phải"
+            title="Kéo riêng chiều ngang"
+            onPointerDown={(event) =>
+              onPointerOperation(
+                event,
+                'resize-right'
+              )
+            }
+            className="absolute -right-2 top-1/2 z-50 h-7 w-4 -translate-y-1/2 cursor-ew-resize rounded-full border-2 border-white bg-[#ff245a] shadow"
+          />
 
           <button
             type="button"
