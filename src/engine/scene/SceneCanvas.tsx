@@ -338,8 +338,9 @@ React.FC<
           />
         )}
 
-        {scene.elements.map(
+        {(scene.elements || []).map(
           (element) => {
+            if (!element || !element.id) return null;
             const deviceVisible = mobile
               ? element.mobileVisible ?? element.visible !== false
               : element.desktopVisible ?? element.visible !== false;

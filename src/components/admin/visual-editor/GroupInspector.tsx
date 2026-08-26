@@ -299,13 +299,14 @@ React.FC<Props> = ({
               className="w-full rounded-[9px] border border-black/10 bg-[#faf9f8] px-2.5 py-2.5 text-[9px] font-bold text-black/60 outline-none"
             >
               {scenes.map(
-                (scene) => (
+                (scene, index) => (
                   <option
                     key={scene.id}
                     value={scene.id}
                   >
-                    {scene.title ||
-                      scene.id}
+                    {scene.title
+                      ? `Trang ${index + 1}: ${scene.title}`
+                      : `Trang ${index + 1} (${scene.id})`}
                   </option>
                 )
               )}

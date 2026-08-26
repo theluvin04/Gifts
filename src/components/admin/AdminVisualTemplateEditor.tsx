@@ -123,6 +123,10 @@ interface Props {
     config:
       TemplateVisualEditorConfig
   ) => void;
+
+  dirty?: boolean;
+  saving?: boolean;
+  onSave?: () => void;
 }
 
 type ChangeMode =
@@ -3260,7 +3264,7 @@ React.FC<Props> = ({
           onPaste={
             paste
           }
-          onNhân bản={
+          onDuplicate={
             duplicateSelected
           }
           onDelete={
@@ -3499,7 +3503,6 @@ React.FC<Props> = ({
             scene={
               scene
             }
-            device={device}
             selectedElementIds={
               selectedElementIds
             }
@@ -3669,7 +3672,7 @@ React.FC<Props> = ({
                   onFrameChange={
                     updateElementFrame
                   }
-                  onNhân bản={
+                  onDuplicate={
                     duplicateSelected
                   }
                   onDelete={

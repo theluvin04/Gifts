@@ -203,13 +203,17 @@ React.FC<
   const definition =
     transitions[
       config.preset
-    ];
+    ] ||
+    transitions.fade ||
+    transitions.none;
 
   const mode =
     config.preset ===
-    'crossfade'
+    'crossfade' ||
+    config.preset ===
+    'none'
       ? 'sync'
-      : 'wait';
+      : 'sync';
 
   return (
     <AnimatePresence

@@ -1,4 +1,7 @@
 import React, {
+  Component,
+  type ErrorInfo,
+  type ReactNode,
   useMemo,
 } from 'react';
 
@@ -17,6 +20,63 @@ import {
 import {
   useSceneController,
 } from './useSceneController';
+
+interface SceneErrorBoundaryProps {
+  children: ReactNode;
+  sceneId: string;
+  onReset?: () => void;
+}
+
+interface SceneErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class SceneErrorBoundary extends React.Component<SceneErrorBoundaryProps, SceneErrorBoundaryState> {
+  override state: SceneErrorBoundaryState = { hasError: false };
+
+  constructor(props: SceneErrorBoundaryProps) {
+    super(props);
+  }
+
+  static getDerivedStateFromError(error: Error): SceneErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Error caught in SceneErrorBoundary:', error, errorInfo);
+  }
+
+  componentDidUpdate(prevProps: SceneErrorBoundaryProps) {
+    if (prevProps.sceneId !== this.props.sceneId && this.state.hasError) {
+      this.setState({ hasError: false, error: undefined });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex min-h-[320px] w-full flex-col items-center justify-center p-6 text-center">
+          <p className="text-sm font-bold text-rose-600">Đã xảy ra lỗi khi hiển thị trang</p>
+          <p className="mt-1 text-xs text-black/50">{this.state.error?.message || 'Lỗi không xác định'}</p>
+          {this.props.onReset && (
+            <button
+              type="button"
+              onClick={() => {
+                this.setState({ hasError: false, error: undefined });
+                this.props.onReset?.();
+              }}
+              className="mt-4 rounded-lg bg-black px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-black/80"
+            >
+              Quay về trang đầu
+            </button>
+          )}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface VisualSceneExperienceProps {
   scenes:
@@ -39,7 +99,7 @@ export const VisualSceneExperience:
 React.FC<
   VisualSceneExperienceProps
 > = ({
-  scenes,
+  scenes = [],
   initialSceneId,
   className = '',
   mobileOverride,
@@ -83,7 +143,7 @@ React.FC<
     if (validInitial && validInitial !== controller.scene && !controller.history.includes(validInitial)) {
       controller.reset(validInitial);
     }
-  }, [validInitial, controller]);
+  }, [validInitial]);
 
   const resolveTargetSceneId = (target: string | undefined): string | null => {
     if (!target || typeof target !== 'string') return null;
@@ -250,29 +310,34 @@ React.FC<
         className,
       ].join(' ')}
     >
-      <SceneTransition
-        sceneKey={
-          currentScene.id
-        }
-        transition={
-          currentScene
-            .transition
-        }
+      <SceneErrorBoundary
+        sceneId={currentScene.id}
+        onReset={() => resetScene()}
       >
-        <SceneCanvas
-          scene={
+        <SceneTransition
+          sceneKey={
+            currentScene.id
+          }
+          transition={
             currentScene
+              .transition
           }
-          actionContext={{
-            goToScene,
-            backScene,
-            resetScene,
-          }}
-          mobileOverride={
-            mobileOverride
-          }
-        />
-      </SceneTransition>
+        >
+          <SceneCanvas
+            scene={
+              currentScene
+            }
+            actionContext={{
+              goToScene,
+              backScene,
+              resetScene,
+            }}
+            mobileOverride={
+              mobileOverride
+            }
+          />
+        </SceneTransition>
+      </SceneErrorBoundary>
     </div>
   );
 };

@@ -45,12 +45,12 @@ export const CurvedText: React.FC<CurvedTextProps> = ({
   const curvature = style.curvature ?? 0;
   const fontSize = style.fontSize || 24;
 
-  // Process text transformations
-  let processedText = text;
+  // Process text transformations safely
+  let processedText = String(text || '');
   if (style.textTransform === 'uppercase') {
-    processedText = text.toUpperCase();
+    processedText = processedText.toUpperCase();
   } else if (style.textTransform === 'lowercase') {
-    processedText = text.toLowerCase();
+    processedText = processedText.toLowerCase();
   }
 
   const { width, height } = dimensions;

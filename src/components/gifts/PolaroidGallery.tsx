@@ -53,7 +53,7 @@ const Sparkle: React.FC<{
   left?: string;
   right?: string;
   delay: number;
-  design: TemplateDesignConfig;
+  design?: TemplateDesignConfig;
 }> = ({ top, left, right, delay }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.6 }}
@@ -85,6 +85,7 @@ const PolaroidCard: React.FC<{
     scale?: number;
   };
   delay: number;
+  design?: TemplateDesignConfig;
 }> = ({
   photo,
   rotateClass,
@@ -121,8 +122,8 @@ const PolaroidCard: React.FC<{
     <div
       style={{
         background:
-          design.memories
-            .polaroidBackground,
+          design?.memories
+            ?.polaroidBackground || '#ffffff',
       }}
       className="p-3 shadow-xl"
     >
@@ -138,13 +139,13 @@ const PolaroidCard: React.FC<{
         <p
           style={{
             color:
-              design.memories
-                .captionColor,
+              design?.memories
+                ?.captionColor,
             fontFamily:
-              design.memories
-                .captionFont,
+              design?.memories
+                ?.captionFont,
             fontSize:
-              `${design.memories.captionSize}px`,
+              design?.memories?.captionSize ? `${design.memories.captionSize}px` : undefined,
           }}
           className="italic"
         >

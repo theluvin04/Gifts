@@ -291,6 +291,7 @@ interface BaseSceneElement {
    * inside the visual editor.
    */
   groupId?: string;
+  nhómId?: string;
 
   frame:
     SceneElementFrame;
@@ -390,6 +391,10 @@ extends BaseSceneElement {
   photos?: string[];
 
   mobilePhotos?: string[];
+
+  sources?: string[];
+
+  mobileSources?: string[];
 
   alt?: string;
 

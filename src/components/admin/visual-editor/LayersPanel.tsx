@@ -75,13 +75,14 @@ React.FC<Props> = ({
       return;
     }
 
+    const groupId = element.groupId || (element as any).nhómId;
     const nhómIds =
-      element.nhómId
+      groupId
         ? scene.elements
             .filter(
               (item) =>
-                item.nhómId ===
-                element.nhómId
+                (item.groupId || (item as any).nhómId) ===
+                groupId
             )
             .map(
               (item) =>
@@ -210,7 +211,7 @@ React.FC<Props> = ({
                       )}
                     </p>
 
-                    {element.nhómId && (
+                    {(element.groupId || (element as any).nhómId) && (
                       <span className="shrink-0 rounded bg-[#f4e6ea] px-1 py-0.5 text-[7px] font-black uppercase text-[#a2344f]">
                         nhóm
                       </span>

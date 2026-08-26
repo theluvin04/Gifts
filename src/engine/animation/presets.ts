@@ -490,7 +490,8 @@ export const getAnimationMotionDefinition =
     const base =
       presetMotion[
         config.preset
-      ];
+      ] ||
+      presetMotion.none;
 
     const repeat =
       config.repeat ===
@@ -507,15 +508,15 @@ export const getAnimationMotionDefinition =
 
     return {
       initial: {
-        ...base.initial,
+        ...(base?.initial || {}),
       },
 
       animate: {
-        ...base.animate,
+        ...(base?.animate || {}),
       },
 
       exit: {
-        ...base.exit,
+        ...(base?.exit || {}),
       },
 
       transition: {
