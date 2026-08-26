@@ -307,6 +307,18 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
   const [error, setError] = useState('');
   const [activeSceneId, setActiveSceneId] = useState('');
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'auto' | 'mobile' | 'desktop'>('auto');
+  const [viewportIsMobile, setViewportIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)');
+    const sync = () => setViewportIsMobile(media.matches);
+    sync();
+    media.addEventListener?.('change', sync);
+    return () => media.removeEventListener?.('change', sync);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -489,6 +501,13 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
   }
 
   const price = getEffectiveTemplatePrice(template);
+  const resolvedPreviewDevice =
+    previewDevice === 'auto'
+      ? viewportIsMobile
+        ? 'mobile'
+        : 'desktop'
+      : previewDevice;
+  const previewIsMobile = resolvedPreviewDevice === 'mobile';
 
   if (mode === 'product') {
     const heroChecklist = buildHeroChecklist(draft);
@@ -563,12 +582,17 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
                 Một câu chuyện chỉ dành cho người nhận.
               </p>
 
-              <div className="mt-8 flex justify-center">
-                <div className="aspect-[9/16] w-full max-w-[380px] overflow-hidden rounded-[26px] border-[6px] border-[#181818] bg-white shadow-[0_24px_70px_rgba(70,25,40,0.16)]">
+              {!viewportIsMobile && (
+                <PreviewDevicePicker value={previewDevice} onChange={setPreviewDevice} />
+              )}
+              <div className="mt-4 flex justify-center">
+                <div className={previewIsMobile
+                  ? 'aspect-[9/16] w-full max-w-[380px] overflow-hidden rounded-[26px] border-[6px] border-[#181818] bg-white shadow-[0_24px_70px_rgba(70,25,40,0.16)]'
+                  : 'aspect-video w-full overflow-hidden rounded-[18px] border-[5px] border-[#181818] bg-white shadow-[0_24px_70px_rgba(70,25,40,0.16)]'}>
                   <VisualSceneExperience
                     scenes={template.visualEditor!.scenes}
                     initialSceneId={template.visualEditor!.initialSceneId}
-                    mobileOverride
+                    mobileOverride={previewIsMobile}
                     containViewport
                   />
                 </div>
@@ -655,7 +679,9 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
           </p>
         </div>
       ) : (
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_370px] lg:items-start">
+        <div className={previewIsMobile
+          ? 'grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_370px] lg:items-start'
+          : 'grid gap-8 lg:grid-cols-[minmax(360px,0.85fr)_minmax(520px,1.15fr)] lg:items-start'}>
           <div>
             <PersonalizeSectionHeader
               title={activeCustomerScene.label}
@@ -840,12 +866,16 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
               </span>
             </div>
 
-            <div className="aspect-[9/16] w-full max-w-[340px] overflow-x-hidden overflow-y-auto rounded-[26px] border-[6px] border-[#181818] bg-white shadow-[0_20px_60px_rgba(70,25,40,0.14)]">
+            <PreviewDevicePicker value={previewDevice} onChange={setPreviewDevice} />
+
+            <div className={previewIsMobile
+              ? 'mt-3 aspect-[9/16] w-full max-w-[340px] overflow-x-hidden overflow-y-auto rounded-[26px] border-[6px] border-[#181818] bg-white shadow-[0_20px_60px_rgba(70,25,40,0.14)]'
+              : 'mt-3 aspect-video w-full overflow-hidden rounded-[18px] border-[5px] border-[#181818] bg-white shadow-[0_20px_60px_rgba(70,25,40,0.14)]'}>
               <VisualSceneExperience
-                key={`personalize-preview-${activeCustomerScene.scene.id}`}
+                key={`personalize-preview-${activeCustomerScene.scene.id}-${resolvedPreviewDevice}`}
                 scenes={draft.scenes}
                 initialSceneId={activeCustomerScene.scene.id}
-                mobileOverride
+                mobileOverride={previewIsMobile}
                 containViewport
               />
             </div>
@@ -888,3 +918,27 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
   );
 
 };
+
+const PreviewDevicePicker: React.FC<{
+  value: 'auto' | 'mobile' | 'desktop';
+  onChange: (value: 'auto' | 'mobile' | 'desktop') => void;
+}> = ({ value, onChange }) => (
+  <div className="flex items-center gap-1 rounded-[11px] border border-black/8 bg-white p-1 text-[9px] font-black">
+    {([
+      ['auto', 'Tự động'],
+      ['mobile', 'Điện thoại'],
+      ['desktop', 'Máy tính'],
+    ] as const).map(([id, label]) => (
+      <button
+        key={id}
+        type="button"
+        onClick={() => onChange(id)}
+        className={value === id
+          ? 'rounded-[8px] bg-[#191919] px-2.5 py-1.5 text-white'
+          : 'rounded-[8px] px-2.5 py-1.5 text-black/40 hover:bg-black/[0.04]'}
+      >
+        {label}
+      </button>
+    ))}
+  </div>
+);

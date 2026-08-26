@@ -1,5 +1,7 @@
 import React, {
+  useEffect,
   useMemo,
+  useState,
 } from 'react';
 
 import type {
@@ -108,6 +110,16 @@ React.FC<Props> = ({
   visualEditor,
   onChange,
 }) => {
+  const [activeSceneId, setActiveSceneId] = useState(
+    visualEditor.initialSceneId || visualEditor.scenes[0]?.id || ''
+  );
+
+  useEffect(() => {
+    if (!visualEditor.scenes.some((scene) => scene.id === activeSceneId)) {
+      setActiveSceneId(visualEditor.initialSceneId || visualEditor.scenes[0]?.id || '');
+    }
+  }, [activeSceneId, visualEditor.initialSceneId, visualEditor.scenes]);
+
   const resources =
     useMemo<VisualResource[]>(
       () =>
@@ -120,7 +132,8 @@ React.FC<Props> = ({
                   element.type === 'decor' ||
                   element.type === 'photo-frame' ||
                   element.type === 'text' ||
-                  element.type === 'button'
+                  element.type === 'button' ||
+                  (element.type === 'custom' && element.slot === 'youtube')
               )
               .map((element) => ({
                 sceneId: scene.id,
@@ -148,6 +161,13 @@ React.FC<Props> = ({
         element.type === 'button'
     );
 
+  const youtubeResources =
+    resources.filter(
+      ({ element }) =>
+        element.type === 'custom' &&
+        element.slot === 'youtube'
+    );
+
   const backgrounds =
     visualEditor.scenes.filter(
       (scene) =>
@@ -162,6 +182,19 @@ React.FC<Props> = ({
         getCustomerSlot(element)
           .kind !== 'none'
     );
+
+  const activeImageResources = imageResources.filter(
+    (resource) => resource.sceneId === activeSceneId
+  );
+  const activeTextResources = textResources.filter(
+    (resource) => resource.sceneId === activeSceneId
+  );
+  const activeYoutubeResources = youtubeResources.filter(
+    (resource) => resource.sceneId === activeSceneId
+  );
+  const activeBackgrounds = backgrounds.filter(
+    (scene) => scene.id === activeSceneId
+  );
 
   const updateElement = (
     sceneId: string,
@@ -230,19 +263,54 @@ React.FC<Props> = ({
           <span className="rounded-full bg-white px-2.5 py-1.5 text-black/45">
             {textResources.length} chữ
           </span>
+          <span className="rounded-full bg-white px-2.5 py-1.5 text-black/45">
+            {youtubeResources.length} YouTube
+          </span>
           <span className="rounded-full bg-[#191919] px-2.5 py-1.5 text-white">
             {customerSlots.length} khách được thay
           </span>
         </div>
       </div>
 
-      {backgrounds.length > 0 && (
+      <div className="sticky top-0 z-20 mt-4 rounded-[14px] border border-black/8 bg-white/95 p-2 shadow-sm backdrop-blur">
+        <p className="px-2 pb-2 text-[9px] font-black uppercase tracking-[0.1em] text-black/30">
+          Chọn scene để chỉnh
+        </p>
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {visualEditor.scenes.map((scene, index) => {
+            const count = resources.filter((resource) => resource.sceneId === scene.id).length;
+            const active = scene.id === activeSceneId;
+            return (
+              <button
+                key={scene.id}
+                type="button"
+                onClick={() => setActiveSceneId(scene.id)}
+                className={[
+                  'min-w-[132px] shrink-0 rounded-[10px] border px-3 py-2 text-left transition',
+                  active
+                    ? 'border-[#cf5068]/30 bg-[#fff1f4] text-[#9f4054]'
+                    : 'border-black/7 bg-[#faf9f8] text-black/45 hover:bg-white',
+                ].join(' ')}
+              >
+                <span className="block text-[8px] font-black uppercase tracking-[0.08em] opacity-55">
+                  Scene {index + 1} · {count} mục
+                </span>
+                <span className="mt-1 block truncate text-[10px] font-black">
+                  {scene.title || scene.id}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {activeBackgrounds.length > 0 && (
         <ResourceSection
           title="Ảnh nền"
           description="Ảnh nền đang được dùng thực tế trong từng trang."
         >
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {backgrounds.map(
+            {activeBackgrounds.map(
               (scene) => (
                 <BackgroundCard
                   key={scene.id}
@@ -272,11 +340,11 @@ React.FC<Props> = ({
         title="Ảnh & trang trí trong mẫu"
         description="Mỗi card tương ứng đúng một layer đang xuất hiện trên canvas."
       >
-        {imageResources.length === 0 ? (
-          <EmptyState text="Template chưa có layer ảnh/trang trí." />
+        {activeImageResources.length === 0 ? (
+          <EmptyState text="Scene này chưa có layer ảnh/trang trí." />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {imageResources.map(
+            {activeImageResources.map(
               ({
                 sceneId,
                 sceneTitle,
@@ -304,11 +372,11 @@ React.FC<Props> = ({
         title="Chữ khách có thể sửa"
         description="Bật đúng những dòng khách cần nhập. Chữ trang trí hoặc chữ cố định cứ để khóa."
       >
-        {textResources.length === 0 ? (
-          <EmptyState text="Template chưa có layer chữ/nút." />
+        {activeTextResources.length === 0 ? (
+          <EmptyState text="Scene này chưa có layer chữ/nút." />
         ) : (
           <div className="space-y-2">
-            {textResources.map(
+            {activeTextResources.map(
               ({
                 sceneId,
                 sceneTitle,
@@ -328,6 +396,28 @@ React.FC<Props> = ({
                 />
               )
             )}
+          </div>
+        )}
+      </ResourceSection>
+
+      <ResourceSection
+        title="Video YouTube"
+        description="Dán link video mặc định và bật quyền để khách tự thay link khi đặt hàng."
+      >
+        {activeYoutubeResources.length === 0 ? (
+          <EmptyState text="Scene này chưa có video YouTube." />
+        ) : (
+          <div className="space-y-2">
+            {activeYoutubeResources.map(({ sceneId, sceneTitle, element }) => (
+              <YouTubeResourceRow
+                key={`${sceneId}-${element.id}`}
+                sceneTitle={sceneTitle}
+                element={element}
+                onChange={(next) =>
+                  updateElement(sceneId, element.id, () => next)
+                }
+              />
+            ))}
           </div>
         )}
       </ResourceSection>
@@ -662,6 +752,96 @@ React.FC<{
           }
           placeholder="Tên trường khách thấy"
           className="mt-2 w-full rounded-[8px] border border-[#cf5068]/15 bg-white px-2.5 py-2 text-[9px] font-bold text-[#9f4054] outline-none focus:border-[#cf5068]/40"
+        />
+      )}
+    </div>
+  );
+};
+
+const YouTubeResourceRow:
+React.FC<{
+  sceneTitle: string;
+  element: SceneElement;
+  onChange: (next: SceneElement) => void;
+}> = ({
+  sceneTitle,
+  element,
+  onChange,
+}) => {
+  if (
+    element.type !== 'custom' ||
+    element.slot !== 'youtube'
+  ) {
+    return null;
+  }
+
+  const slot = getCustomerSlot(element);
+  const youtubeUrl = String(element.data?.youtubeUrl || '');
+  const label = element.name || 'Video YouTube';
+
+  const setCustomerReplace = (enabled: boolean) => {
+    onChange(
+      encodeCustomerSlot(
+        element,
+        enabled ? 'youtube' : 'none',
+        slot.label || label
+      )
+    );
+  };
+
+  return (
+    <div className="rounded-[11px] border border-black/7 bg-[#faf9f8] p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="truncate text-[10px] font-black text-black/65">
+            {label}
+          </p>
+          <p className="mt-0.5 text-[8px] text-black/28">
+            {sceneTitle} · YouTube
+          </p>
+        </div>
+
+        <label className="flex shrink-0 items-center gap-1.5 text-[8px] font-black text-black/45">
+          <input
+            type="checkbox"
+            checked={slot.kind === 'youtube'}
+            onChange={(event) => setCustomerReplace(event.target.checked)}
+            className="h-3.5 w-3.5 accent-[#b83e57]"
+          />
+          Khách thay link
+        </label>
+      </div>
+
+      <input
+        type="url"
+        value={youtubeUrl}
+        onChange={(event) =>
+          onChange({
+            ...element,
+            data: {
+              ...element.data,
+              youtubeUrl: event.target.value,
+            },
+          })
+        }
+        placeholder="https://youtube.com/watch?v=..."
+        className="mt-2 w-full rounded-[8px] border border-black/7 bg-white px-2.5 py-2 font-mono text-[9px] outline-none focus:border-[#cf5068]/40"
+      />
+
+      {slot.kind === 'youtube' && (
+        <input
+          value={slot.label || label}
+          onChange={(event) =>
+            onChange(
+              encodeCustomerSlot(
+                element,
+                'youtube',
+                event.target.value
+              )
+            )
+          }
+          placeholder="Tên trường khách thấy"
+          className="mt-2 w-full rounded-[8px] border border-[#cf5068]/15 bg-[#fff7f9] px-2.5 py-2 text-[9px] font-bold text-[#9f4054] outline-none focus:border-[#cf5068]/40"
         />
       )}
     </div>

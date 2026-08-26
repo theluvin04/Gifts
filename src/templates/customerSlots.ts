@@ -1,4 +1,5 @@
 import type { SceneElement } from '../engine';
+import { resolvePhotoFrameStyle } from '../engine/scene/photoFramePresets';
 
 export type CustomerSlotKind = 'none' | 'image' | 'text' | 'youtube';
 
@@ -43,7 +44,10 @@ export const getCustomerImageSlotCount = (
 ) => {
   if (element.type !== 'photo-frame') return 1;
 
-  const style = element.frameStyle || {};
+  // The renderer resolves the preset before deciding how many photo cells to
+  // draw. Do the same here; otherwise a 4-photo preset without an explicit
+  // `layout` is incorrectly exposed to the customer as one upload field.
+  const style = resolvePhotoFrameStyle(element.frameStyle || {});
   const layout = style.layout;
   const inferred =
     layout === 'strip-vertical-4' ||
