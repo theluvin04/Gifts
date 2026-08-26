@@ -1136,14 +1136,14 @@ const normalizeActions = (
 ):
   SceneElementAction[] => {
   if (
-    !Array.isArray(
-      value
-    )
+    !value
   ) {
     return [];
   }
 
-  return value
+  const list = Array.isArray(value) ? value : [value];
+
+  return list
     .filter(
       (
         item
@@ -1154,6 +1154,22 @@ const normalizeActions = (
         typeof item.type ===
           'string'
     )
+    .map((item: any) => {
+      const type = String(item.type || '').toLowerCase().replace(/_/g, '-');
+      if (type === 'go-to-scene' || type === 'goto-scene' || type === 'change-scene') {
+        return {
+          type: 'go-to-scene',
+          sceneId: safeString(item.sceneId, '', 120),
+          replace: item.replace === true,
+        };
+      }
+      if (type === 'back-scene' || type === 'back' || type === 'prev-scene' || type === 'previous-scene') {
+        return {
+          type: 'back-scene',
+        };
+      }
+      return item;
+    })
     .slice(
       0,
       12

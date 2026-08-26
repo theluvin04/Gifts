@@ -54,16 +54,23 @@ const isSafeExternalUrl = (
 export const executeSceneAction =
   (
     action:
-      SceneElementAction,
+      SceneElementAction | any,
     context:
       SceneActionContext
   ) => {
-    switch (
-      action.type
-    ) {
+    if (!action || typeof action !== 'object') {
+      return;
+    }
+
+    const type = String(action.type || '').toLowerCase().replace(/_/g, '-');
+
+    switch (type) {
       case 'go-to-scene':
+      case 'goto-scene':
+      case 'change-scene':
+      case 'next-scene':
         context.goToScene(
-          action.sceneId,
+          action.sceneId || (type === 'next-scene' ? 'next' : ''),
           {
             replace:
               action.replace,
@@ -72,6 +79,9 @@ export const executeSceneAction =
         return;
 
       case 'back-scene':
+      case 'back':
+      case 'prev-scene':
+      case 'previous-scene':
         context.backScene();
         return;
 
@@ -137,11 +147,7 @@ export const executeSceneAction =
         return;
 
       default: {
-        const exhaustive:
-          never =
-            action;
-
-        return exhaustive;
+        return;
       }
     }
   };
@@ -150,19 +156,27 @@ export const executeSceneActions =
   (
     actions:
       SceneElementAction[] |
-      undefined,
+      SceneElementAction |
+      any,
     context:
       SceneActionContext
   ) => {
     if (
-      !actions ||
-      actions.length ===
+      !actions
+    ) {
+      return;
+    }
+
+    const list = Array.isArray(actions) ? actions : [actions];
+
+    if (
+      list.length ===
         0
     ) {
       return;
     }
 
-    actions.forEach(
+    list.forEach(
       (action) =>
         executeSceneAction(
           action,

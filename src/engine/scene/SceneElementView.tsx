@@ -206,8 +206,7 @@ React.FC<
 
   const clickable =
     Boolean(
-      element.actions
-        ?.length
+      (element.actions && element.actions.length > 0) || (element as any).action
     );
 
   const wrapperStyle =
@@ -217,7 +216,7 @@ React.FC<
 
   const pointerClass =
     clickable
-      ? 'cursor-pointer'
+      ? 'cursor-pointer pointer-events-auto select-none'
       : 'pointer-events-none';
 
   const renderContent =
@@ -452,6 +451,14 @@ React.FC<
         return (
           <motion.button
             type="button"
+            onClick={
+              clickable
+                ? (e) => {
+                    e.stopPropagation();
+                    onClick();
+                  }
+                : undefined
+            }
             whileTap={{
               scale: 0.97,
             }}
@@ -596,7 +603,10 @@ React.FC<
           }
           onClick={
             clickable
-              ? onClick
+              ? (event) => {
+                  event.stopPropagation();
+                  onClick();
+                }
               : undefined
           }
           onKeyDown={

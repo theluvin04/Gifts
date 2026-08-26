@@ -1796,16 +1796,19 @@ React.FC<{
             label="Trang đích"
             value={
               firstAction
-                .sceneId
+                .sceneId ||
+              scenes[0]?.id ||
+              ''
             }
             options={
               scenes.map(
-                (item) => ({
+                (item, index) => ({
                   value:
                     item.id,
                   label:
-                    item.title ||
-                    item.id,
+                    item.title
+                      ? `Trang ${index + 1}: ${item.title}`
+                      : `Trang ${index + 1} (${item.id})`,
                 })
               )
             }
