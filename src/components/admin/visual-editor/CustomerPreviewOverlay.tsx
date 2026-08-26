@@ -99,6 +99,27 @@ export const CustomerPreviewOverlay: React.FC<Props> = ({ config, onClose }) => 
                       />
                     </label>
                   )}
+                  {slot.kind === 'youtube' && element.type === 'custom' && (
+                    <input
+                      type="url"
+                      value={String(element.data?.youtubeUrl || '')}
+                      placeholder="Dán link YouTube"
+                      onChange={(event) =>
+                        updateElement(sceneId, element.id, (current) =>
+                          current.type === 'custom'
+                            ? {
+                                ...current,
+                                data: {
+                                  ...current.data,
+                                  youtubeUrl: event.target.value,
+                                },
+                              }
+                            : current
+                        )
+                      }
+                      className="mt-2 w-full rounded-[9px] border border-black/9 bg-white px-3 py-2.5 text-[11px] outline-none focus:border-[#cf5068]/40"
+                    />
+                  )}
                 </div>
               ))
             )}

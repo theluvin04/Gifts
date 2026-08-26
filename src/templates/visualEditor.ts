@@ -2,12 +2,12 @@ import type {
   AnimationPreset,
   SceneButtonElement,
   SceneCanvasDefinition,
+  SceneCustomElement,
   SceneElement,
   SceneElementAction,
   SceneElementFrame,
   SceneImageElement,
   ScenePhotoFrameElement,
-  SceneYoutubeElement,
   SceneShapeElement,
   SceneTextElement,
   SceneTransitionPreset,
@@ -600,54 +600,48 @@ export const createPolaroidElement =
     actions: [],
   });
 
-export const createYoutubeElement = (
-  index = 1
-): SceneYoutubeElement => ({
-  id: createId('youtube'),
+export const createYouTubeElement =
+  (
+    index = 1
+  ):
+    SceneCustomElement => ({
+    id:
+      createId(
+        'youtube'
+      ),
 
-  type: 'youtube',
+    type: 'custom',
 
-  name: `Nhạc YouTube ${index}`,
+    slot: 'youtube',
 
-  youtubeUrl: 'https://www.youtube.com/watch?v=jfKfPfyJRdk',
+    name:
+      `Video YouTube ${index}`,
 
-  title: 'Nhạc nền tình yêu',
+    data: {
+      youtubeUrl: '',
+    },
 
-  frame: {
-    ...DEFAULT_FRAME,
-    width: 36,
-    height: 24,
-    zIndex: 2,
-  },
+    frame: {
+      ...DEFAULT_FRAME,
+      width: 48,
+      height: 27,
+      zIndex: 2,
+    },
 
-  mobileFrame: {
-    width: 78,
-    height: 22,
-  },
+    mobileFrame: {
+      width: 82,
+      height: 26,
+    },
 
-  youtubeStyle: {
-    borderRadius: 16,
-    borderWidth: 0,
-    borderColor: '#ffffff',
-    borderStyle: 'solid',
-    boxShadow: '0 16px 36px rgba(0,0,0,0.22)',
-    autoplay: false,
-    loop: true,
-    mute: false,
-    controls: true,
-    frameTheme: 'youtube',
-    showTitle: true,
-  },
+    animation: {
+      preset: 'fade',
+      durationMs: 420,
+      delayMs: 0,
+      easing: 'easeOut',
+    },
 
-  animation: {
-    preset: 'zoom-in',
-    durationMs: 500,
-    delayMs: 0,
-    easing: 'easeOut',
-  },
-
-  actions: [],
-});
+    actions: [],
+  });
 
 
 const introScene:
@@ -1136,14 +1130,14 @@ const normalizeActions = (
 ):
   SceneElementAction[] => {
   if (
-    !value
+    !Array.isArray(
+      value
+    )
   ) {
     return [];
   }
 
-  const list = Array.isArray(value) ? value : [value];
-
-  return list
+  return value
     .filter(
       (
         item
@@ -1154,22 +1148,6 @@ const normalizeActions = (
         typeof item.type ===
           'string'
     )
-    .map((item: any) => {
-      const type = String(item.type || '').toLowerCase().replace(/_/g, '-');
-      if (type === 'go-to-scene' || type === 'goto-scene' || type === 'change-scene') {
-        return {
-          type: 'go-to-scene',
-          sceneId: safeString(item.sceneId, '', 120),
-          replace: item.replace === true,
-        };
-      }
-      if (type === 'back-scene' || type === 'back' || type === 'prev-scene' || type === 'previous-scene') {
-        return {
-          type: 'back-scene',
-        };
-      }
-      return item;
-    })
     .slice(
       0,
       12
@@ -1205,9 +1183,7 @@ const normalizeElement = (
     data.type ===
       'shape' ||
     data.type ===
-      'photo-frame' ||
-    data.type ===
-      'youtube'
+      'photo-frame'
       ? data.type
       : null;
 
@@ -1513,75 +1489,6 @@ const normalizeElement = (
     };
   }
 
-  if (
-    type ===
-    'youtube'
-  ) {
-    return {
-      ...base,
-
-      type: 'youtube',
-
-      youtubeUrl:
-        safeString(
-          data.youtubeUrl,
-          'https://www.youtube.com/watch?v=jfKfPfyJRdk',
-          2000
-        ),
-
-      mobileYoutubeUrl:
-        safeString(
-          data.mobileYoutubeUrl,
-          '',
-          2000
-        ) || undefined,
-
-      title:
-        safeString(
-          data.title,
-          'Nhạc nền',
-          300
-        ),
-
-      mobileTitle:
-        typeof data.mobileTitle === 'string'
-          ? safeString(
-              data.mobileTitle,
-              '',
-              300
-            )
-          : undefined,
-
-      youtubeStyle:
-        data.youtubeStyle &&
-        typeof data.youtubeStyle === 'object'
-          ? {
-              ...data.youtubeStyle,
-            }
-          : {
-              borderRadius: 16,
-              borderWidth: 0,
-              borderColor: '#ffffff',
-              borderStyle: 'solid',
-              boxShadow: '0 16px 36px rgba(0,0,0,0.22)',
-              autoplay: false,
-              loop: true,
-              mute: false,
-              controls: true,
-              frameTheme: 'youtube',
-              showTitle: true,
-            },
-
-      mobileYoutubeStyle:
-        data.mobileYoutubeStyle &&
-        typeof data.mobileYoutubeStyle === 'object'
-          ? {
-              ...data.mobileYoutubeStyle,
-            }
-          : undefined,
-    };
-  }
-
   return {
     ...base,
 
@@ -1725,27 +1632,6 @@ const normalizeScene = (
             Number.MAX_SAFE_INTEGER
           )
         : undefined,
-
-    mobileMinHeight:
-      typeof data
-        .mobileMinHeight ===
-        'number'
-        ? safeNumber(
-            data.mobileMinHeight,
-            data.minHeight || 0,
-            0,
-            Number.MAX_SAFE_INTEGER
-          )
-        : typeof data
-            .minHeight ===
-            'number'
-          ? safeNumber(
-              data.minHeight,
-              0,
-              0,
-              Number.MAX_SAFE_INTEGER
-            )
-          : undefined,
 
     maxWidth:
       safeNumber(

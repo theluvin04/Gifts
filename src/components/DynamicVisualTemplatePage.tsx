@@ -12,6 +12,7 @@ import type { TemplateVisualEditorConfig } from '../templates/visualEditor';
 import { getCustomerSlot } from '../templates/customerSlots';
 import {
   PersonalizePageShell,
+  PersonalizeInput,
   PersonalizeSectionHeader,
   PersonalizeTextarea,
   type PersonalizeTab,
@@ -32,6 +33,77 @@ const clone = <T,>(value: T): T =>
 const draftKey = (templateId: string) =>
   `dearly:visual-customer-draft:${templateId}`;
 
+const mergeCustomerValues = (
+  latest: TemplateVisualEditorConfig,
+  saved: TemplateVisualEditorConfig
+): TemplateVisualEditorConfig => {
+  const next = clone(latest);
+  const savedScenes = new Map(
+    saved.scenes.map((scene) => [scene.id, scene])
+  );
+
+  next.scenes = next.scenes.map((scene) => {
+    const savedScene = savedScenes.get(scene.id);
+    if (!savedScene) return scene;
+
+    const savedElements = new Map(
+      savedScene.elements.map((element) => [element.id, element])
+    );
+
+    return {
+      ...scene,
+      elements: scene.elements.map((element) => {
+        const slot = getCustomerSlot(element);
+        const savedElement = savedElements.get(element.id);
+
+        if (!savedElement || slot.kind === 'none') return element;
+
+        if (
+          slot.kind === 'text' &&
+          element.type === savedElement.type
+        ) {
+          if (element.type === 'text' && savedElement.type === 'text') {
+            return { ...element, text: savedElement.text };
+          }
+          if (element.type === 'button' && savedElement.type === 'button') {
+            return { ...element, label: savedElement.label };
+          }
+        }
+
+        if (
+          slot.kind === 'image' &&
+          (element.type === 'image' || element.type === 'photo-frame') &&
+          (savedElement.type === 'image' || savedElement.type === 'photo-frame')
+        ) {
+          return {
+            ...element,
+            src: savedElement.src,
+            alt: savedElement.alt,
+          } as SceneElement;
+        }
+
+        if (
+          slot.kind === 'youtube' &&
+          element.type === 'custom' &&
+          savedElement.type === 'custom'
+        ) {
+          return {
+            ...element,
+            data: {
+              ...element.data,
+              youtubeUrl: savedElement.data?.youtubeUrl || '',
+            },
+          };
+        }
+
+        return element;
+      }),
+    };
+  });
+
+  return next;
+};
+
 const loadDraft = (
   templateId: string,
   fallback: TemplateVisualEditorConfig
@@ -49,7 +121,7 @@ const loadDraft = (
       Array.isArray(parsed.scenes) &&
       typeof parsed.initialSceneId === 'string'
     ) {
-      return parsed;
+      return mergeCustomerValues(fallback, parsed);
     }
   } catch {
     // fallback below
@@ -157,6 +229,7 @@ const buildHighlights = (
 
   const hasImage = slots.some((item) => item.slot.kind === 'image');
   const hasText = slots.some((item) => item.slot.kind === 'text');
+  const hasYouTube = slots.some((item) => item.slot.kind === 'youtube');
   const sceneCount = draft.scenes.length;
   const category = getTemplateCategory(template);
 
@@ -182,7 +255,9 @@ const buildHighlights = (
         category === 'Tình yêu'
           ? 'Âm nhạc / cảm xúc riêng'
           : 'Nội dung riêng của khách',
-      description: hasText
+      description: hasYouTube
+        ? 'Khách có thể thay link YouTube ngay trên mẫu; video mới được cập nhật trực tiếp trong trải nghiệm.'
+        : hasText
         ? 'Các đoạn chữ, lời chúc hoặc CTA có thể chỉnh ngay trước khi thanh toán.'
         : 'Nội dung được giữ tinh gọn để tối ưu trải nghiệm xem trên điện thoại.',
     },
@@ -250,7 +325,7 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
         }
 
         setTemplate(next);
-        setDraft((curr) => curr || loadDraft(templateId, next.visualEditor!));
+        setDraft(loadDraft(templateId, next.visualEditor!));
       })
       .catch((loadError: any) => {
         if (!active) return;
@@ -485,6 +560,14 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
                   />
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={onStartPersonalize}
+                className="mt-5 w-full rounded-[14px] bg-[#191919] px-6 py-3.5 text-sm font-black text-white transition hover:bg-[#cf5068]"
+              >
+                Chỉnh mẫu này →
+              </button>
             </div>
           </section>
 
@@ -663,6 +746,41 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
                         />
                       </label>
                     </div>
+                  )}
+
+                  {slot.kind === 'youtube' &&
+                    element.type === 'custom' && (
+                    <PersonalizeInput
+                      label={
+                        slot.label ||
+                        element.name ||
+                        `Video YouTube ${index + 1}`
+                      }
+                      value={
+                        String(
+                          element.data
+                            ?.youtubeUrl ||
+                          ''
+                        )
+                      }
+                      placeholder="Dán link YouTube"
+                      onChange={(youtubeUrl) =>
+                        updateElement(
+                          sceneId,
+                          element.id,
+                          (current) =>
+                            current.type === 'custom'
+                              ? {
+                                  ...current,
+                                  data: {
+                                    ...current.data,
+                                    youtubeUrl,
+                                  },
+                                }
+                              : current
+                        )
+                      }
+                    />
                   )}
                 </div>
               )

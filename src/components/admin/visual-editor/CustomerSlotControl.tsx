@@ -15,8 +15,9 @@ export const CustomerSlotControl: React.FC<Props> = ({ element, onChange }) => {
   const slot = getCustomerSlot(element);
   const canImage = element.type === 'image' || element.type === 'photo-frame';
   const canText = element.type === 'text' || element.type === 'button';
+  const canYouTube = element.type === 'custom' && element.slot === 'youtube';
 
-  if (!canImage && !canText) return null;
+  if (!canImage && !canText && !canYouTube) return null;
 
   const setKind = (kind: CustomerSlotKind) => {
     onChange(encodeCustomerSlot(element, kind, slot.label));
@@ -57,6 +58,18 @@ export const CustomerSlotControl: React.FC<Props> = ({ element, onChange }) => {
           ].join(' ')}
         >
           Chữ
+        </button>
+      )}
+      {canYouTube && (
+        <button
+          type="button"
+          onClick={() => setKind('youtube')}
+          className={[
+            'rounded-[6px] px-2 py-1.5 text-[8px] font-black',
+            slot.kind === 'youtube' ? 'bg-[#fff0f4] text-[#a73551]' : 'text-black/35 hover:bg-[#f5f2f1]',
+          ].join(' ')}
+        >
+          YouTube
         </button>
       )}
     </div>

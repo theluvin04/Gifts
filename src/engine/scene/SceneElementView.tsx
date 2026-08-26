@@ -23,20 +23,8 @@ import {
 } from './photoFramePresets';
 
 import {
-  CurvedText,
-} from './CurvedText';
-
-import {
-  ImageShapeRenderer,
-} from './ImageShapeRenderer';
-
-import {
-  PhotoFrameRenderer,
-} from './PhotoFrameRenderer';
-
-import {
-  YoutubeFrameRenderer,
-} from './YoutubeFrameRenderer';
+  getYouTubeEmbedUrl,
+} from '../../utils/youtube';
 
 const getAnchorTransform = (
   anchor:
@@ -206,7 +194,8 @@ React.FC<
 
   const clickable =
     Boolean(
-      (element.actions && element.actions.length > 0) || (element as any).action
+      element.actions
+        ?.length
     );
 
   const wrapperStyle =
@@ -215,9 +204,14 @@ React.FC<
     );
 
   const pointerClass =
-    clickable
-      ? 'cursor-pointer pointer-events-auto select-none'
-      : 'pointer-events-none';
+    element.type ===
+      'custom' &&
+    element.slot ===
+      'youtube'
+      ? 'pointer-events-auto'
+      : clickable
+        ? 'cursor-pointer'
+        : 'pointer-events-none';
 
   const renderContent =
     () => {
@@ -241,16 +235,6 @@ React.FC<
                 ...mobileStyle,
               }
             : desktopStyle;
-
-        if (style.curvature && Math.abs(style.curvature) > 0) {
-          return (
-            <CurvedText
-              text={element.text}
-              style={style}
-              pathId={`scene-curved-text-${element.id}-${animationVersion}`}
-            />
-          );
-        }
 
         return (
           <div
@@ -281,8 +265,6 @@ React.FC<
                 style.fontStyle,
               textDecoration:
                 style.textDecoration,
-              textShadow:
-                style.textShadow,
               whiteSpace:
                 style.whiteSpace ||
                 'pre-line',
@@ -325,10 +307,37 @@ React.FC<
         }
 
         return (
-          <ImageShapeRenderer
-            src={source}
-            alt={element.alt || ''}
-            style={style}
+          <img
+            src={
+              source
+            }
+            alt={
+              element.alt ||
+              ''
+            }
+            draggable={
+              false
+            }
+            style={{
+              objectFit:
+                style.objectFit ||
+                'contain',
+              borderRadius:
+                style.borderRadius,
+              boxShadow:
+                style.boxShadow,
+              background:
+                style.background,
+              borderColor:
+                style.borderColor,
+              borderWidth:
+                style.borderWidth,
+              borderStyle:
+                style.borderWidth
+                  ? 'solid'
+                  : undefined,
+            }}
+            className="h-full w-full select-none"
           />
         );
       }
@@ -337,15 +346,147 @@ React.FC<
         element.type ===
         'photo-frame'
       ) {
+        const source =
+          mobile
+            ? element.mobileSrc || element.src
+            : element.src;
+        const style =
+          resolvePhotoFrameStyle(
+            mobile
+              ? {
+                  ...element.frameStyle,
+                  ...element.mobileFrameStyle,
+                }
+              : element.frameStyle
+          );
+
+        const padding =
+          Math.max(
+            0,
+            style.paddingPercent ??
+              6
+          );
+
+        const captionArea =
+          Math.max(
+            12,
+            style.captionAreaPercent ??
+              22
+          );
+
         return (
-          <PhotoFrameRenderer
-            element={element}
-            device={
-              mobile
-                ? 'mobile'
-                : 'desktop'
-            }
-          />
+          <div
+            style={{
+              width:
+                '100%',
+              height:
+                '100%',
+              display:
+                'flex',
+              flexDirection:
+                'column',
+              gap:
+                `${Math.max(2, padding * 0.45)}%`,
+              padding:
+                `${padding}%`,
+              paddingBottom:
+                `${Math.max(padding, padding * 0.7)}%`,
+              background:
+                style.background ||
+                '#fffdf8',
+              borderRadius:
+                style.outerRadius ??
+                4,
+              boxShadow:
+                style.boxShadow ||
+                '0 18px 38px rgba(40,25,25,0.18)',
+              overflow:
+                'hidden',
+            }}
+          >
+            <div
+              style={{
+                minHeight: 0,
+                flex:
+                  `1 1 ${100 - captionArea}%`,
+                overflow:
+                  'hidden',
+                borderRadius:
+                  style.innerRadius ??
+                  2,
+                background:
+                  '#eeeae5',
+              }}
+            >
+              {source ? (
+                <img
+                  src={
+                    source
+                  }
+                  alt={
+                    element.alt ||
+                    ''
+                  }
+                  draggable={
+                    false
+                  }
+                  style={{
+                    width:
+                      '100%',
+                    height:
+                      '100%',
+                    objectFit:
+                      style.imageFit ||
+                      'cover',
+                  }}
+                  className="select-none"
+                />
+              ) : null}
+            </div>
+
+            <div
+              style={{
+                minHeight:
+                  `${captionArea}%`,
+                display:
+                  'flex',
+                alignItems:
+                  'center',
+                justifyContent:
+                  style.captionAlign ===
+                  'left'
+                    ? 'flex-start'
+                    : style.captionAlign ===
+                        'right'
+                      ? 'flex-end'
+                      : 'center',
+                color:
+                  style.captionColor ||
+                  '#34302f',
+                fontFamily:
+                  style.captionFontFamily,
+                fontSize:
+                  style.captionFontSize ||
+                  16,
+                fontWeight:
+                  style.captionFontWeight ||
+                  600,
+                textAlign:
+                  style.captionAlign ||
+                  'center',
+                lineHeight:
+                  1.2,
+                whiteSpace:
+                  'pre-line',
+                overflow:
+                  'hidden',
+              }}
+            >
+              {mobile
+                ? element.mobileCaption ?? element.caption ?? ''
+                : element.caption || ''}
+            </div>
+          </div>
         );
       }
 
@@ -451,14 +592,6 @@ React.FC<
         return (
           <motion.button
             type="button"
-            onClick={
-              clickable
-                ? (e) => {
-                    e.stopPropagation();
-                    onClick();
-                  }
-                : undefined
-            }
             whileTap={{
               scale: 0.97,
             }}
@@ -514,24 +647,43 @@ React.FC<
 
       if (
         element.type ===
-        'youtube'
-      ) {
-        return (
-          <YoutubeFrameRenderer
-            element={element}
-            device={
-              mobile
-                ? 'mobile'
-                : 'desktop'
-            }
-          />
-        );
-      }
-
-      if (
-        element.type ===
         'custom'
       ) {
+        if (
+          element.slot ===
+          'youtube'
+        ) {
+          const embedUrl =
+            getYouTubeEmbedUrl(
+              String(
+                element.data
+                  ?.youtubeUrl ||
+                ''
+              )
+            );
+
+          if (!embedUrl) {
+            return (
+              <div className="flex h-full w-full items-center justify-center rounded-[10px] border border-dashed border-black/15 bg-black/[0.04] px-3 text-center text-[10px] font-bold text-black/35">
+                Dán link YouTube trong bảng Nội dung
+              </div>
+            );
+          }
+
+          return (
+            <iframe
+              src={embedUrl}
+              title={
+                element.name ||
+                'YouTube video'
+              }
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="h-full w-full rounded-[10px] border-0"
+            />
+          );
+        }
+
         return (
           renderCustom?.(
             element
@@ -603,10 +755,7 @@ React.FC<
           }
           onClick={
             clickable
-              ? (event) => {
-                  event.stopPropagation();
-                  onClick();
-                }
+              ? onClick
               : undefined
           }
           onKeyDown={

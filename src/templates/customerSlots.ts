@@ -1,8 +1,8 @@
 import type { SceneElement } from '../engine';
 
-export type CustomerSlotKind = 'none' | 'image' | 'text';
+export type CustomerSlotKind = 'none' | 'image' | 'text' | 'youtube';
 
-const SLOT_PREFIX = /^\[customer:(image|text)\]\s*/i;
+const SLOT_PREFIX = /^\[customer:(image|text|youtube)\]\s*/i;
 
 export const getCustomerSlot = (element: SceneElement): {
   kind: CustomerSlotKind;
@@ -19,7 +19,7 @@ export const getCustomerSlot = (element: SceneElement): {
   }
 
   return {
-    kind: match[1].toLowerCase() as 'image' | 'text',
+    kind: match[1].toLowerCase() as Exclude<CustomerSlotKind, 'none'>,
     label: aria.replace(SLOT_PREFIX, '').trim(),
   };
 };
@@ -45,6 +45,8 @@ export const encodeCustomerSlot = (
         ? element.label
         : element.type === 'photo-frame'
           ? element.caption || 'Ảnh'
+          : element.type === 'custom' && element.slot === 'youtube'
+            ? 'Video YouTube'
           : element.type === 'image' || element.type === 'decor'
             ? element.alt || 'Ảnh'
             : 'Nội dung');

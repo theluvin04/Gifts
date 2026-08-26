@@ -21,9 +21,9 @@ import {
   createDecorElement,
   createImageElement,
   createPolaroidElement,
-  createYoutubeElement,
   createShapeElement,
   createTextElement,
+  createYouTubeElement,
   createVisualScene,
   duplicateVisualScene,
 } from '../../templates/visualEditor';
@@ -958,10 +958,7 @@ React.FC<Props> = ({
       | 'decor'
       | 'shape'
       | 'photo-frame'
-      | 'youtube',
-    configure?: (
-      element: SceneElement
-    ) => void
+      | 'youtube'
   ) => {
     if (!scene) {
       return null;
@@ -1000,16 +997,12 @@ React.FC<Props> = ({
                   )
                 : type ===
                     'youtube'
-                  ? createYoutubeElement(
+                  ? createYouTubeElement(
                       count
                     )
-                  : createDecorElement(
-                      count
-                    );
-
-    configure?.(
-      element
-    );
+                : createDecorElement(
+                    count
+                  );
 
     const maxZ =
       Math.max(
@@ -1057,50 +1050,6 @@ React.FC<Props> = ({
     () => {
       addElement(
         'photo-frame'
-      );
-    };
-
-  const addSquare =
-    () => {
-      if (!scene) {
-        return;
-      }
-
-      const desktopWidth =
-        scene.maxWidth || 1200;
-      const desktopHeight =
-        isLongPageScene(scene)
-          ? scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT
-          : desktopWidth / (scene.aspectRatio || 16 / 9);
-      const mobileHeight =
-        isLongPageScene(scene)
-          ? scene.mobileMinHeight || scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT
-          : LONG_PAGE_MOBILE_WIDTH / (9 / 16);
-      const desktopWidthPercent = 18;
-      const mobileWidthPercent = 32;
-
-      addElement(
-        'shape',
-        (element) => {
-          if (element.type !== 'shape') return;
-
-          element.name = 'Hình vuông';
-          element.frame = {
-            ...element.frame,
-            width: desktopWidthPercent,
-            height: desktopWidthPercent * desktopWidth / desktopHeight,
-          };
-          element.mobileFrame = {
-            ...element.mobileFrame,
-            width: mobileWidthPercent,
-            height: mobileWidthPercent * LONG_PAGE_MOBILE_WIDTH / mobileHeight,
-          };
-          element.shapeStyle = {
-            ...element.shapeStyle,
-            kind: 'square',
-            borderRadius: 0,
-          };
-        }
       );
     };
 
@@ -1744,7 +1693,7 @@ React.FC<Props> = ({
     const primaryId =
       selectedElementIds[
         selectedElementIds.length - 1
-      ] || '';
+      ];
 
     const reference =
       unlocked.find(
@@ -2630,17 +2579,6 @@ React.FC<Props> = ({
         const currentHeight =
           scene.minHeight ||
           LONG_PAGE_DEFAULT_HEIGHT;
-        const currentMobileHeight =
-          scene.mobileMinHeight ||
-          currentHeight;
-
-        const resizedDesktop =
-          resizeElementsForDevicePageHeight(
-            scene.elements,
-            'desktop',
-            currentHeight,
-            nextDesktopHeight
-          );
 
         updateScene({
           ...scene,
@@ -2650,17 +2588,16 @@ React.FC<Props> = ({
             'screen',
           minHeight:
             undefined,
-          mobileMinHeight:
-            undefined,
           maxWidth:
             1200,
           overflow:
             'hidden',
           elements:
-            resizeElementsForDevicePageHeight(
-              resizedDesktop,
-              'mobile',
-              currentMobileHeight,
+            resizeElementsForPageHeight(
+              scene.elements,
+              currentHeight,
+              nextDesktopHeight,
+              currentHeight,
               nextMobileHeight
             ),
         });
@@ -2680,64 +2617,72 @@ React.FC<Props> = ({
           'long-page',
         minHeight:
           LONG_PAGE_DEFAULT_HEIGHT,
-        mobileMinHeight:
-          LONG_PAGE_DEFAULT_HEIGHT,
         maxWidth:
           scene.maxWidth ||
           1200,
         overflow:
           'hidden',
         elements:
-          resizeElementsForDevicePageHeight(
-            resizeElementsForDevicePageHeight(
-              scene.elements,
-              'desktop',
-              oldDesktopHeight,
-              LONG_PAGE_DEFAULT_HEIGHT
-            ),
-            'mobile',
+          resizeElementsForPageHeight(
+            scene.elements,
+            oldDesktopHeight,
+            LONG_PAGE_DEFAULT_HEIGHT,
             oldMobileHeight,
             LONG_PAGE_DEFAULT_HEIGHT
           ),
       });
     };
 
-  const resizeElementsForDevicePageHeight = (
+  const resizeElementsForPageHeight = (
     elements: SceneElement[],
-    targetDevice: DeviceMode,
-    oldHeight: number,
-    nextHeight: number
+    oldDesktopHeight: number,
+    nextDesktopHeight: number,
+    oldMobileHeight: number,
+    nextMobileHeight: number
   ) =>
     elements.map((element) => {
-      const frame =
+      const desktop =
         getEffectiveFrame(
           element,
-          targetDevice
+          'desktop'
         );
-      const ratio =
-        oldHeight /
-        nextHeight;
-      const resizedFrame = {
-        ...frame,
-        y:
-          frame.y * ratio,
-        height:
-          typeof frame.height === 'number'
-            ? frame.height * ratio
-            : undefined,
-      };
+      const mobile =
+        getEffectiveFrame(
+          element,
+          'mobile'
+        );
+      const desktopRatio =
+        oldDesktopHeight /
+        nextDesktopHeight;
+      const mobileRatio =
+        oldMobileHeight /
+        nextMobileHeight;
 
-      return targetDevice === 'mobile'
-        ? {
-            ...element,
-            mobileFrame:
-              resizedFrame,
-          } as SceneElement
-        : {
-            ...element,
-            frame:
-              resizedFrame,
-          } as SceneElement;
+      return {
+        ...element,
+        frame: {
+          ...desktop,
+          y:
+            desktop.y *
+            desktopRatio,
+          height:
+            typeof desktop.height === 'number'
+              ? desktop.height *
+                desktopRatio
+              : undefined,
+        },
+        mobileFrame: {
+          ...mobile,
+          y:
+            mobile.y *
+            mobileRatio,
+          height:
+            typeof mobile.height === 'number'
+              ? mobile.height *
+                mobileRatio
+              : undefined,
+        },
+      } as SceneElement;
     });
 
   const setLongPageHeight =
@@ -2759,12 +2704,8 @@ React.FC<Props> = ({
           )
         );
       const currentHeight =
-        device === 'mobile'
-          ? scene.mobileMinHeight ||
-              scene.minHeight ||
-              LONG_PAGE_DEFAULT_HEIGHT
-          : scene.minHeight ||
-              LONG_PAGE_DEFAULT_HEIGHT;
+        scene.minHeight ||
+        LONG_PAGE_DEFAULT_HEIGHT;
 
       if (
         safeHeight ===
@@ -2775,22 +2716,16 @@ React.FC<Props> = ({
 
       updateScene({
         ...scene,
-        ...(device === 'mobile'
-          ? {
-              mobileMinHeight:
-                safeHeight,
-            }
-          : {
-              minHeight:
-                safeHeight,
-            }),
+        minHeight:
+          safeHeight,
         maxWidth:
           scene.maxWidth ||
           1200,
         elements:
-          resizeElementsForDevicePageHeight(
+          resizeElementsForPageHeight(
             scene.elements,
-            device,
+            currentHeight,
+            safeHeight,
             currentHeight,
             safeHeight
           ),
@@ -2821,14 +2756,6 @@ React.FC<Props> = ({
     isLongPageScene(
       scene
     );
-
-  const activeLongPageHeight =
-    device === 'mobile'
-      ? scene.mobileMinHeight ||
-          scene.minHeight ||
-          LONG_PAGE_DEFAULT_HEIGHT
-      : scene.minHeight ||
-          LONG_PAGE_DEFAULT_HEIGHT;
 
   const editorCanvasScene:
     SceneCanvasDefinition =
@@ -2910,17 +2837,18 @@ React.FC<Props> = ({
               <div className="flex min-w-[280px] flex-1 items-end gap-2 rounded-[9px] border border-black/7 bg-[#faf9f8] px-2.5 py-1.5 xl:max-w-[460px]">
                 <label className="min-w-0 flex-1 pb-1">
                   <span className="mb-1 block text-[8px] font-black uppercase tracking-[0.08em] text-black/30">
-                    Chiều dài {device === 'mobile' ? 'Mobile' : 'PC'}
+                    Kéo chiều dài
                   </span>
                   <input
                     type="range"
                     value={
-                      activeLongPageHeight
+                      scene.minHeight ||
+                      LONG_PAGE_DEFAULT_HEIGHT
                     }
                     min={600}
                     max={Math.max(
                       20000,
-                      activeLongPageHeight * 2
+                      (scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT) * 2
                     )}
                     step={100}
                     onChange={(event) =>
@@ -2938,7 +2866,8 @@ React.FC<Props> = ({
                   <NumberInput
                     label="Chiều dài"
                     value={
-                      activeLongPageHeight
+                      scene.minHeight ||
+                      LONG_PAGE_DEFAULT_HEIGHT
                     }
                     min={600}
                     step={100}
@@ -2954,7 +2883,7 @@ React.FC<Props> = ({
                     type="button"
                     onClick={() =>
                       setLongPageHeight(
-                        activeLongPageHeight + 1000
+                        (scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT) + 1000
                       )
                     }
                     className="rounded-[7px] border border-black/8 bg-white px-2 py-1 text-[8px] font-black text-black/45"
@@ -2965,7 +2894,7 @@ React.FC<Props> = ({
                     type="button"
                     onClick={() =>
                       setLongPageHeight(
-                        activeLongPageHeight - 500
+                        (scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT) - 500
                       )
                     }
                     className="rounded-[7px] border border-black/8 bg-white px-2 py-1 text-[8px] font-black text-black/45"
@@ -3432,26 +3361,12 @@ React.FC<Props> = ({
           />
 
           <AddElementButton
-            label="+ Nhạc YouTube"
-            onClick={() =>
-              addElement(
-                'youtube'
-              )
-            }
-          />
-
-          <AddElementButton
             label="+ Hình"
             onClick={() =>
               addElement(
                 'shape'
               )
             }
-          />
-
-          <AddElementButton
-            label="+ Hình vuông"
-            onClick={addSquare}
           />
 
           <AddElementButton
@@ -3468,6 +3383,15 @@ React.FC<Props> = ({
             onClick={() =>
               addElement(
                 'decor'
+              )
+            }
+          />
+
+          <AddElementButton
+            label="+ YouTube"
+            onClick={() =>
+              addElement(
+                'youtube'
               )
             }
           />
@@ -3529,7 +3453,7 @@ React.FC<Props> = ({
             {longPage && (
               <div className="sticky top-0 z-30 mb-2 flex items-center justify-between rounded-[9px] border border-black/7 bg-white/95 px-3 py-2 text-[9px] font-bold text-black/45 backdrop-blur">
                 <span>Trang dài · giữ nguyên chiều ngang, chỉ kéo dài xuống dưới</span>
-                <span>Desktop {Math.round(scene.maxWidth || 1200)} × {Math.round(scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT)} · Mobile {LONG_PAGE_MOBILE_WIDTH} × {Math.round(scene.mobileMinHeight || scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT)}</span>
+                <span>Desktop {Math.round(scene.maxWidth || 1200)} × {Math.round(scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT)} · Mobile {LONG_PAGE_MOBILE_WIDTH} × {Math.round(scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT)}</span>
               </div>
             )}
 
