@@ -552,22 +552,15 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
               </p>
 
               <div className="mt-8 flex justify-center">
-                <div className="max-h-[760px] w-full max-w-[400px] overflow-y-auto overflow-x-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_30px_80px_rgba(70,25,40,0.12)]">
+                <div className="aspect-[9/16] w-full max-w-[380px] overflow-hidden rounded-[26px] border-[6px] border-[#181818] bg-white shadow-[0_24px_70px_rgba(70,25,40,0.16)]">
                   <VisualSceneExperience
                     scenes={template.visualEditor!.scenes}
                     initialSceneId={template.visualEditor!.initialSceneId}
                     mobileOverride
+                    containViewport
                   />
                 </div>
               </div>
-
-              <button
-                type="button"
-                onClick={onStartPersonalize}
-                className="mt-5 w-full rounded-[14px] bg-[#191919] px-6 py-3.5 text-sm font-black text-white transition hover:bg-[#cf5068]"
-              >
-                Chỉnh mẫu này →
-              </button>
             </div>
           </section>
 
@@ -650,141 +643,183 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
           </p>
         </div>
       ) : (
-        <div>
-          <PersonalizeSectionHeader
-            title={activeCustomerScene.label}
-          />
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_370px] lg:items-start">
+          <div>
+            <PersonalizeSectionHeader
+              title={activeCustomerScene.label}
+              hint="Điền thông tin và hình ảnh bên dưới. Bạn có thể xem ngay kết quả trên khung điện thoại bên cạnh."
+            />
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            {activeCustomerScene.slots.map(
-              ({ sceneId, element, slot }, index) => (
-                <div
-                  key={`${sceneId}-${element.id}`}
-                  className="rounded-[14px] border border-black/[0.07] bg-[#faf9f8] p-3.5"
-                >
-                  {slot.kind === 'text' && (
-                    <PersonalizeTextarea
-                      label={
-                        slot.label ||
-                        element.name ||
-                        `Nội dung ${index + 1}`
-                      }
-                      rows={3}
-                      value={
-                        element.type === 'text'
-                          ? element.text
-                          : element.type === 'button'
-                            ? element.label
-                            : ''
-                      }
-                      onChange={(value) =>
-                        updateElement(
-                          sceneId,
-                          element.id,
-                          (current) => {
-                            if (current.type === 'text') {
-                              return {
-                                ...current,
-                                text: value,
-                              };
-                            }
+            <div className="grid gap-4">
+              {activeCustomerScene.slots.map(
+                ({ sceneId, element, slot }, index) => {
+                  const imageSrc =
+                    element.type === 'image' || element.type === 'photo-frame'
+                      ? element.src
+                      : '';
 
-                            if (current.type === 'button') {
-                              return {
-                                ...current,
-                                label: value,
-                              };
-                            }
-
-                            return current;
+                  return (
+                    <div
+                      key={`${sceneId}-${element.id}`}
+                      className="rounded-[16px] border border-black/[0.07] bg-[#faf9f8] p-4 transition-all hover:border-black/15"
+                    >
+                      {slot.kind === 'text' && (
+                        <PersonalizeTextarea
+                          label={
+                            slot.label ||
+                            element.name ||
+                            `Nội dung ${index + 1}`
                           }
-                        )
-                      }
-                    />
-                  )}
-
-                  {slot.kind === 'image' && (
-                    <div>
-                      <p className="mb-2 text-xs font-bold text-black/58">
-                        {slot.label ||
-                          element.name ||
-                          `Ảnh ${index + 1}`}
-                      </p>
-
-                      <label className="flex min-h-12 cursor-pointer items-center justify-center rounded-[11px] border border-dashed border-[#c9435d]/25 bg-white px-4 text-xs font-black text-[#b83e57] transition hover:bg-[#fff5f7]">
-                        Chọn ảnh
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(event) => {
-                            const file =
-                              event.target.files?.[0];
-                            if (!file) return;
-
-                            readImage(file, (url) =>
-                              updateElement(
-                                sceneId,
-                                element.id,
-                                (current) => {
-                                  if (
-                                    current.type === 'image' ||
-                                    current.type === 'photo-frame'
-                                  ) {
-                                    return {
-                                      ...current,
-                                      src: url,
-                                      alt: file.name,
-                                    } as SceneElement;
-                                  }
-
-                                  return current;
+                          rows={3}
+                          value={
+                            element.type === 'text'
+                              ? element.text
+                              : element.type === 'button'
+                                ? element.label
+                                : ''
+                          }
+                          onChange={(value) =>
+                            updateElement(
+                              sceneId,
+                              element.id,
+                              (current) => {
+                                if (current.type === 'text') {
+                                  return {
+                                    ...current,
+                                    text: value,
+                                  };
                                 }
-                              )
-                            );
-                          }}
+
+                                if (current.type === 'button') {
+                                  return {
+                                    ...current,
+                                    label: value,
+                                  };
+                                }
+
+                                return current;
+                              }
+                            )
+                          }
                         />
-                      </label>
-                    </div>
-                  )}
+                      )}
 
-                  {slot.kind === 'youtube' &&
-                    element.type === 'custom' && (
-                    <PersonalizeInput
-                      label={
-                        slot.label ||
-                        element.name ||
-                        `Video YouTube ${index + 1}`
-                      }
-                      value={
-                        String(
-                          element.data
-                            ?.youtubeUrl ||
-                          ''
-                        )
-                      }
-                      placeholder="Dán link YouTube"
-                      onChange={(youtubeUrl) =>
-                        updateElement(
-                          sceneId,
-                          element.id,
-                          (current) =>
-                            current.type === 'custom'
-                              ? {
-                                  ...current,
-                                  data: {
-                                    ...current.data,
-                                    youtubeUrl,
-                                  },
-                                }
-                              : current
-                        )
-                      }
-                    />
-                  )}
-                </div>
-              )
-            )}
+                      {slot.kind === 'image' && (
+                        <div>
+                          <p className="mb-2 text-xs font-bold text-black/58">
+                            {slot.label ||
+                              element.name ||
+                              `Ảnh ${index + 1}`}
+                          </p>
+
+                          <div className="flex items-center gap-3">
+                            {imageSrc && (
+                              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[10px] border border-black/10 bg-white shadow-xs">
+                                <img
+                                  src={imageSrc}
+                                  alt="Preview"
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            )}
+
+                            <label className="flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-[11px] border border-dashed border-[#c9435d]/30 bg-white px-4 text-xs font-black text-[#b83e57] transition hover:bg-[#fff5f7]">
+                              {imageSrc ? 'Thay đổi ảnh khác' : 'Chọn ảnh'}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(event) => {
+                                  const file =
+                                    event.target.files?.[0];
+                                  if (!file) return;
+
+                                  readImage(file, (url) =>
+                                    updateElement(
+                                      sceneId,
+                                      element.id,
+                                      (current) => {
+                                        if (
+                                          current.type === 'image' ||
+                                          current.type === 'photo-frame'
+                                        ) {
+                                          return {
+                                            ...current,
+                                            src: url,
+                                            alt: file.name,
+                                          } as SceneElement;
+                                        }
+
+                                        return current;
+                                      }
+                                    )
+                                  );
+                                }}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      {slot.kind === 'youtube' &&
+                        element.type === 'custom' && (
+                        <PersonalizeInput
+                          label={
+                            slot.label ||
+                            element.name ||
+                            `Video YouTube ${index + 1}`
+                          }
+                          value={
+                            String(
+                              element.data
+                                ?.youtubeUrl ||
+                              ''
+                            )
+                          }
+                          placeholder="Dán link YouTube (ví dụ: https://youtu.be/...)"
+                          onChange={(youtubeUrl) =>
+                            updateElement(
+                              sceneId,
+                              element.id,
+                              (current) =>
+                                current.type === 'custom'
+                                  ? {
+                                      ...current,
+                                      data: {
+                                        ...current.data,
+                                        youtubeUrl,
+                                      },
+                                    }
+                                  : current
+                            )
+                          }
+                        />
+                      )}
+                    </div>
+                  );
+                }
+              )}
+            </div>
+          </div>
+
+          <div className="sticky top-[130px] flex flex-col items-center">
+            <div className="mb-2.5 flex w-full items-center justify-between px-1">
+              <span className="text-[11px] font-black uppercase tracking-[0.12em] text-[#c9435d]">
+                Xem trước trang đang chỉnh
+              </span>
+              <span className="rounded-full bg-black/5 px-2.5 py-0.5 text-[10px] font-bold text-black/50">
+                {activeCustomerScene.label}
+              </span>
+            </div>
+
+            <div className="aspect-[9/16] w-full max-w-[340px] overflow-hidden rounded-[26px] border-[6px] border-[#181818] bg-white shadow-[0_20px_60px_rgba(70,25,40,0.14)]">
+              <VisualSceneExperience
+                key={`personalize-preview-${activeCustomerScene.scene.id}`}
+                scenes={draft.scenes}
+                initialSceneId={activeCustomerScene.scene.id}
+                containViewport
+              />
+            </div>
           </div>
         </div>
       )}
