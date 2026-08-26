@@ -193,6 +193,9 @@ React.FC<Props> = ({
           ['bottom', 'Dưới'],
           ['distribute-x', 'Chia đều ngang'],
           ['distribute-y', 'Chia đều dọc'],
+          ['match-width', 'Cùng chiều rộng'],
+          ['match-height', 'Cùng chiều cao'],
+          ['match-size', 'Cùng kích thước'],
         ]}
         onChange={(
           value

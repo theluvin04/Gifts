@@ -16,6 +16,7 @@ export const PreviewLinkOverlay: React.FC<Props> = ({ template, onClose }) => {
   const [device, setDevice] = useState<PreviewDevice>('mobile');
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState('');
 
   const generate = useCallback(async () => {
@@ -33,6 +34,7 @@ export const PreviewLinkOverlay: React.FC<Props> = ({ template, onClose }) => {
       });
 
       setUrl(result.url);
+      setRefreshKey((current) => current + 1);
     } catch (previewError: any) {
       setError(
         previewError?.message ||
@@ -128,7 +130,7 @@ export const PreviewLinkOverlay: React.FC<Props> = ({ template, onClose }) => {
             onClick={() => void generate()}
             className="rounded-[9px] border border-black/10 px-3 py-2 text-[9px] font-black text-black/50 disabled:opacity-35"
           >
-            Cập nhật link
+            Đồng bộ link
           </button>
 
           {url && (
@@ -161,7 +163,7 @@ export const PreviewLinkOverlay: React.FC<Props> = ({ template, onClose }) => {
 
       {url && (
         <p className="mx-auto mt-2 w-full max-w-[1480px] text-center text-[9px] font-semibold text-white/40">
-          Link dùng trong 24 giờ. Sau khi chỉnh tiếp, bấm “Cập nhật link” để đồng bộ bản mới nhất.
+          Đây là link cố định của mẫu. Sau khi chỉnh, bấm “Đồng bộ link”; đường dẫn không thay đổi.
         </p>
       )}
 
@@ -180,7 +182,7 @@ export const PreviewLinkOverlay: React.FC<Props> = ({ template, onClose }) => {
             ].join(' ')}
           >
             <iframe
-              key={url}
+              key={`${url}-${refreshKey}`}
               src={url}
               title="Bản test template"
               className="h-full w-full border-0 bg-white"

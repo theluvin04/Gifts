@@ -246,7 +246,7 @@ React.FC<{
   label: string;
   value: number;
   min: number;
-  max: number;
+  max?: number;
   step: number;
   suffix?: string;
   onChange: (
@@ -327,11 +327,16 @@ React.FC<{
     }
 
     const next =
-      clamp(
-        parsed,
-        min,
-        max
-      );
+      typeof max === 'number'
+        ? clamp(
+            parsed,
+            min,
+            max
+          )
+        : Math.max(
+            min,
+            parsed
+          );
 
     setDraft(
       String(
@@ -381,7 +386,8 @@ React.FC<{
         parsed
       ) &&
       parsed >= min &&
-      parsed <= max
+      (typeof max !== 'number' ||
+        parsed <= max)
     ) {
       onChange(
         parsed

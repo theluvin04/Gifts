@@ -15,69 +15,44 @@ import type {
   TemplateVisualEditorConfig,
 } from '../templates/visualEditor';
 
-const PREVIEW_TTL_MS =
-  24 * 60 * 60 * 1000;
-
-const PREVIEW_ID_PREFIX =
-  'dearly:template-preview-id:';
-
-const ALPHABET =
-  'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-
 export interface TemplatePreviewDocument {
   id: string;
   templateId: string;
   templateName: string;
   config: TemplateVisualEditorConfig;
-  expiresAtMs: number;
+  expiresAtMs?: number;
 }
-
-const generatePreviewId = (
-  length = 24
-) => {
-  const bytes =
-    new Uint8Array(length);
-
-  crypto.getRandomValues(bytes);
-
-  return Array.from(
-    bytes,
-    (byte) =>
-      ALPHABET[
-        byte % ALPHABET.length
-      ]
-  ).join('');
-};
 
 const getPreviewId = (
   templateId: string
 ) => {
-  const key =
-    `${PREVIEW_ID_PREFIX}${templateId}`;
+  let hash = 2166136261;
 
-  try {
-    const current =
-      localStorage.getItem(key);
-
-    if (
-      current &&
-      /^[A-Za-z0-9_-]{16,64}$/.test(current)
-    ) {
-      return current;
-    }
-
-    const created =
-      generatePreviewId();
-
-    localStorage.setItem(
-      key,
-      created
+  for (
+    let index = 0;
+    index < templateId.length;
+    index += 1
+  ) {
+    hash ^=
+      templateId.charCodeAt(
+        index
+      );
+    hash = Math.imul(
+      hash,
+      16777619
     );
-
-    return created;
-  } catch {
-    return generatePreviewId();
   }
+
+  const safeId =
+    templateId
+      .replace(
+        /[^A-Za-z0-9_-]/g,
+        '-'
+      )
+      .slice(0, 36) ||
+    'template';
+
+  return `template-test-${safeId}-${(hash >>> 0).toString(36)}`;
 };
 
 export const createTemplatePreviewLink =
@@ -105,9 +80,6 @@ export const createTemplatePreviewLink =
     const previewId =
       getPreviewId(templateId);
 
-    const expiresAtMs =
-      Date.now() + PREVIEW_TTL_MS;
-
     const cleanConfig =
       JSON.parse(
         JSON.stringify(config)
@@ -131,7 +103,7 @@ export const createTemplatePreviewLink =
             serverTimestamp(),
           updatedAt:
             serverTimestamp(),
-          expiresAtMs,
+          active: true,
         },
         {
           merge: true,
@@ -156,7 +128,6 @@ export const createTemplatePreviewLink =
       id: previewId,
       url:
         `${window.location.origin}/preview/${previewId}`,
-      expiresAtMs,
     };
   };
 
@@ -187,8 +158,8 @@ export const fetchTemplatePreview =
       !Array.isArray(
         data.config.scenes
       ) ||
-      data.expiresAtMs <=
-        Date.now()
+      (data as any).active ===
+        false
     ) {
       return null;
     }

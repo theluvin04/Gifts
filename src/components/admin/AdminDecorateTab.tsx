@@ -94,7 +94,7 @@ React.FC<Props> = ({
               }
               className="min-h-10 rounded-[10px] border border-[#cf5068]/20 bg-[#fff6f8] px-3.5 text-[10px] font-black text-[#a73551] hover:bg-[#f8e8ed]"
             >
-              Tạo link test
+              Link test cố định
             </button>
 
             {dirty && (

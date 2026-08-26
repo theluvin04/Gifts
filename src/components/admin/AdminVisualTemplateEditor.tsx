@@ -723,6 +723,58 @@ React.FC<Props> = ({
       );
     };
 
+  const copySelectedLayoutToOtherDevice =
+    () => {
+      if (
+        !scene ||
+        selectedElementIds.length === 0
+      ) {
+        return;
+      }
+
+      const selected =
+        new Set(
+          selectedElementIds
+        );
+
+      updateScene({
+        ...scene,
+        elements:
+          scene.elements.map(
+            (element) => {
+              if (
+                !selected.has(
+                  element.id
+                )
+              ) {
+                return element;
+              }
+
+              if (
+                device === 'desktop'
+              ) {
+                return {
+                  ...element,
+                  mobileFrame: {
+                    ...element.frame,
+                  },
+                } as SceneElement;
+              }
+
+              return {
+                ...element,
+                frame: {
+                  ...getEffectiveFrame(
+                    element,
+                    'mobile'
+                  ),
+                },
+              } as SceneElement;
+            }
+          ),
+      });
+    };
+
   const addScene =
     () => {
       const next =
@@ -1627,17 +1679,24 @@ React.FC<Props> = ({
       return;
     }
 
-    const selectionBounds =
-      getSelectionBounds(
-        unlocked,
+    const reference =
+      unlocked.find(
+        (element) =>
+          element.id ===
+          primaryId
+      ) ||
+      unlocked[
+        unlocked.length - 1
+      ];
+    const referenceFrame =
+      getEffectiveFrame(
+        reference,
         device
       );
-
-    if (
-      !selectionBounds
-    ) {
-      return;
-    }
+    const referenceBounds =
+      getFrameBounds(
+        referenceFrame
+      );
 
     const nextFrames:
       Record<
@@ -1760,9 +1819,70 @@ React.FC<Props> = ({
                 );
         }
       );
+    } else if (
+      action ===
+        'match-width' ||
+      action ===
+        'match-height' ||
+      action ===
+        'match-size'
+    ) {
+      unlocked.forEach(
+        (element) => {
+          if (
+            element.id ===
+            reference.id
+          ) {
+            return;
+          }
+
+          const frame =
+            getEffectiveFrame(
+              element,
+              device
+            );
+          const bounds =
+            getFrameBounds(
+              frame
+            );
+          const nextFrame = {
+            ...frame,
+            width:
+              action ===
+              'match-height'
+                ? frame.width
+                : referenceFrame.width,
+            height:
+              action ===
+              'match-width'
+                ? frame.height
+                : referenceFrame.height,
+          };
+
+          nextFrames[
+            element.id
+          ] =
+            moveFrameToBounds(
+              nextFrame,
+              {
+                centerX:
+                  bounds.centerX,
+                centerY:
+                  bounds.centerY,
+              }
+            );
+        }
+      );
     } else {
       unlocked.forEach(
         (element) => {
+          if (
+            element.id ===
+            reference.id
+          ) {
+            return;
+          }
+
           const frame =
             getEffectiveFrame(
               element,
@@ -1774,35 +1894,35 @@ React.FC<Props> = ({
             'left'
               ? {
                   left:
-                    selectionBounds.left,
+                    referenceBounds.left,
                 }
               : action ===
                   'center-x'
                 ? {
                     centerX:
-                      selectionBounds.centerX,
+                      referenceBounds.centerX,
                   }
                 : action ===
                     'right'
                   ? {
                       right:
-                        selectionBounds.right,
+                        referenceBounds.right,
                     }
                   : action ===
                       'top'
                     ? {
                         top:
-                          selectionBounds.top,
+                          referenceBounds.top,
                       }
                     : action ===
                         'center-y'
                       ? {
                           centerY:
-                            selectionBounds.centerY,
+                            referenceBounds.centerY,
                         }
                       : {
                           bottom:
-                            selectionBounds.bottom,
+                            referenceBounds.bottom,
                         };
 
           nextFrames[
@@ -2376,15 +2496,23 @@ React.FC<Props> = ({
 
     alignCenterX:
       () =>
-        alignSelectionToCanvas(
-          'center-x'
-        ),
+        selectedElements.length > 1
+          ? alignSelection(
+              'center-x'
+            )
+          : alignSelectionToCanvas(
+              'center-x'
+            ),
 
     alignCenterY:
       () =>
-        alignSelectionToCanvas(
-          'center-y'
-        ),
+        selectedElements.length > 1
+          ? alignSelection(
+              'center-y'
+            )
+          : alignSelectionToCanvas(
+              'center-y'
+            ),
 
     zoomIn:
       () =>
@@ -2426,6 +2554,16 @@ React.FC<Props> = ({
           scene
         )
       ) {
+        const nextDesktopHeight =
+          (scene.maxWidth || 1200) /
+          (16 / 9);
+        const nextMobileHeight =
+          LONG_PAGE_MOBILE_WIDTH /
+          (9 / 16);
+        const currentHeight =
+          scene.minHeight ||
+          LONG_PAGE_DEFAULT_HEIGHT;
+
         updateScene({
           ...scene,
           aspectRatio:
@@ -2438,9 +2576,24 @@ React.FC<Props> = ({
             1200,
           overflow:
             'hidden',
+          elements:
+            resizeElementsForPageHeight(
+              scene.elements,
+              currentHeight,
+              nextDesktopHeight,
+              currentHeight,
+              nextMobileHeight
+            ),
         });
         return;
       }
+
+      const oldDesktopHeight =
+        (scene.maxWidth || 1200) /
+        (scene.aspectRatio || 16 / 9);
+      const oldMobileHeight =
+        LONG_PAGE_MOBILE_WIDTH /
+        (9 / 16);
 
       updateScene({
         ...scene,
@@ -2453,8 +2606,68 @@ React.FC<Props> = ({
           1200,
         overflow:
           'hidden',
+        elements:
+          resizeElementsForPageHeight(
+            scene.elements,
+            oldDesktopHeight,
+            LONG_PAGE_DEFAULT_HEIGHT,
+            oldMobileHeight,
+            LONG_PAGE_DEFAULT_HEIGHT
+          ),
       });
     };
+
+  const resizeElementsForPageHeight = (
+    elements: SceneElement[],
+    oldDesktopHeight: number,
+    nextDesktopHeight: number,
+    oldMobileHeight: number,
+    nextMobileHeight: number
+  ) =>
+    elements.map((element) => {
+      const desktop =
+        getEffectiveFrame(
+          element,
+          'desktop'
+        );
+      const mobile =
+        getEffectiveFrame(
+          element,
+          'mobile'
+        );
+      const desktopRatio =
+        oldDesktopHeight /
+        nextDesktopHeight;
+      const mobileRatio =
+        oldMobileHeight /
+        nextMobileHeight;
+
+      return {
+        ...element,
+        frame: {
+          ...desktop,
+          y:
+            desktop.y *
+            desktopRatio,
+          height:
+            typeof desktop.height === 'number'
+              ? desktop.height *
+                desktopRatio
+              : undefined,
+        },
+        mobileFrame: {
+          ...mobile,
+          y:
+            mobile.y *
+            mobileRatio,
+          height:
+            typeof mobile.height === 'number'
+              ? mobile.height *
+                mobileRatio
+              : undefined,
+        },
+      } as SceneElement;
+    });
 
   const setLongPageHeight =
     (height: number) => {
@@ -2468,11 +2681,22 @@ React.FC<Props> = ({
       }
 
       const safeHeight =
-        clamp(
-          height,
-          1200,
-          10000
+        Math.max(
+          600,
+          Math.round(
+            height
+          )
         );
+      const currentHeight =
+        scene.minHeight ||
+        LONG_PAGE_DEFAULT_HEIGHT;
+
+      if (
+        safeHeight ===
+        currentHeight
+      ) {
+        return;
+      }
 
       updateScene({
         ...scene,
@@ -2481,6 +2705,14 @@ React.FC<Props> = ({
         maxWidth:
           scene.maxWidth ||
           1200,
+        elements:
+          resizeElementsForPageHeight(
+            scene.elements,
+            currentHeight,
+            safeHeight,
+            currentHeight,
+            safeHeight
+          ),
       });
     };
 
@@ -2597,8 +2829,11 @@ React.FC<Props> = ({
                       scene.minHeight ||
                       LONG_PAGE_DEFAULT_HEIGHT
                     }
-                    min={1200}
-                    max={10000}
+                    min={600}
+                    max={Math.max(
+                      20000,
+                      (scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT) * 2
+                    )}
                     step={100}
                     onChange={(event) =>
                       setLongPageHeight(
@@ -2618,14 +2853,38 @@ React.FC<Props> = ({
                       scene.minHeight ||
                       LONG_PAGE_DEFAULT_HEIGHT
                     }
-                    min={1200}
-                    max={10000}
+                    min={600}
                     step={100}
                     suffix="px"
                     onChange={
                       setLongPageHeight
                     }
                   />
+                </div>
+
+                <div className="flex shrink-0 flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLongPageHeight(
+                        (scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT) + 1000
+                      )
+                    }
+                    className="rounded-[7px] border border-black/8 bg-white px-2 py-1 text-[8px] font-black text-black/45"
+                  >
+                    +1000
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLongPageHeight(
+                        (scene.minHeight || LONG_PAGE_DEFAULT_HEIGHT) - 500
+                      )
+                    }
+                    className="rounded-[7px] border border-black/8 bg-white px-2 py-1 text-[8px] font-black text-black/45"
+                  >
+                    −500
+                  </button>
                 </div>
               </div>
             )}
@@ -2648,6 +2907,17 @@ React.FC<Props> = ({
                   Layout riêng · không tự đồng bộ
                 </span>
               </>
+            )}
+
+            {selectedElements.length > 0 && (
+              <button
+                type="button"
+                onClick={copySelectedLayoutToOtherDevice}
+                className="rounded-[8px] border border-sky-200 bg-sky-50 px-2.5 py-2 text-[9px] font-black text-sky-700 transition hover:bg-sky-100"
+                title="Chỉ chép vị trí, kích thước và góc xoay của các đối tượng đang chọn; không ghi đè cả trang."
+              >
+                Chép {selectedElements.length} mục → {device === 'desktop' ? 'Mobile' : 'PC'}
+              </button>
             )}
 
             <button
@@ -3233,6 +3503,9 @@ React.FC<Props> = ({
               }
               onAlignCanvas={
                 alignSelectionToCanvas
+              }
+              onAlignElements={
+                alignSelection
               }
               onRotate={
                 rotateSelection

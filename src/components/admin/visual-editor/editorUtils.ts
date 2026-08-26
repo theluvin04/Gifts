@@ -16,7 +16,10 @@ export type AlignAction =
   | 'center-y'
   | 'bottom'
   | 'distribute-x'
-  | 'distribute-y';
+  | 'distribute-y'
+  | 'match-width'
+  | 'match-height'
+  | 'match-size';
 
 export type CanvasAlignAction =
   | 'left'

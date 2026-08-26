@@ -12,10 +12,6 @@ import type {
   SceneTransitionPreset,
 } from '../engine';
 
-import {
-  getPhotoFramePreset,
-} from '../engine';
-
 export interface TemplateVisualEditorConfig {
   enabled: boolean;
 
@@ -1347,45 +1343,8 @@ const normalizeElement = (
     type ===
     'photo-frame'
   ) {
-    const photoPreset =
-      getPhotoFramePreset(
-        data.frameStyle?.preset
-      );
-
-    const legacyMobileHeights:
-      Record<string, number> = {
-        polaroid: 34,
-        'polaroid-square': 31,
-        'polaroid-wide': 25,
-        'polaroid-mini': 25,
-        'polaroid-rounded': 33,
-        'polaroid-black': 33,
-        'polaroid-vintage': 34,
-        'polaroid-clean': 30,
-      };
-
-    const legacyHeight =
-      legacyMobileHeights[
-        photoPreset.value
-      ];
-
-    const mobileFrame =
-      base.mobileFrame &&
-      base.mobileFrame.width ===
-        photoPreset.mobile.width &&
-      base.mobileFrame.height ===
-        legacyHeight
-        ? {
-            ...base.mobileFrame,
-            height:
-              photoPreset.mobile.height,
-          }
-        : base.mobileFrame;
-
     return {
       ...base,
-
-      mobileFrame,
 
       type:
         'photo-frame',
@@ -1626,7 +1585,7 @@ const normalizeScene = (
             data.minHeight,
             0,
             0,
-            4000
+            Number.MAX_SAFE_INTEGER
           )
         : undefined,
 

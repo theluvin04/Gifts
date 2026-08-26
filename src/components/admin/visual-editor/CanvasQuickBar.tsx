@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type {
+  AlignAction,
   CanvasAlignAction,
   LayerAction,
 } from './editorUtils';
@@ -12,6 +13,11 @@ interface Props {
   onAlignCanvas: (
     action:
       CanvasAlignAction
+  ) => void;
+
+  onAlignElements: (
+    action:
+      AlignAction
   ) => void;
 
   onRotate: (
@@ -46,6 +52,7 @@ export const CanvasQuickBar:
 React.FC<Props> = ({
   selectionCount,
   onAlignCanvas,
+  onAlignElements,
   onRotate,
   onLayer,
   onDuplicate,
@@ -103,6 +110,131 @@ React.FC<Props> = ({
       />
 
       <Divider />
+
+      {selectionCount > 1 && (
+        <>
+          <span className="mx-1 shrink-0 text-[8px] font-black uppercase tracking-[0.1em] text-[#a73551]">
+            Căn nhau
+          </span>
+
+          <QuickButton
+            label="Trái nhau"
+            title="Căn mép trái theo đối tượng chọn cuối"
+            onClick={() =>
+              onAlignElements(
+                'left'
+              )
+            }
+          />
+
+          <QuickButton
+            label="Tâm ngang"
+            title="Căn tâm ngang theo đối tượng chọn cuối"
+            strong
+            onClick={() =>
+              onAlignElements(
+                'center-x'
+              )
+            }
+          />
+
+          <QuickButton
+            label="Tâm dọc"
+            title="Căn tâm dọc theo đối tượng chọn cuối"
+            strong
+            onClick={() =>
+              onAlignElements(
+                'center-y'
+              )
+            }
+          />
+
+          <QuickButton
+            label="Phải nhau"
+            title="Căn mép phải theo đối tượng chọn cuối"
+            onClick={() =>
+              onAlignElements(
+                'right'
+              )
+            }
+          />
+
+          <QuickButton
+            label="Trên nhau"
+            title="Căn mép trên theo đối tượng chọn cuối"
+            onClick={() =>
+              onAlignElements(
+                'top'
+              )
+            }
+          />
+
+          <QuickButton
+            label="Dưới nhau"
+            title="Căn mép dưới theo đối tượng chọn cuối"
+            onClick={() =>
+              onAlignElements(
+                'bottom'
+              )
+            }
+          />
+
+          <QuickButton
+            label="Cùng rộng"
+            title="Lấy chiều rộng của đối tượng chọn cuối"
+            onClick={() =>
+              onAlignElements(
+                'match-width'
+              )
+            }
+          />
+
+          <QuickButton
+            label="Cùng cao"
+            title="Lấy chiều cao của đối tượng chọn cuối"
+            onClick={() =>
+              onAlignElements(
+                'match-height'
+              )
+            }
+          />
+
+          <QuickButton
+            label="Cùng cỡ"
+            title="Lấy cả chiều rộng và chiều cao của đối tượng chọn cuối"
+            onClick={() =>
+              onAlignElements(
+                'match-size'
+              )
+            }
+          />
+
+          {selectionCount > 2 && (
+            <>
+              <QuickButton
+                label="Chia ngang"
+                title="Chia đều các đối tượng theo chiều ngang"
+                onClick={() =>
+                  onAlignElements(
+                    'distribute-x'
+                  )
+                }
+              />
+              <QuickButton
+                label="Chia dọc"
+                title="Chia đều các đối tượng theo chiều dọc"
+                onClick={() =>
+                  onAlignElements(
+                    'distribute-y'
+                  )
+                }
+              />
+            </>
+          )}
+
+          <Divider />
+        </>
+      )}
 
       <QuickButton
         label="Trên"

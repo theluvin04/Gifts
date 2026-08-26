@@ -266,12 +266,11 @@ service cloud.firestore {
         );
     }
 
-    // Admin-generated, opaque preview links for testing a template on a
-    // real phone. They expire automatically in the UI after 24 hours.
+    // Stable per-template preview links. Admin updates the same document;
+    // anyone with the unlisted URL may view it.
     match /templatePreviews/{previewId} {
       allow get: if resource != null
-        && resource.data.get('expiresAtMs', 0)
-          > request.time.toMillis();
+        && resource.data.get('active', true) == true;
       allow list: if isAdmin();
       allow create, update, delete: if isAdmin();
     }
