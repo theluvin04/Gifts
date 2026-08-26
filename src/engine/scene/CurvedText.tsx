@@ -134,6 +134,11 @@ export const CurvedText: React.FC<CurvedTextProps> = ({
           textDecoration={style.textDecoration || 'none'}
           textAnchor={textAnchor}
           dominantBaseline="central"
+          style={{
+            filter: style.textShadow
+              ? `drop-shadow(${style.textShadow.split(',')[0].trim()})`
+              : undefined,
+          }}
         >
           <textPath
             href={`#${pathId}`}

@@ -70,6 +70,7 @@ export interface SceneTextStyle {
     'pre-line' |
     'pre-wrap';
   curvature?: number;
+  textShadow?: string;
 }
 
 export type SceneImageShape =

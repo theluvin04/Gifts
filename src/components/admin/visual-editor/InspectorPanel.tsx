@@ -18,9 +18,11 @@ import type {
 } from '../../../engine';
 
 import {
+  BOX_SHADOW_PRESETS,
   IMAGE_SHAPE_PRESETS,
   PHOTOBOOTH_SHADOW_PRESETS,
   PHOTO_FRAME_PRESETS,
+  TEXT_SHADOW_PRESETS,
   getPhotoFramePreset,
   resolvePhotoFrameStyle,
 } from '../../../engine';
@@ -2044,6 +2046,67 @@ const FONT_OPTIONS = [
   },
 ] as const;
 
+const ShadowEditorSection: React.FC<{
+  title?: string;
+  value?: string;
+  presets: { label: string; value: string; description?: string }[];
+  onChange: (value: string | undefined) => void;
+  type?: 'text' | 'box';
+}> = ({
+  title = 'Bóng đổ & Hiệu ứng 3D',
+  value = '',
+  presets,
+  onChange,
+  type = 'box',
+}) => {
+  return (
+    <div className="mt-2.5 rounded-[9px] border border-black/7 bg-[#faf9f8] p-2.5">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[9px] font-bold text-black/60">
+          {title}
+        </span>
+        {Boolean(value) && (
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            className="text-[8px] font-bold text-[#b83e57] hover:underline"
+          >
+            Tắt bóng
+          </button>
+        )}
+      </div>
+
+      <TextInput
+        label={type === 'text' ? 'Mã bóng đổ chữ (CSS text-shadow)' : 'Mã bóng đổ (CSS box-shadow)'}
+        value={value || ''}
+        placeholder={type === 'text' ? '2px 4px 10px rgba(0,0,0,0.65)' : '0 16px 36px rgba(0,0,0,0.22)'}
+        onChange={(val) => onChange(val || undefined)}
+      />
+
+      <div className="mt-2 flex flex-wrap gap-1">
+        {presets.map((preset) => {
+          const isActive = (value || '') === preset.value;
+          return (
+            <button
+              key={preset.label}
+              type="button"
+              title={preset.description}
+              onClick={() => onChange(preset.value || undefined)}
+              className={`rounded-[5px] px-2 py-1 text-[8px] font-bold transition ${
+                isActive
+                  ? 'bg-[#b83e57] text-white shadow-sm ring-1 ring-[#b83e57]'
+                  : 'border border-black/10 bg-white text-black/60 hover:bg-black/5'
+              }`}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const TextControls:
 React.FC<{
   element:
@@ -2484,6 +2547,14 @@ React.FC<{
           </button>
         </div>
       </div>
+
+      <ShadowEditorSection
+        title="Bóng đổ chữ & Hào quang (Text Shadow)"
+        value={style.textShadow}
+        presets={TEXT_SHADOW_PRESETS}
+        onChange={(textShadow) => patch({ textShadow })}
+        type="text"
+      />
     </>
   );
 };
@@ -2877,37 +2948,13 @@ const ImageControls: React.FC<{
       </div>
 
       {/* 5. Bóng đổ & Hiệu ứng */}
-      <div className="mt-2.5 rounded-[9px] border border-black/7 bg-[#faf9f8] p-2.5">
-        <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-[9px] font-bold text-black/60">
-            Bóng đổ & Hiệu ứng phát sáng
-          </span>
-        </div>
-
-        <TextInput
-          label="Mã bóng đổ CSS"
-          value={style.boxShadow || ''}
-          placeholder="0 12px 30px rgba(0,0,0,0.18)"
-          onChange={(boxShadow) => patchStyle({ boxShadow: boxShadow || undefined })}
-        />
-
-        <div className="mt-2 flex flex-wrap gap-1">
-          {SHADOW_PRESETS.map((p) => (
-            <button
-              key={p.label}
-              type="button"
-              onClick={() => patchStyle({ boxShadow: p.value || undefined })}
-              className={`rounded-[5px] px-2 py-1 text-[8px] font-bold transition ${
-                (style.boxShadow || '') === p.value
-                  ? 'bg-[#b83e57] text-white shadow-sm'
-                  : 'border border-black/10 bg-white text-black/50 hover:bg-black/5'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <ShadowEditorSection
+        title="Bóng đổ ảnh & Hiệu ứng phát sáng"
+        value={style.boxShadow}
+        presets={BOX_SHADOW_PRESETS}
+        onChange={(boxShadow) => patchStyle({ boxShadow })}
+        type="box"
+      />
     </>
   );
 };
@@ -3666,21 +3713,12 @@ React.FC<{
         }
       />
 
-      <TextInput
-        label="Bóng đổ"
-        value={
-          style.boxShadow ||
-          ''
-        }
-        onChange={(
-          boxShadow
-        ) =>
-          patch({
-            boxShadow:
-              boxShadow ||
-              undefined,
-          })
-        }
+      <ShadowEditorSection
+        title="Bóng đổ hình khối (Box Shadow)"
+        value={style.boxShadow}
+        presets={BOX_SHADOW_PRESETS}
+        onChange={(boxShadow) => patch({ boxShadow })}
+        type="box"
       />
     </>
   );
@@ -3888,6 +3926,14 @@ React.FC<{
           }
         />
       </div>
+
+      <ShadowEditorSection
+        title="Bóng đổ nút bấm (Box Shadow)"
+        value={style.boxShadow}
+        presets={BOX_SHADOW_PRESETS}
+        onChange={(boxShadow) => patch({ boxShadow })}
+        type="box"
+      />
     </>
   );
 };

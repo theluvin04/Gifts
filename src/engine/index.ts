@@ -122,6 +122,15 @@ export type {
 } from './scene/photoFramePresets';
 
 export {
+  TEXT_SHADOW_PRESETS,
+  BOX_SHADOW_PRESETS,
+} from './scene/shadowPresets';
+
+export type {
+  ShadowPreset,
+} from './scene/shadowPresets';
+
+export {
   SceneCanvas,
 } from './scene/SceneCanvas';
 

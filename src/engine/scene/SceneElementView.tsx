@@ -278,6 +278,8 @@ React.FC<
                 style.fontStyle,
               textDecoration:
                 style.textDecoration,
+              textShadow:
+                style.textShadow,
               whiteSpace:
                 style.whiteSpace ||
                 'pre-line',
