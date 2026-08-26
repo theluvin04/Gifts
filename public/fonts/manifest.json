@@ -1,3 +1,18 @@
 {
-  "fonts": []
+  "fonts": [
+    {
+      "label": "Anastasia Script",
+      "family": "Anastasia Script",
+      "group": "Font riêng",
+      "fallback": "cursive",
+      "sources": [
+        {
+          "src": "/fonts/custom/Anastasia%20Script%20Personal%20Use.ttf",
+          "format": "truetype",
+          "weight": 400,
+          "style": "normal"
+        }
+      ]
+    }
+  ]
 }

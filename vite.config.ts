@@ -39,6 +39,124 @@ Record<string, string> = {
     'image/avif',
 };
 
+const FONT_FORMAT_BY_EXTENSION: Record<string, string> = {
+  '.woff2': 'woff2',
+  '.woff': 'woff',
+  '.ttf': 'truetype',
+  '.otf': 'opentype',
+};
+
+const FONT_WEIGHT_BY_NAME: Record<string, number> = {
+  thin: 100,
+  extralight: 200,
+  light: 300,
+  regular: 400,
+  normal: 400,
+  medium: 500,
+  semibold: 600,
+  bold: 700,
+  extrabold: 800,
+  black: 900,
+};
+
+const getFontIdentity = (fileName: string) => {
+  const rawName = path.basename(fileName, path.extname(fileName));
+  const searchable = rawName.toLowerCase().replace(/[\s_-]+/g, '');
+  const weightEntry = Object.entries(FONT_WEIGHT_BY_NAME)
+    .sort((a, b) => b[0].length - a[0].length)
+    .find(([name]) => searchable.includes(name));
+  const style = /italic|oblique/i.test(rawName) ? 'italic' : 'normal';
+  const family = rawName
+    .replace(/personal[\s_-]*use/gi, '')
+    .replace(/free[\s_-]*for[\s_-]*personal[\s_-]*use/gi, '')
+    .replace(/demo|trial/gi, '')
+    .replace(/italic|oblique/gi, '')
+    .replace(/extra[\s_-]*light|semi[\s_-]*bold|extra[\s_-]*bold/gi, '')
+    .replace(/thin|light|regular|normal|medium|bold|black/gi, '')
+    .replace(/[\s_-]+/g, ' ')
+    .trim() || rawName;
+
+  return {
+    family,
+    weight: weightEntry?.[1] || 400,
+    style,
+  };
+};
+
+const generateFontManifest = (rootDir: string) => {
+  const fontsDir = path.join(rootDir, 'public', 'fonts');
+  const customDir = path.join(fontsDir, 'custom');
+  fs.mkdirSync(customDir, {recursive: true});
+
+  const grouped = new Map<string, {
+    label: string;
+    family: string;
+    group: 'Font riêng';
+    fallback: 'cursive';
+    sources: Array<{
+      src: string;
+      format: string;
+      weight: number;
+      style: string;
+    }>;
+  }>();
+
+  fs.readdirSync(customDir, {withFileTypes: true})
+    .filter((entry) => entry.isFile())
+    .forEach((entry) => {
+      const extension = path.extname(entry.name).toLowerCase();
+      const format = FONT_FORMAT_BY_EXTENSION[extension];
+      if (!format) return;
+
+      const identity = getFontIdentity(entry.name);
+      const key = identity.family.toLowerCase();
+      const font = grouped.get(key) || {
+        label: identity.family,
+        family: identity.family,
+        group: 'Font riêng' as const,
+        fallback: 'cursive' as const,
+        sources: [],
+      };
+
+      font.sources.push({
+        src: `/fonts/custom/${encodeURIComponent(entry.name)}`,
+        format,
+        weight: identity.weight,
+        style: identity.style,
+      });
+      grouped.set(key, font);
+    });
+
+  const manifestPath = path.join(fontsDir, 'manifest.json');
+  const nextContent = `${JSON.stringify({fonts: Array.from(grouped.values())}, null, 2)}\n`;
+  const currentContent = fs.existsSync(manifestPath)
+    ? fs.readFileSync(manifestPath, 'utf8')
+    : '';
+
+  if (currentContent !== nextContent) {
+    fs.writeFileSync(manifestPath, nextContent, 'utf8');
+  }
+};
+
+const autoFontManifestPlugin = (): Plugin => ({
+  name: 'dearly-auto-font-manifest',
+  buildStart() {
+    generateFontManifest(__dirname);
+  },
+  configureServer(server) {
+    const customDir = path.join(__dirname, 'public', 'fonts', 'custom');
+    server.watcher.add(customDir);
+    const refresh = (filePath: string) => {
+      if (filePath.startsWith(customDir)) {
+        generateFontManifest(__dirname);
+      }
+    };
+    server.watcher.on('add', refresh);
+    server.watcher.on('change', refresh);
+    server.watcher.on('unlink', refresh);
+  },
+});
+
 const prettyFolderName = (
   folderPath:
     string,
@@ -593,6 +711,7 @@ const codeAssetsPlugin =
 export default defineConfig(() => {
   return {
     plugins: [
+      autoFontManifestPlugin(),
       codeAssetsPlugin(),
       react(),
       tailwindcss(),

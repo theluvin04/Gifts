@@ -16,9 +16,13 @@ public/
 ## Thêm font mới
 
 1. Chép file font vào `public/fonts/custom/`.
-2. Mở `public/fonts/manifest.json`.
-3. Thêm một object font giống `manifest.example.json`.
-4. Deploy lại website.
+2. Deploy lại website.
+
+`vite.config.ts` sẽ tự quét thư mục và tạo lại
+`public/fonts/manifest.json`. Không cần khai báo JSON thủ công.
+
+Tên hiển thị được lấy từ tên file. Các hậu tố như `Regular`, `Bold`,
+`Italic`, `Personal Use`, `Demo` được tự nhận diện và loại khỏi tên font.
 
 Editor sẽ tự đọc manifest, nạp `@font-face`, thêm font vào mục **Font riêng**, cho xem preview trực tiếp và lưu `fontFamily` vào element. Vì font được bootstrap ở `src/main.tsx`, trang khách/preview cũng dùng cùng font, không chỉ riêng màn hình editor.
 
@@ -45,4 +49,5 @@ Editor sẽ tự đọc manifest, nạp `@font-face`, thêm font vào mục **Fo
 }
 ```
 
-Không cần sửa `InspectorPanel.tsx` hay `QuickFontPicker.tsx` mỗi lần thêm font nữa.
+Không cần sửa `manifest.json`, `InspectorPanel.tsx` hay
+`QuickFontPicker.tsx` mỗi lần thêm font nữa.

@@ -1,6 +1,12 @@
 import React, {
+  useEffect,
   useState,
 } from 'react';
+
+import {
+  loadEditorFonts,
+  type EditorFontOption,
+} from '../../../config/editorFonts';
 
 import type {
   SceneCanvasDefinition,
@@ -3469,8 +3475,33 @@ React.FC<{
   ] =
     useState('');
 
+  const [
+    fontOptions,
+    setFontOptions,
+  ] = useState<EditorFontOption[]>(
+    () =>
+      FONT_OPTIONS.map((font) => ({
+        ...font,
+        source: 'google' as const,
+      }))
+  );
+
+  useEffect(() => {
+    let alive = true;
+
+    void loadEditorFonts().then((fonts) => {
+      if (alive) {
+        setFontOptions(fonts);
+      }
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const current =
-    FONT_OPTIONS.find(
+    fontOptions.find(
       (
         font
       ) =>
@@ -3479,7 +3510,7 @@ React.FC<{
     );
 
   const visible =
-    FONT_OPTIONS.filter(
+    fontOptions.filter(
       (
         font
       ) => {
