@@ -295,6 +295,7 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
   );
   const [error, setError] = useState('');
   const [activeSceneId, setActiveSceneId] = useState('');
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -647,8 +648,24 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
           <div>
             <PersonalizeSectionHeader
               title={activeCustomerScene.label}
-              hint="Điền thông tin và hình ảnh bên dưới. Bạn có thể xem ngay kết quả trên khung điện thoại bên cạnh."
+              hint="Điền nội dung bên dưới. Thay đổi được tự lưu và cập nhật ngay trên bản xem trước."
             />
+
+            <button
+              type="button"
+              onClick={() => setMobilePreviewOpen(true)}
+              className="mb-4 flex min-h-12 w-full items-center justify-between rounded-[14px] border border-[#cf5068]/20 bg-[#fff5f7] px-4 text-left lg:hidden"
+            >
+              <span>
+                <span className="block text-xs font-black text-[#a73551]">
+                  Xem trước trên điện thoại
+                </span>
+                <span className="mt-0.5 block text-[10px] font-bold text-black/35">
+                  Kiểm tra mẫu sau khi chỉnh
+                </span>
+              </span>
+              <span className="text-lg text-[#c9435d]">→</span>
+            </button>
 
             <div className="grid gap-4">
               {activeCustomerScene.slots.map(
@@ -802,7 +819,7 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="sticky top-[130px] flex flex-col items-center">
+          <div className="sticky top-[130px] hidden flex-col items-center lg:flex">
             <div className="mb-2.5 flex w-full items-center justify-between px-1">
               <span className="text-[11px] font-black uppercase tracking-[0.12em] text-[#c9435d]">
                 Xem trước trang đang chỉnh
@@ -812,15 +829,48 @@ export const DynamicVisualTemplatePage: React.FC<Props> = ({
               </span>
             </div>
 
-            <div className="aspect-[9/16] w-full max-w-[340px] overflow-hidden rounded-[26px] border-[6px] border-[#181818] bg-white shadow-[0_20px_60px_rgba(70,25,40,0.14)]">
+            <div className="aspect-[9/16] w-full max-w-[340px] overflow-x-hidden overflow-y-auto rounded-[26px] border-[6px] border-[#181818] bg-white shadow-[0_20px_60px_rgba(70,25,40,0.14)]">
               <VisualSceneExperience
                 key={`personalize-preview-${activeCustomerScene.scene.id}`}
                 scenes={draft.scenes}
                 initialSceneId={activeCustomerScene.scene.id}
+                mobileOverride
                 containViewport
               />
             </div>
           </div>
+
+          {mobilePreviewOpen && (
+            <div className="fixed inset-0 z-[90] flex flex-col items-center bg-[#171717]/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-[calc(0.75rem+env(safe-area-inset-top))] lg:hidden">
+              <div className="mx-auto mb-3 flex w-full max-w-[430px] items-center justify-between gap-3 text-white">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-white/45">
+                    Xem trước trên điện thoại
+                  </p>
+                  <p className="mt-0.5 truncate text-sm font-black">
+                    {activeCustomerScene.label}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobilePreviewOpen(false)}
+                  className="min-h-11 shrink-0 rounded-[12px] bg-white px-4 text-xs font-black text-black"
+                >
+                  Đóng
+                </button>
+              </div>
+
+              <div className="aspect-[9/16] min-h-0 w-full max-w-[430px] overflow-x-hidden overflow-y-auto rounded-[24px] border-[5px] border-black bg-white shadow-2xl">
+                <VisualSceneExperience
+                  key={`mobile-personalize-preview-${activeCustomerScene.scene.id}`}
+                  scenes={draft.scenes}
+                  initialSceneId={activeCustomerScene.scene.id}
+                  mobileOverride
+                  containViewport
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </PersonalizePageShell>
