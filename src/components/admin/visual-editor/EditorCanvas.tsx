@@ -187,7 +187,7 @@ React.FC<Props> = ({
 
   const longPageHeight =
     Math.max(
-      1200,
+      600,
       scene.minHeight || 3200
     );
 

@@ -42,6 +42,9 @@ interface SceneCanvasProps {
   mobileOverride?:
     boolean;
 
+  viewportContained?:
+    boolean;
+
   renderCustomElement?: (
     element:
       Extract<
@@ -107,6 +110,7 @@ React.FC<
   actionContext,
   className = '',
   mobileOverride,
+  viewportContained = false,
   renderCustomElement,
 }) => {
   const detectedMobile =
@@ -183,7 +187,7 @@ React.FC<
 
   const pageHeight =
     Math.max(
-      1800,
+      600,
       scene.minHeight ||
         3200
     );
@@ -216,7 +220,9 @@ React.FC<
         minHeight:
           longPage
             ? undefined
-            : '100svh',
+            : viewportContained
+              ? '100%'
+              : '100svh',
       }}
       data-scene-device={
         mobile
@@ -329,7 +335,12 @@ React.FC<
         )}
 
         {scene.elements.map(
-          (element) => (
+          (element) => {
+            const deviceVisible = mobile
+              ? element.mobileVisible ?? element.visible !== false
+              : element.desktopVisible ?? element.visible !== false;
+
+            return (
             <SceneElementView
               key={
                 element.id
@@ -341,12 +352,12 @@ React.FC<
                 mobile
               }
               visible={
-                runtime
+                deviceVisible && (runtime
                   .visibility[
                   element.id
                 ] ??
                 element.visible !==
-                  false
+                  false)
               }
               animationVersion={
                 runtime
@@ -365,7 +376,8 @@ React.FC<
                 renderCustomElement
               }
             />
-          )
+            );
+          }
         )}
       </div>
     </div>
