@@ -17,6 +17,7 @@ import {
   CurvedText,
   ImageShapeRenderer,
   PhotoFrameRenderer,
+  YoutubeFrameRenderer,
   isTextRevealPreset,
   resolvePhotoFrameStyle,
 } from '../../../engine';
@@ -2175,6 +2176,19 @@ React.FC<{
       >
         {element.label}
       </div>
+    );
+  }
+
+  if (
+    element.type ===
+    'youtube'
+  ) {
+    return (
+      <YoutubeFrameRenderer
+        element={element}
+        device={device}
+        isEditor={true}
+      />
     );
   }
 

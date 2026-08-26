@@ -155,6 +155,17 @@ export const getElementLabel = (
 
   if (
     element.type ===
+    'youtube'
+  ) {
+    return (
+      element.title
+        ?.trim() ||
+      'Nhạc YouTube'
+    );
+  }
+
+  if (
+    element.type ===
     'shape'
   ) {
     const kind =

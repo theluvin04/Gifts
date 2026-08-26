@@ -21,6 +21,7 @@ import {
   createDecorElement,
   createImageElement,
   createPolaroidElement,
+  createYoutubeElement,
   createShapeElement,
   createTextElement,
   createVisualScene,
@@ -952,7 +953,8 @@ React.FC<Props> = ({
       | 'button'
       | 'decor'
       | 'shape'
-      | 'photo-frame',
+      | 'photo-frame'
+      | 'youtube',
     configure?: (
       element: SceneElement
     ) => void
@@ -992,9 +994,14 @@ React.FC<Props> = ({
                 ? createPolaroidElement(
                     count
                   )
-                : createDecorElement(
-                    count
-                  );
+                : type ===
+                    'youtube'
+                  ? createYoutubeElement(
+                      count
+                    )
+                  : createDecorElement(
+                      count
+                    );
 
     configure?.(
       element
@@ -3417,6 +3424,15 @@ React.FC<Props> = ({
             label="+ Khung Polaroid"
             onClick={
               addPolaroid
+            }
+          />
+
+          <AddElementButton
+            label="+ Nhạc YouTube"
+            onClick={() =>
+              addElement(
+                'youtube'
+              )
             }
           />
 

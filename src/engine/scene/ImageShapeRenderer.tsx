@@ -29,9 +29,7 @@ export const ImageShapeRenderer: React.FC<ImageShapeRendererProps> = ({
   const borderRadius =
     shape === 'circle'
       ? 9999
-      : shape === 'rectangle'
-        ? 0
-        : (currentStyle.borderRadius ?? 0);
+      : (currentStyle.borderRadius ?? 0);
 
   const dashArray = getStrokeDashArray(borderStyle, borderWidth);
 

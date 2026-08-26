@@ -69,6 +69,9 @@ export type {
   ScenePhotoFrameElement,
   ScenePhotoFramePreset,
   ScenePhotoFrameStyle,
+  SceneYoutubeElement,
+  SceneYoutubeFrameTheme,
+  SceneYoutubeStyle,
   SceneShapeElement,
   SceneShapeKind,
   SceneShapeStyle,
@@ -120,6 +123,21 @@ export {
 export type {
   PhotoFramePresetDefinition,
 } from './scene/photoFramePresets';
+
+export {
+  YoutubeFrameRenderer,
+} from './scene/YoutubeFrameRenderer';
+
+export {
+  YOUTUBE_FRAME_THEMES,
+  extractYoutubeId,
+  buildYoutubeEmbedUrl,
+  getYoutubeThumbnailUrl,
+} from './scene/youtubeUtils';
+
+export type {
+  YoutubeFrameThemeOption,
+} from './scene/youtubeUtils';
 
 export {
   TEXT_SHADOW_PRESETS,

@@ -15,6 +15,9 @@ import type {
   SceneElementAction,
   SceneElementFrame,
   SceneImageShape,
+  SceneYoutubeElement,
+  SceneYoutubeFrameTheme,
+  SceneYoutubeStyle,
 } from '../../../engine';
 
 import {
@@ -23,6 +26,9 @@ import {
   PHOTOBOOTH_SHADOW_PRESETS,
   PHOTO_FRAME_PRESETS,
   TEXT_SHADOW_PRESETS,
+  YOUTUBE_FRAME_THEMES,
+  extractYoutubeId,
+  getYoutubeThumbnailUrl,
   getPhotoFramePreset,
   resolvePhotoFrameStyle,
 } from '../../../engine';
@@ -1028,6 +1034,21 @@ React.FC<{
             }
             onOpenAssetLibrary={
               onOpenAssetLibrary
+            }
+          />
+        )}
+
+        {element.type ===
+          'youtube' && (
+          <YoutubeControls
+            element={
+              element
+            }
+            device={
+              device
+            }
+            onChange={
+              onChange
             }
           />
         )}
@@ -3511,6 +3532,419 @@ const PhotoFrameControls: React.FC<{
           </div>
         )}
       </div>
+    </>
+  );
+};
+
+const POPULAR_YOUTUBE_PRESETS = [
+  { label: 'Lofi Chill Học Tập & Thư Giãn', url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk', title: 'Lofi Hip Hop - Chill Beats' },
+  { label: 'Acoustic Tình Yêu Lãng Mạn', url: 'https://www.youtube.com/watch?v=5qap5aO4i9A', title: 'Acoustic Love Songs' },
+  { label: 'Piano Đám Cưới & Hẹn Hò', url: 'https://www.youtube.com/watch?v=kXYiU_JCYtU', title: 'Romantic Wedding Piano' },
+  { label: 'Cafe Acoustic Nhẹ Nhàng', url: 'https://www.youtube.com/watch?v=L4b3p4SffmY', title: 'Sweet Cafe Acoustic' },
+  { label: 'Nhạc Không Lời Tình Cảm', url: 'https://www.youtube.com/watch?v=1ZYbU82GVz4', title: 'Peaceful Melody' },
+];
+
+const YoutubeControls: React.FC<{
+  element: Extract<SceneElement, { type: 'youtube' }>;
+  device: DeviceMode;
+  onChange: (updater: (element: SceneElement) => SceneElement) => void;
+}> = ({ element, device, onChange }) => {
+  const style = element.youtubeStyle || {};
+  const currentTheme = style.frameTheme || 'youtube';
+  const videoId = extractYoutubeId(element.youtubeUrl || '');
+  const thumbnail = getYoutubeThumbnailUrl(videoId);
+
+  const patchStyle = (next: Record<string, unknown>) =>
+    onChange(
+      (current) =>
+        ({
+          ...current,
+          youtubeStyle: {
+            ...(current.type === 'youtube' ? current.youtubeStyle : {}),
+            ...next,
+          },
+        } as SceneElement)
+    );
+
+  const BORDER_COLORS = [
+    { label: 'Trắng', value: '#ffffff' },
+    { label: 'Đỏ nhung', value: '#b83e57' },
+    { label: 'Đen', value: '#191919' },
+    { label: 'Vàng gold', value: '#f59e0b' },
+    { label: 'Hồng pastel', value: '#fca5a5' },
+    { label: 'Tím mộng mơ', value: '#a855f7' },
+    { label: 'Xanh ngọc', value: '#14b8a6' },
+    { label: 'Bạc', value: '#94a3b8' },
+  ];
+
+  return (
+    <>
+      {/* 1. Nhập Link YouTube hoặc chọn nhạc mẫu */}
+      <div className="rounded-[10px] border border-black/8 bg-[#faf9f8] p-2.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[9px] font-black uppercase tracking-wider text-black/60">
+            Nguồn Video / Nhạc YouTube
+          </span>
+          {videoId ? (
+            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[8px] font-bold text-emerald-700">
+              ID: {videoId}
+            </span>
+          ) : (
+            <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[8px] font-bold text-rose-700">
+              Chưa có ID
+            </span>
+          )}
+        </div>
+
+        <TextInput
+          label="Link Video YouTube (Watch, Share, Shorts...)"
+          value={element.youtubeUrl || ''}
+          placeholder="https://www.youtube.com/watch?v=..."
+          onChange={(youtubeUrl) =>
+            onChange(
+              (current) =>
+                ({
+                  ...current,
+                  youtubeUrl,
+                } as SceneElement)
+            )
+          }
+        />
+
+        {/* Thumbnail Preview */}
+        {videoId && (
+          <div className="mt-2 flex items-center gap-2 rounded-[8px] border border-black/8 bg-white p-1.5">
+            <img
+              src={thumbnail}
+              alt="Video Thumbnail"
+              className="h-10 w-16 rounded-[4px] object-cover shadow-xs"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[9px] font-bold text-black/80">
+                {element.title || 'Video YouTube sẵn sàng'}
+              </p>
+              <a
+                href={element.youtubeUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block text-[8px] font-bold text-[#b83e57] hover:underline"
+              >
+                Mở thử trên YouTube ↗
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Nhạc nền gợi ý */}
+        <div className="mt-2.5">
+          <p className="mb-1 text-[8px] font-bold text-black/40">
+            Chọn nhanh nhạc mẫu:
+          </p>
+          <div className="flex flex-col gap-1">
+            {POPULAR_YOUTUBE_PRESETS.map((preset) => (
+              <button
+                key={preset.url}
+                type="button"
+                onClick={() =>
+                  onChange(
+                    (current) =>
+                      ({
+                        ...current,
+                        youtubeUrl: preset.url,
+                        title: preset.title,
+                      } as SceneElement)
+                  )
+                }
+                className={`flex items-center justify-between rounded-[6px] border px-2 py-1 text-left text-[8px] font-bold transition ${
+                  element.youtubeUrl === preset.url
+                    ? 'border-[#b83e57] bg-[#fff0f4] text-[#b83e57]'
+                    : 'border-black/8 bg-white text-black/60 hover:bg-black/5'
+                }`}
+              >
+                <span className="truncate">🎵 {preset.label}</span>
+                <span className="shrink-0 text-[7px] opacity-60">Chọn</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Chọn Giao diện / Khung phát nhạc */}
+      <div className="mt-2 rounded-[10px] border border-black/8 bg-[#faf9f8] p-2.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[9px] font-black uppercase tracking-wider text-black/60">
+            Kiểu khung trình phát
+          </span>
+          <span className="text-[8px] font-bold text-[#b83e57]">
+            {YOUTUBE_FRAME_THEMES.find((t) => t.value === currentTheme)?.label || 'YouTube Classic'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-1.5">
+          {YOUTUBE_FRAME_THEMES.map((theme) => {
+            const active = currentTheme === theme.value;
+            return (
+              <button
+                key={theme.value}
+                type="button"
+                title={theme.description}
+                onClick={() => patchStyle({ frameTheme: theme.value })}
+                className={`flex flex-col items-center justify-center rounded-[8px] border p-2 text-center transition ${
+                  active
+                    ? 'border-[#b83e57] bg-[#fff0f4] text-[#b83e57] shadow-xs ring-1 ring-[#b83e57]/40'
+                    : 'border-black/8 bg-white text-black/60 hover:bg-black/5'
+                }`}
+              >
+                <span className="text-[16px] leading-none">{theme.icon}</span>
+                <span className="mt-1 line-clamp-1 text-[8px] font-bold">
+                  {theme.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 3. Tiêu đề bài hát & Hiển thị */}
+      <div className="mt-2 rounded-[10px] border border-black/8 bg-[#faf9f8] p-2.5">
+        <TextInput
+          label="Tên bài hát / Chú thích khung nhạc"
+          value={element.title || ''}
+          placeholder="VD: Perfect - Ed Sheeran"
+          onChange={(title) =>
+            onChange(
+              (current) =>
+                ({
+                  ...current,
+                  title,
+                } as SceneElement)
+            )
+          }
+        />
+
+        <div className="mt-2">
+          <ToggleRow
+            label="Hiện thanh tiêu đề trên khung"
+            checked={style.showTitle !== false}
+            onChange={(showTitle) => patchStyle({ showTitle })}
+          />
+        </div>
+      </div>
+
+      {/* 4. Cài đặt phát nhạc */}
+      <div className="mt-2 rounded-[10px] border border-black/8 bg-[#faf9f8] p-2.5">
+        <p className="mb-2 text-[8px] font-black uppercase tracking-wider text-black/40">
+          Tùy chọn phát nhạc
+        </p>
+
+        <div className="grid grid-cols-2 gap-1.5">
+          <ToggleRow
+            label="Tự động phát"
+            checked={Boolean(style.autoplay)}
+            onChange={(autoplay) => patchStyle({ autoplay })}
+          />
+          <ToggleRow
+            label="Lặp lại vô tận"
+            checked={style.loop !== false}
+            onChange={(loop) => patchStyle({ loop })}
+          />
+          <ToggleRow
+            label="Tắt tiếng ban đầu"
+            checked={Boolean(style.mute)}
+            onChange={(mute) => patchStyle({ mute })}
+          />
+          <ToggleRow
+            label="Hiện nút điều khiển"
+            checked={style.controls !== false}
+            onChange={(controls) => patchStyle({ controls })}
+          />
+        </div>
+      </div>
+
+      {/* 5. Bo góc khung (Border Radius) */}
+      <div className="mt-2 rounded-[10px] border border-black/8 bg-[#faf9f8] p-2.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[9px] font-bold text-black/60">
+            Bán kính bo góc (Corner Radius)
+          </span>
+          <span className="font-mono text-[9px] font-bold text-[#b83e57]">
+            {style.borderRadius ?? 16}px
+          </span>
+        </div>
+
+        <input
+          type="range"
+          value={style.borderRadius ?? 16}
+          min={0}
+          max={80}
+          step={1}
+          onChange={(event) => patchStyle({ borderRadius: Number(event.target.value) })}
+          className="w-full accent-[#b83e57]"
+        />
+
+        <div className="mt-2 flex flex-wrap items-center gap-1">
+          {[
+            { label: '0px (Nhọn)', value: 0 },
+            { label: '8px', value: 8 },
+            { label: '16px (Chuẩn)', value: 16 },
+            { label: '24px', value: 24 },
+            { label: '36px', value: 36 },
+            { label: 'Viên thuốc', value: 9999 },
+          ].map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => patchStyle({ borderRadius: item.value })}
+              className={`rounded-[6px] px-2 py-1 text-[8px] font-bold transition ${
+                (style.borderRadius ?? 16) === item.value
+                  ? 'bg-[#b83e57] text-white shadow-sm'
+                  : 'border border-black/10 bg-white text-black/50 hover:bg-black/5'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 6. Viền khung & Stroke */}
+      <div className="mt-2 rounded-[10px] border border-black/8 bg-[#faf9f8] p-2.5">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[9px] font-bold text-black/60">
+            Viền khung nhạc (Border Stroke)
+          </span>
+          <span className="font-mono text-[9px] font-bold text-[#b83e57]">
+            {style.borderWidth ? `${style.borderWidth}px (${style.borderStyle || 'solid'})` : '0px (Không viền)'}
+          </span>
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-[8px] font-bold text-black/40">
+            <span>Độ dày viền</span>
+            <span>{style.borderWidth || 0}px</span>
+          </div>
+          <input
+            type="range"
+            value={style.borderWidth || 0}
+            min={0}
+            max={20}
+            step={1}
+            onChange={(event) =>
+              patchStyle({
+                borderWidth: Number(event.target.value),
+                borderStyle: style.borderStyle || 'solid',
+              })
+            }
+            className="w-full accent-[#b83e57]"
+          />
+          <div className="flex flex-wrap gap-1">
+            {[0, 1, 2, 4, 6, 8, 12].map((w) => (
+              <button
+                key={w}
+                type="button"
+                onClick={() =>
+                  patchStyle({
+                    borderWidth: w,
+                    borderStyle: style.borderStyle || 'solid',
+                  })
+                }
+                className={`rounded-[5px] px-2 py-0.5 text-[8px] font-bold transition ${
+                  (style.borderWidth || 0) === w
+                    ? 'bg-[#b83e57] text-white shadow-sm'
+                    : 'border border-black/10 bg-white text-black/50 hover:bg-black/5'
+                }`}
+              >
+                {w === 0 ? 'Tắt' : `${w}px`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {(style.borderWidth ?? 0) > 0 && (
+          <div className="mt-3 space-y-1">
+            <span className="text-[8px] font-bold text-black/40">Kiểu nét viền</span>
+            <div className="grid grid-cols-3 gap-1">
+              {[
+                { value: 'solid', label: 'Nét liền ──' },
+                { value: 'dashed', label: 'Nét đứt ╌╌' },
+                { value: 'dotted', label: 'Nét chấm •••' },
+                { value: 'double', label: 'Nét đôi ══' },
+                { value: 'groove', label: 'Rãnh chìm' },
+                { value: 'ridge', label: 'Gờ nổi' },
+              ].map((st) => (
+                <button
+                  key={st.value}
+                  type="button"
+                  onClick={() => patchStyle({ borderStyle: st.value })}
+                  className={`rounded-[6px] border py-1 text-center text-[8px] font-bold transition ${
+                    (style.borderStyle || 'solid') === st.value
+                      ? 'border-[#b83e57] bg-[#fff0f4] text-[#b83e57] shadow-sm'
+                      : 'border-black/10 bg-white text-black/50 hover:bg-black/5'
+                  }`}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-3 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[8px] font-bold text-black/40">Màu viền</span>
+            <span className="font-mono text-[8px] font-bold text-black/60">
+              {style.borderColor || '#ffffff'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={
+                style.borderColor && style.borderColor.startsWith('#')
+                  ? style.borderColor.slice(0, 7)
+                  : '#ffffff'
+              }
+              onChange={(e) => patchStyle({ borderColor: e.target.value })}
+              className="h-7 w-9 cursor-pointer rounded-[6px] border border-black/10 bg-white p-0.5"
+            />
+            <input
+              type="text"
+              value={style.borderColor || '#ffffff'}
+              onChange={(e) => patchStyle({ borderColor: e.target.value })}
+              placeholder="#ffffff"
+              className="w-full rounded-[6px] border border-black/10 bg-white px-2 py-1 font-mono text-[9px] font-bold text-black/80"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-1 pt-1">
+            {BORDER_COLORS.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                title={c.label}
+                onClick={() => patchStyle({ borderColor: c.value })}
+                className="flex items-center gap-1 rounded-[5px] border border-black/10 bg-white px-1.5 py-0.5 text-[8px] font-bold text-black/60 hover:bg-black/5"
+              >
+                <span
+                  className="h-2.5 w-2.5 rounded-full border border-black/20"
+                  style={{ backgroundColor: c.value }}
+                />
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 7. Bóng đổ & Phát sáng */}
+      <ShadowEditorSection
+        title="Bóng đổ khung phát nhạc (Box Shadow)"
+        value={style.boxShadow}
+        presets={BOX_SHADOW_PRESETS}
+        onChange={(boxShadow) => patchStyle({ boxShadow })}
+        type="box"
+      />
     </>
   );
 };

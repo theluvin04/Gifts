@@ -34,6 +34,10 @@ import {
   PhotoFrameRenderer,
 } from './PhotoFrameRenderer';
 
+import {
+  YoutubeFrameRenderer,
+} from './YoutubeFrameRenderer';
+
 const getAnchorTransform = (
   anchor:
     SceneElementFrame[
@@ -498,6 +502,22 @@ React.FC<
           >
             {element.label}
           </motion.button>
+        );
+      }
+
+      if (
+        element.type ===
+        'youtube'
+      ) {
+        return (
+          <YoutubeFrameRenderer
+            element={element}
+            device={
+              mobile
+                ? 'mobile'
+                : 'desktop'
+            }
+          />
         );
       }
 

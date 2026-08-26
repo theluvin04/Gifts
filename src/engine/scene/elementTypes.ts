@@ -13,6 +13,7 @@ export type SceneElementType =
   | 'decor'
   | 'shape'
   | 'photo-frame'
+  | 'youtube'
   | 'custom';
 
 export type SceneElementAnchor =
@@ -403,6 +404,49 @@ extends BaseSceneElement {
     Partial<ScenePhotoFrameStyle>;
 }
 
+export type SceneYoutubeFrameTheme =
+  | 'youtube'
+  | 'minimal'
+  | 'vinyl'
+  | 'glass'
+  | 'retro-tv'
+  | 'photobooth';
+
+export interface SceneYoutubeStyle {
+  borderRadius?: number;
+  borderWidth?: number;
+  borderColor?: string;
+  borderStyle?: 'solid' | 'dashed' | 'dotted' | 'double' | 'none';
+  boxShadow?: string;
+  autoplay?: boolean;
+  loop?: boolean;
+  mute?: boolean;
+  controls?: boolean;
+  frameTheme?: SceneYoutubeFrameTheme;
+  showTitle?: boolean;
+  customTitle?: string;
+  accentColor?: string;
+}
+
+export interface SceneYoutubeElement
+extends BaseSceneElement {
+  type: 'youtube';
+
+  youtubeUrl: string;
+
+  mobileYoutubeUrl?: string;
+
+  title?: string;
+
+  mobileTitle?: string;
+
+  youtubeStyle?:
+    SceneYoutubeStyle;
+
+  mobileYoutubeStyle?:
+    Partial<SceneYoutubeStyle>;
+}
+
 export interface SceneCustomElement
 extends BaseSceneElement {
   type: 'custom';
@@ -422,6 +466,7 @@ export type SceneElement =
   | SceneButtonElement
   | SceneShapeElement
   | ScenePhotoFrameElement
+  | SceneYoutubeElement
   | SceneCustomElement;
 
 export interface SceneCanvasBackground {

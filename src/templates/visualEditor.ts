@@ -7,6 +7,7 @@ import type {
   SceneElementFrame,
   SceneImageElement,
   ScenePhotoFrameElement,
+  SceneYoutubeElement,
   SceneShapeElement,
   SceneTextElement,
   SceneTransitionPreset,
@@ -598,6 +599,55 @@ export const createPolaroidElement =
 
     actions: [],
   });
+
+export const createYoutubeElement = (
+  index = 1
+): SceneYoutubeElement => ({
+  id: createId('youtube'),
+
+  type: 'youtube',
+
+  name: `Nhạc YouTube ${index}`,
+
+  youtubeUrl: 'https://www.youtube.com/watch?v=jfKfPfyJRdk',
+
+  title: 'Nhạc nền tình yêu',
+
+  frame: {
+    ...DEFAULT_FRAME,
+    width: 36,
+    height: 24,
+    zIndex: 2,
+  },
+
+  mobileFrame: {
+    width: 78,
+    height: 22,
+  },
+
+  youtubeStyle: {
+    borderRadius: 16,
+    borderWidth: 0,
+    borderColor: '#ffffff',
+    borderStyle: 'solid',
+    boxShadow: '0 16px 36px rgba(0,0,0,0.22)',
+    autoplay: false,
+    loop: true,
+    mute: false,
+    controls: true,
+    frameTheme: 'youtube',
+    showTitle: true,
+  },
+
+  animation: {
+    preset: 'zoom-in',
+    durationMs: 500,
+    delayMs: 0,
+    easing: 'easeOut',
+  },
+
+  actions: [],
+});
 
 
 const introScene:
