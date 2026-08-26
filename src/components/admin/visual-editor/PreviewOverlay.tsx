@@ -416,8 +416,8 @@ React.FC<Props> = ({
             'relative shrink-0 overflow-hidden bg-white shadow-[0_24px_80px_rgba(0,0,0,0.4)] transition-all duration-200',
             device ===
             'mobile'
-              ? 'w-[min(390px,92vw)] rounded-[26px] border-[8px] border-black'
-              : 'w-[min(1180px,96vw)] rounded-[8px]',
+              ? 'aspect-[9/16] w-[min(390px,92vw)] overflow-y-auto rounded-[26px] border-[8px] border-black'
+              : 'aspect-video w-[min(1180px,96vw)] overflow-y-auto rounded-[8px]',
           ].join(' ')}
         >
           {ready ? (
@@ -435,6 +435,7 @@ React.FC<Props> = ({
                 device ===
                 'mobile'
               }
+              containViewport
             />
           ) : (
             <div className="flex aspect-video w-full items-center justify-center bg-white text-[10px] font-black text-black/25">
