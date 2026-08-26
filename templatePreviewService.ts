@@ -15,22 +15,58 @@ import type {
   TemplateVisualEditorConfig,
 } from '../templates/visualEditor';
 
-// Keep the stable preview readable with both the old Firestore rule
-// (which requires expiresAtMs) and the new non-expiring rule.
-const STABLE_PREVIEW_EXPIRES_AT_MS =
-  Date.UTC(
-    2100,
-    0,
-    1
-  );
-
 export interface TemplatePreviewDocument {
   id: string;
   templateId: string;
   templateName: string;
   config: TemplateVisualEditorConfig;
-  expiresAtMs?: number;
 }
+
+const PREVIEW_CACHE_PREFIX =
+  'dearly:template-preview:';
+
+const writePreviewCache = (
+  preview:
+    TemplatePreviewDocument
+) => {
+  try {
+    window.localStorage.setItem(
+      PREVIEW_CACHE_PREFIX +
+        preview.id,
+      JSON.stringify(preview)
+    );
+  } catch {
+    // Firestore remains the cross-device source when storage is unavailable.
+  }
+};
+
+const readPreviewCache = (
+  previewId: string
+): TemplatePreviewDocument | null => {
+  try {
+    const raw =
+      window.localStorage.getItem(
+        PREVIEW_CACHE_PREFIX +
+          previewId
+      );
+
+    if (!raw) return null;
+
+    const preview =
+      JSON.parse(raw) as
+        TemplatePreviewDocument;
+
+    return preview?.id ===
+        previewId &&
+      Array.isArray(
+        preview.config?.scenes
+      )
+      ? preview
+      : null;
+  } catch {
+    return null;
+  }
+};
 
 const getPreviewId = (
   templateId: string
@@ -64,6 +100,35 @@ const getPreviewId = (
   return `template-test-${safeId}-${(hash >>> 0).toString(36)}`;
 };
 
+const getTemplateIdFromPreviewId = (
+  previewId: string
+) => {
+  const prefix =
+    'template-test-';
+
+  if (
+    !previewId.startsWith(
+      prefix
+    )
+  ) {
+    return '';
+  }
+
+  const value =
+    previewId.slice(
+      prefix.length
+    );
+  const hashSeparator =
+    value.lastIndexOf('-');
+
+  return hashSeparator > 0
+    ? value.slice(
+        0,
+        hashSeparator
+      )
+    : '';
+};
+
 export const createTemplatePreviewLink =
   async ({
     templateId,
@@ -95,30 +160,43 @@ export const createTemplatePreviewLink =
       ) as
         TemplateVisualEditorConfig;
 
+    const cachedPreview:
+      TemplatePreviewDocument = {
+        id: previewId,
+        templateId,
+        templateName,
+        config: cleanConfig,
+      };
+
     try {
       await setDoc(
         doc(
           db,
-          'templatePreviews',
-          previewId
+          'templates',
+          templateId
         ),
         {
-          id: previewId,
-          templateId,
-          templateName,
-          config: cleanConfig,
-          ownerId: user.uid,
-          createdAt:
-            serverTimestamp(),
-          updatedAt:
-            serverTimestamp(),
-          active: true,
-          expiresAtMs:
-            STABLE_PREVIEW_EXPIRES_AT_MS,
+          testPreview: {
+            id: previewId,
+            templateId,
+            templateName,
+            config: cleanConfig,
+            ownerId: user.uid,
+            updatedAt:
+              serverTimestamp(),
+            active: true,
+          },
         },
         {
           merge: true,
         }
+      );
+
+      // The editor preview iframe is same-origin. Cache after Firestore accepts
+      // the sync so AI Studio/Vercel preview never hangs waiting for a second
+      // Firestore read. External phones still read the public template document.
+      writePreviewCache(
+        cachedPreview
       );
     } catch (error: any) {
       if (
@@ -128,7 +206,7 @@ export const createTemplatePreviewLink =
           'firestore/permission-denied'
       ) {
         throw new Error(
-          'Firestore chưa cho phép tạo link test. Cần cập nhật firestore.rules trong gói sửa.'
+          'Không đồng bộ được bản test. Hãy đăng nhập lại tài khoản Admin.'
         );
       }
 
@@ -139,8 +217,6 @@ export const createTemplatePreviewLink =
       id: previewId,
       url:
         `${window.location.origin}/preview/${previewId}`,
-      expiresAtMs:
-        STABLE_PREVIEW_EXPIRES_AT_MS,
     };
   };
 
@@ -149,12 +225,30 @@ export const fetchTemplatePreview =
     previewId: string
   ):
   Promise<TemplatePreviewDocument | null> => {
+    const cached =
+      readPreviewCache(
+        previewId
+      );
+
+    if (cached) {
+      return cached;
+    }
+
+    const templateId =
+      getTemplateIdFromPreviewId(
+        previewId
+      );
+
+    if (!templateId) {
+      return null;
+    }
+
     const snapshot =
       await getDoc(
         doc(
           db,
-          'templatePreviews',
-          previewId
+          'templates',
+          templateId
         )
       );
 
@@ -163,22 +257,31 @@ export const fetchTemplatePreview =
     }
 
     const data =
-      snapshot.data() as
-        TemplatePreviewDocument;
+      snapshot.data() as {
+        testPreview?:
+          TemplatePreviewDocument & {
+            active?: boolean;
+          };
+      };
+    const preview =
+      data.testPreview;
 
     if (
-      !data.config ||
+      !preview ||
+      preview.id !==
+        previewId ||
+      !preview.config ||
       !Array.isArray(
-        data.config.scenes
+        preview.config.scenes
       ) ||
-      (data as any).active ===
+      preview.active ===
         false
     ) {
       return null;
     }
 
     return {
-      ...data,
-      id: snapshot.id,
+      ...preview,
+      id: previewId,
     };
   };
