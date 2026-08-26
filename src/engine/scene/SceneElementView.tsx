@@ -22,6 +22,10 @@ import {
   resolvePhotoFrameStyle,
 } from './photoFramePresets';
 
+import {
+  CurvedText,
+} from './CurvedText';
+
 const getAnchorTransform = (
   anchor:
     SceneElementFrame[
@@ -226,6 +230,16 @@ React.FC<
                 ...mobileStyle,
               }
             : desktopStyle;
+
+        if (style.curvature && Math.abs(style.curvature) > 0) {
+          return (
+            <CurvedText
+              text={element.text}
+              style={style}
+              pathId={`scene-curved-text-${element.id}-${animationVersion}`}
+            />
+          );
+        }
 
         return (
           <div

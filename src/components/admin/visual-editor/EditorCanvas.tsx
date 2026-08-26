@@ -14,6 +14,7 @@ import type {
 import {
   AnimatedElement,
   AnimatedTextContent,
+  CurvedText,
   isTextRevealPreset,
   resolvePhotoFrameStyle,
 } from '../../../engine';
@@ -1784,6 +1785,16 @@ React.FC<{
             ...mobileStyle,
           }
         : desktopStyle;
+
+    if (style.curvature && Math.abs(style.curvature) > 0) {
+      return (
+        <CurvedText
+          text={element.text}
+          style={style}
+          pathId={`editor-curved-text-${element.id}-${device}`}
+        />
+      );
+    }
 
     return (
       <div

@@ -2397,6 +2397,89 @@ React.FC<{
           }
         />
       </div>
+
+      <div className="mt-3 rounded-[9px] border border-black/7 bg-[#faf9f8] p-2.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[9px] font-bold text-black/50">
+            Độ cong của chữ (Curvature)
+          </span>
+          <span className="font-mono text-[9px] font-bold text-[#b83e57]">
+            {style.curvature ? `${style.curvature > 0 ? '+' : ''}${style.curvature}%` : '0% (Thẳng)'}
+          </span>
+        </div>
+
+        <input
+          type="range"
+          value={style.curvature || 0}
+          min={-100}
+          max={100}
+          step={1}
+          onChange={(event) =>
+            patch({
+              curvature: Number(event.target.value),
+            })
+          }
+          className="w-full accent-[#b83e57]"
+        />
+
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => patch({ curvature: 0 })}
+            className={`rounded-[6px] px-2 py-1 text-[8px] font-bold transition ${
+              !style.curvature || style.curvature === 0
+                ? 'bg-[#b83e57] text-white shadow-sm'
+                : 'border border-black/10 bg-white text-black/50 hover:bg-black/5'
+            }`}
+          >
+            Thẳng (0)
+          </button>
+          <button
+            type="button"
+            onClick={() => patch({ curvature: 35 })}
+            className={`rounded-[6px] px-2 py-1 text-[8px] font-bold transition ${
+              style.curvature === 35
+                ? 'bg-[#b83e57] text-white shadow-sm'
+                : 'border border-black/10 bg-white text-black/50 hover:bg-black/5'
+            }`}
+          >
+            Vòm nhẹ (+35)
+          </button>
+          <button
+            type="button"
+            onClick={() => patch({ curvature: 70 })}
+            className={`rounded-[6px] px-2 py-1 text-[8px] font-bold transition ${
+              style.curvature === 70
+                ? 'bg-[#b83e57] text-white shadow-sm'
+                : 'border border-black/10 bg-white text-black/50 hover:bg-black/5'
+            }`}
+          >
+            Vòm cong (+70)
+          </button>
+          <button
+            type="button"
+            onClick={() => patch({ curvature: -35 })}
+            className={`rounded-[6px] px-2 py-1 text-[8px] font-bold transition ${
+              style.curvature === -35
+                ? 'bg-[#b83e57] text-white shadow-sm'
+                : 'border border-black/10 bg-white text-black/50 hover:bg-black/5'
+            }`}
+          >
+            Uốn cười (-35)
+          </button>
+          <button
+            type="button"
+            onClick={() => patch({ curvature: 100 })}
+            className={`rounded-[6px] px-2 py-1 text-[8px] font-bold transition ${
+              style.curvature === 100
+                ? 'bg-[#b83e57] text-white shadow-sm'
+                : 'border border-black/10 bg-white text-black/50 hover:bg-black/5'
+            }`}
+          >
+            Vòng tròn (+100)
+          </button>
+        </div>
+      </div>
     </>
   );
 };

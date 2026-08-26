@@ -92,6 +92,10 @@ export {
 } from './scene/SceneElementView';
 
 export {
+  CurvedText,
+} from './scene/CurvedText';
+
+export {
   PHOTO_FRAME_PRESETS,
   getPhotoFramePreset,
   resolvePhotoFrameStyle,

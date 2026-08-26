@@ -69,6 +69,7 @@ export interface SceneTextStyle {
     'normal' |
     'pre-line' |
     'pre-wrap';
+  curvature?: number;
 }
 
 export interface SceneImageStyle {

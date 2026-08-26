@@ -1730,6 +1730,11 @@ React.FC<Props> = ({
       return;
     }
 
+    const primaryId =
+      selectedElementIds[
+        selectedElementIds.length - 1
+      ] || '';
+
     const reference =
       unlocked.find(
         (element) =>
