@@ -388,6 +388,9 @@ export interface SceneCanvasDefinition {
 
   minHeight?: number;
 
+  /** Long-page height used only by the mobile canvas. */
+  mobileMinHeight?: number;
+
   maxWidth?: number;
 
   overflow?:

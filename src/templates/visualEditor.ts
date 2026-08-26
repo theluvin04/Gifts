@@ -1589,6 +1589,27 @@ const normalizeScene = (
           )
         : undefined,
 
+    mobileMinHeight:
+      typeof data
+        .mobileMinHeight ===
+        'number'
+        ? safeNumber(
+            data.mobileMinHeight,
+            data.minHeight || 0,
+            0,
+            Number.MAX_SAFE_INTEGER
+          )
+        : typeof data
+            .minHeight ===
+            'number'
+          ? safeNumber(
+              data.minHeight,
+              0,
+              0,
+              Number.MAX_SAFE_INTEGER
+            )
+          : undefined,
+
     maxWidth:
       safeNumber(
         data.maxWidth,

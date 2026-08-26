@@ -188,7 +188,11 @@ React.FC<Props> = ({
   const longPageHeight =
     Math.max(
       600,
-      scene.minHeight || 3200
+      device === 'mobile'
+        ? scene.mobileMinHeight ||
+            scene.minHeight ||
+            3200
+        : scene.minHeight || 3200
     );
 
   const aspectRatio =
