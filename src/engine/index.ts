@@ -65,6 +65,7 @@ export type {
   SceneImageElement,
   SceneImageShape,
   SceneImageStyle,
+  PhotoFrameLayoutKind,
   ScenePhotoFrameElement,
   ScenePhotoFramePreset,
   ScenePhotoFrameStyle,
@@ -106,7 +107,12 @@ export {
 } from './scene/imageShapeUtils';
 
 export {
+  PhotoFrameRenderer,
+} from './scene/PhotoFrameRenderer';
+
+export {
   PHOTO_FRAME_PRESETS,
+  PHOTOBOOTH_SHADOW_PRESETS,
   getPhotoFramePreset,
   resolvePhotoFrameStyle,
 } from './scene/photoFramePresets';

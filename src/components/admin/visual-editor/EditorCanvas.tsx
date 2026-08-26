@@ -16,6 +16,7 @@ import {
   AnimatedTextContent,
   CurvedText,
   ImageShapeRenderer,
+  PhotoFrameRenderer,
   isTextRevealPreset,
   resolvePhotoFrameStyle,
 } from '../../../engine';
@@ -2026,148 +2027,12 @@ React.FC<{
     element.type ===
     'photo-frame'
   ) {
-    const source =
-      device === 'mobile'
-        ? element.mobileSrc || element.src
-        : element.src;
-    const style =
-      resolvePhotoFrameStyle(
-        device === 'mobile'
-          ? {
-              ...element.frameStyle,
-              ...element.mobileFrameStyle,
-            }
-          : element.frameStyle
-      );
-
-    const padding =
-      Math.max(
-        0,
-        style.paddingPercent ??
-          6
-      );
-
-    const captionArea =
-      Math.max(
-        12,
-        style.captionAreaPercent ??
-          22
-      );
-
     return (
-      <div
-        style={{
-          width:
-            '100%',
-          height:
-            '100%',
-          display:
-            'flex',
-          flexDirection:
-            'column',
-          gap:
-            `${Math.max(2, padding * 0.45)}%`,
-          padding:
-            `${padding}%`,
-          paddingBottom:
-            `${Math.max(padding, padding * 0.7)}%`,
-          background:
-            style.background ||
-            '#fffdf8',
-          borderRadius:
-            style.outerRadius ??
-            4,
-          boxShadow:
-            style.boxShadow ||
-            '0 18px 38px rgba(40,25,25,0.18)',
-          overflow:
-            'hidden',
-        }}
-      >
-        <div
-          style={{
-            minHeight: 0,
-            flex:
-              `1 1 ${100 - captionArea}%`,
-            overflow:
-              'hidden',
-            borderRadius:
-              style.innerRadius ??
-              2,
-            background:
-              '#eeeae5',
-          }}
-        >
-          {source ? (
-            <img
-              src={
-                source
-              }
-              alt=""
-              draggable={
-                false
-              }
-              style={{
-                width:
-                  '100%',
-                height:
-                  '100%',
-                objectFit:
-                  style.imageFit ||
-                  'cover',
-              }}
-              className="select-none"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center px-2 text-center text-[8px] font-bold text-black/28">
-              Chọn ảnh
-            </div>
-          )}
-        </div>
-
-        <div
-          style={{
-            minHeight:
-              `${captionArea}%`,
-            display:
-              'flex',
-            alignItems:
-              'center',
-            justifyContent:
-              style.captionAlign ===
-              'left'
-                ? 'flex-start'
-                : style.captionAlign ===
-                    'right'
-                  ? 'flex-end'
-                  : 'center',
-            color:
-              style.captionColor ||
-              '#34302f',
-            fontFamily:
-              style.captionFontFamily,
-            fontSize:
-              style.captionFontSize ||
-              16,
-            fontWeight:
-              style.captionFontWeight ||
-              600,
-            textAlign:
-              style.captionAlign ||
-              'center',
-            lineHeight:
-              1.2,
-            whiteSpace:
-              'pre-line',
-            overflow:
-              'hidden',
-          }}
-        >
-          {device === 'mobile'
-            ? element.mobileCaption ?? element.caption ?? ''
-            : element.caption || ''}
-        </div>
-      </div>
+      <PhotoFrameRenderer
+        element={element}
+        device={device}
+        isEditor
+      />
     );
   }
 

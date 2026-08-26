@@ -156,6 +156,12 @@ export interface SceneShapeStyle {
 }
 
 export type ScenePhotoFramePreset =
+  | 'photobooth-4'
+  | 'photobooth-white-4'
+  | 'photobooth-black-4'
+  | 'photobooth-pink-4'
+  | 'photobooth-3'
+  | 'polaroid-grid-4'
   | 'polaroid'
   | 'polaroid-square'
   | 'polaroid-wide'
@@ -165,9 +171,28 @@ export type ScenePhotoFramePreset =
   | 'polaroid-vintage'
   | 'polaroid-clean';
 
+export type PhotoFrameLayoutKind =
+  | 'single'
+  | 'strip-vertical-4'
+  | 'strip-vertical-3'
+  | 'strip-vertical-2'
+  | 'grid-2x2'
+  | 'strip-horizontal-4';
+
 export interface ScenePhotoFrameStyle {
   preset?:
     ScenePhotoFramePreset;
+
+  layout?:
+    PhotoFrameLayoutKind;
+
+  photoCount?: number;
+
+  gapPercent?: number;
+
+  innerBorderWidth?: number;
+
+  innerBorderColor?: string;
 
   background?: string;
 
@@ -199,6 +224,10 @@ export interface ScenePhotoFrameStyle {
     'left' |
     'center' |
     'right';
+
+  badgeText?: string;
+
+  badgeColor?: string;
 }
 
 export type SceneElementAction =
@@ -355,6 +384,10 @@ extends BaseSceneElement {
   src: string;
 
   mobileSrc?: string;
+
+  photos?: string[];
+
+  mobilePhotos?: string[];
 
   alt?: string;
 

@@ -9,6 +9,7 @@ import {
 } from '../../../config/editorFonts';
 
 import type {
+  PhotoFrameLayoutKind,
   SceneCanvasDefinition,
   SceneElement,
   SceneElementAction,
@@ -18,6 +19,7 @@ import type {
 
 import {
   IMAGE_SHAPE_PRESETS,
+  PHOTOBOOTH_SHADOW_PRESETS,
   PHOTO_FRAME_PRESETS,
   getPhotoFramePreset,
   resolvePhotoFrameStyle,
@@ -2910,438 +2912,558 @@ const ImageControls: React.FC<{
   );
 };
 
-const PhotoFrameControls:
-React.FC<{
-  element:
-    Extract<
-      SceneElement,
-      {
-        type:
-          'photo-frame';
-      }
-    >;
+const PHOTO_FRAME_THEMES = [
+  { label: 'Đỏ đô sang trọng', value: '#7e192a', text: '#ffffff', border: 'rgba(255,255,255,0.2)' },
+  { label: 'Trắng nghệ thuật', value: '#ffffff', text: '#222222', border: 'rgba(0,0,0,0.12)' },
+  { label: 'Đen Film cổ điển', value: '#181818', text: '#f3ede2', border: 'rgba(255,255,255,0.15)' },
+  { label: 'Kem Vintage', value: '#f4ecd8', text: '#3c3228', border: 'rgba(60,50,40,0.15)' },
+  { label: 'Hồng Pastel', value: '#ffd6e0', text: '#70243b', border: 'rgba(112,36,59,0.15)' },
+  { label: 'Xanh Navy', value: '#0f172a', text: '#e2e8f0', border: 'rgba(255,255,255,0.15)' },
+  { label: 'Xanh Matcha', value: '#e2e8dd', text: '#2d3b2d', border: 'rgba(45,59,45,0.15)' },
+];
 
-  device:
-    DeviceMode;
-
-  onChange: (
-    updater: (
-      element:
-        SceneElement
-    ) =>
-      SceneElement
-  ) => void;
-
-  onOpenAssetLibrary:
-    () => void;
+const PhotoFrameControls: React.FC<{
+  element: Extract<SceneElement, { type: 'photo-frame' }>;
+  device: DeviceMode;
+  onChange: (updater: (element: SceneElement) => SceneElement) => void;
+  onOpenAssetLibrary: () => void;
 }> = ({
   element,
   device,
   onChange,
   onOpenAssetLibrary,
 }) => {
-  const style =
-    resolvePhotoFrameStyle(
-      device === 'mobile'
-        ? {
-            ...element.frameStyle,
-            ...element.mobileFrameStyle,
-          }
-        : element.frameStyle
-    );
+  const [activeSlotForPicker, setActiveSlotForPicker] = useState<number>(0);
+
+  const style = resolvePhotoFrameStyle(
+    device === 'mobile'
+      ? {
+          ...element.frameStyle,
+          ...element.mobileFrameStyle,
+        }
+      : element.frameStyle
+  );
 
   const source =
     device === 'mobile'
       ? element.mobileSrc || element.src
       : element.src;
 
+  const rawSources =
+    device === 'mobile'
+      ? element.mobileSources || element.sources
+      : element.sources;
+
+  const currentLayout = style.layout || 'strip-vertical-4';
+  const slotCount =
+    currentLayout === 'strip-vertical-4' || currentLayout === 'strip-horizontal-4' || style.preset === 'polaroid-grid-4'
+      ? 4
+      : currentLayout === 'strip-vertical-3'
+        ? 3
+        : currentLayout === 'strip-vertical-2'
+          ? 2
+          : 1;
+
+  const resolvedSlotImages: string[] = [];
+  for (let i = 0; i < slotCount; i++) {
+    const s = rawSources?.[i] || (i === 0 ? source : '') || '';
+    resolvedSlotImages.push(s);
+  }
+
   const caption =
     device === 'mobile'
       ? element.mobileCaption ?? element.caption ?? ''
       : element.caption || '';
 
-  const patchStyle = (
-    next:
-      Record<
-        string,
-        unknown
-      >
-  ) =>
+  const patchStyle = (next: Record<string, unknown>) =>
     onChange(
-      (current) => ({
-        ...current,
-        ...(current.type !== 'photo-frame'
-          ? {}
-          : device === 'mobile'
-            ? {
-                mobileFrameStyle: {
-                  ...current.mobileFrameStyle,
-                  ...next,
-                },
-              }
-            : {
-                frameStyle: {
-                  ...current.frameStyle,
-                  ...next,
-                },
-              }),
-      } as
-        SceneElement)
+      (current) =>
+        ({
+          ...current,
+          ...(current.type !== 'photo-frame'
+            ? {}
+            : device === 'mobile'
+              ? {
+                  mobileFrameStyle: {
+                    ...current.mobileFrameStyle,
+                    ...next,
+                  },
+                }
+              : {
+                  frameStyle: {
+                    ...current.frameStyle,
+                    ...next,
+                  },
+                }),
+        }) as SceneElement
     );
+
+  const updateSlotImage = (index: number, newSrc: string) => {
+    onChange((current) => {
+      if (current.type !== 'photo-frame') return current;
+      const curSources = [
+        ...(device === 'mobile'
+          ? current.mobileSources || current.sources || []
+          : current.sources || []),
+      ];
+      while (curSources.length < slotCount) {
+        curSources.push('');
+      }
+      curSources[index] = newSrc;
+
+      if (device === 'mobile') {
+        return {
+          ...current,
+          mobileSrc: index === 0 ? newSrc : current.mobileSrc || current.src,
+          mobileSources: curSources,
+        };
+      }
+      return {
+        ...current,
+        src: index === 0 ? newSrc : current.src,
+        sources: curSources,
+      };
+    });
+  };
 
   return (
     <>
-      <AssetPickerButton
-        label={
-          source
-            ? 'Thay ảnh trong khung'
-            : 'Chọn ảnh cho khung'
-        }
-        onClick={
-          onOpenAssetLibrary
-        }
-      />
-
-      <button
-        type="button"
-        onClick={() => {
-          const preset =
-            getPhotoFramePreset(
-              style.preset
-            );
-
-          onChange(
-            (current) => {
-              if (
-                current.type !== 'photo-frame'
-              ) {
-                return current;
-              }
-
-              return device === 'mobile'
-                ? {
-                    ...current,
-                    mobileFrame: {
-                      ...current.mobileFrame,
-                      ...preset.mobile,
-                    },
-                  }
-                : {
-                    ...current,
-                    frame: {
-                      ...current.frame,
-                      ...preset.desktop,
-                    },
-                  };
-            }
-          );
-        }}
-        className="mt-2 w-full rounded-[9px] border border-[#cf5068]/20 bg-[#fff5f7] px-3 py-2 text-[9px] font-black text-[#a73551] transition hover:bg-[#f9e9ed]"
-      >
-        Chuẩn hóa kích thước {device === 'mobile' ? 'Mobile' : 'PC'}
-      </button>
-
-      {source && (
-        <div className="overflow-hidden rounded-[9px] border border-black/7 bg-[#f4f1ee] p-2">
-          <img
-            src={
-              source
-            }
-            alt=""
-            className="aspect-square w-full rounded-[6px] object-cover"
-          />
-        </div>
-      )}
-
-      <TextInput
-        label="Chú thích dưới ảnh"
-        value={
-          caption
-        }
-        placeholder="Có thể để trống"
-        onChange={(
-          caption
-        ) =>
-          onChange(
-            (current) => ({
-              ...current,
-              ...(device === 'mobile'
-                ? { mobileCaption: caption }
-                : { caption }),
-            } as
-              SceneElement)
-          )
-        }
-      />
-
+      {/* 1. Chọn layout & Mẫu khung Polaroid / Photobooth */}
       <div>
         <p className="mb-2 text-[8px] font-black uppercase tracking-[0.1em] text-black/30">
-          Mẫu khung
+          Mẫu dải ảnh / Khung Polaroid
         </p>
 
         <div className="grid grid-cols-2 gap-2">
-          {PHOTO_FRAME_PRESETS.map(
-            (
-              preset
-            ) => {
-              const active =
-                style.preset ===
-                preset.value;
+          {PHOTO_FRAME_PRESETS.map((preset) => {
+            const active = style.preset === preset.value;
 
-              return (
-                <button
-                  key={
-                    preset.value
-                  }
-                  type="button"
-                  title={
-                    preset.description
-                  }
-                  onClick={() =>
-                    onChange(
-                      (
-                        current
-                      ) => {
-                        if (
-                          current.type !==
-                          'photo-frame'
-                        ) {
-                          return current;
-                        }
+            return (
+              <button
+                key={preset.value}
+                type="button"
+                title={preset.description}
+                onClick={() =>
+                  onChange((current) => {
+                    if (current.type !== 'photo-frame') {
+                      return current;
+                    }
 
-                        const selected =
-                          getPhotoFramePreset(
-                            preset.value
-                          );
+                    const selected = getPhotoFramePreset(preset.value);
 
-                        return {
-                          ...current,
-                          ...(device === 'mobile'
-                            ? {
-                                mobileFrame: {
-                                  ...current.mobileFrame,
-                                  ...selected.mobile,
-                                },
-                                mobileFrameStyle: {
-                                  ...selected.style,
-                                },
-                              }
-                            : {
-                                frame: {
-                                  ...current.frame,
-                                  ...selected.desktop,
-                                },
-                                frameStyle: {
-                                  ...selected.style,
-                                },
-                              }),
-                        };
-                      }
-                    )
-                  }
-                  className={[
-                    'rounded-[9px] border p-2 text-left transition',
-                    active
-                      ? 'border-[#cf5068]/35 bg-[#fff4f7]'
-                      : 'border-black/8 bg-[#faf9f8] hover:border-[#cf5068]/20',
-                  ].join(' ')}
+                    return {
+                      ...current,
+                      ...(device === 'mobile'
+                        ? {
+                            mobileFrame: {
+                              ...current.mobileFrame,
+                              ...selected.mobile,
+                            },
+                            mobileFrameStyle: {
+                              ...selected.style,
+                            },
+                          }
+                        : {
+                            frame: {
+                              ...current.frame,
+                              ...selected.desktop,
+                            },
+                            frameStyle: {
+                              ...selected.style,
+                            },
+                          }),
+                    };
+                  })
+                }
+                className={[
+                  'rounded-[9px] border p-2 text-left transition',
+                  active
+                    ? 'border-[#cf5068] bg-[#fff4f7] shadow-sm'
+                    : 'border-black/8 bg-[#faf9f8] hover:border-[#cf5068]/30',
+                ].join(' ')}
+              >
+                <div
+                  style={{
+                    background: preset.style.background,
+                    borderRadius: preset.style.outerRadius,
+                    boxShadow: '0 4px 10px rgba(30,20,20,0.12)',
+                  }}
+                  className="mx-auto flex h-14 w-10 flex-col gap-0.5 p-1"
                 >
-                  <div
-                    style={{
-                      background:
-                        preset.style
-                          .background,
-                      borderRadius:
-                        preset.style
-                          .outerRadius,
-                      boxShadow:
-                        '0 5px 12px rgba(30,20,20,0.10)',
-                    }}
-                    className="mx-auto flex h-14 w-11 flex-col gap-1 p-1"
-                  >
+                  {preset.value === 'photobooth-4' || preset.value === 'photobooth-white-4' || preset.value === 'photobooth-black-4' || preset.value === 'photobooth-pink-4' ? (
+                    <div className="flex flex-1 flex-col gap-0.5">
+                      <div className="flex-1 rounded-[1px] bg-[#ded9d4]" />
+                      <div className="flex-1 rounded-[1px] bg-[#ded9d4]" />
+                      <div className="flex-1 rounded-[1px] bg-[#ded9d4]" />
+                      <div className="flex-1 rounded-[1px] bg-[#ded9d4]" />
+                    </div>
+                  ) : preset.value === 'polaroid-grid-4' ? (
+                    <div className="grid flex-1 grid-cols-2 gap-0.5">
+                      <div className="rounded-[1px] bg-[#ded9d4]" />
+                      <div className="rounded-[1px] bg-[#ded9d4]" />
+                      <div className="rounded-[1px] bg-[#ded9d4]" />
+                      <div className="rounded-[1px] bg-[#ded9d4]" />
+                    </div>
+                  ) : (
                     <div
-                      style={{
-                        borderRadius:
-                          preset.style
-                            .innerRadius,
-                      }}
+                      style={{ borderRadius: preset.style.innerRadius }}
                       className="min-h-0 flex-1 bg-[#ded9d4]"
                     />
+                  )}
 
-                    <div
-                      style={{
-                        background:
-                          preset.style
-                            .captionColor,
-                      }}
-                      className="mx-auto h-[2px] w-1/2 rounded-full opacity-35"
-                    />
-                  </div>
+                  <div
+                    style={{ background: preset.style.captionColor }}
+                    className="mx-auto h-[2px] w-1/2 rounded-full opacity-40"
+                  />
+                </div>
 
-                  <p className="mt-2 text-[8px] font-black text-black/60">
-                    {preset.label}
-                  </p>
-                </button>
-              );
-            }
-          )}
+                <p className="mt-1.5 line-clamp-1 text-[8px] font-black text-black/70">
+                  {preset.label}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <SelectInput
-        label="Cách đặt ảnh"
-        value={
-          style.imageFit ||
-          'cover'
-        }
-        options={[
-          {
-            value:
-              'cover',
-            label:
-              'Phủ kín khung',
-          },
-          {
-            value:
-              'contain',
-            label:
-              'Hiện toàn bộ ảnh',
-          },
-        ]}
-        onChange={(
-          imageFit
-        ) =>
-          patchStyle({
-            imageFit,
-          })
-        }
-      />
+      {/* Button chuẩn hóa kích thước */}
+      <button
+        type="button"
+        onClick={() => {
+          const preset = getPhotoFramePreset(style.preset);
+          onChange((current) => {
+            if (current.type !== 'photo-frame') return current;
+            return device === 'mobile'
+              ? {
+                  ...current,
+                  mobileFrame: {
+                    ...current.mobileFrame,
+                    ...preset.mobile,
+                  },
+                }
+              : {
+                  ...current,
+                  frame: {
+                    ...current.frame,
+                    ...preset.desktop,
+                  },
+                };
+          });
+        }}
+        className="w-full rounded-[9px] border border-[#cf5068]/20 bg-[#fff5f7] px-3 py-1.5 text-[9px] font-black text-[#a73551] transition hover:bg-[#f9e9ed]"
+      >
+        📐 Chuẩn hóa kích thước khung ({device === 'mobile' ? 'Mobile' : 'PC'})
+      </button>
 
-      <div className="grid grid-cols-2 gap-2">
-        <ColorInput
-          label="Màu khung"
-          value={
-            style.background ||
-            '#fffdf8'
-          }
-          onChange={(
-            background
-          ) =>
-            patchStyle({
-              background,
-            })
-          }
-        />
+      {/* 2. Quản lý từng ô ảnh (Photo Slots) */}
+      <div className="mt-2 rounded-[10px] border border-black/8 bg-[#faf9f8] p-2.5">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[9px] font-black uppercase tracking-wider text-black/60">
+            {slotCount > 1 ? `Danh sách ${slotCount} ô ảnh trong khung` : 'Ảnh trong khung'}
+          </span>
+          <span className="rounded bg-black/5 px-1.5 py-0.5 text-[8px] font-bold text-black/50">
+            {slotCount} ảnh
+          </span>
+        </div>
 
-        <ColorInput
-          label="Màu chú thích"
-          value={
-            style.captionColor ||
-            '#34302f'
-          }
-          onChange={(
-            captionColor
-          ) =>
-            patchStyle({
-              captionColor,
-            })
-          }
-        />
+        <div className="space-y-2">
+          {resolvedSlotImages.map((imgUrl, idx) => (
+            <div
+              key={idx}
+              className="flex items-center gap-2 rounded-[8px] border border-black/8 bg-white p-1.5 shadow-xs"
+            >
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-[6px] border border-black/10 bg-[#eae6e1]">
+                {imgUrl ? (
+                  <img src={imgUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[7px] font-bold text-black/30">
+                    Ô #{idx + 1}
+                  </div>
+                )}
+              </div>
 
-        <NumberInput
-          label="Lề khung"
-          value={
-            style.paddingPercent ??
-            6
-          }
-          min={0}
-          max={20}
-          step={0.5}
-          suffix="%"
-          onChange={(
-            paddingPercent
-          ) =>
-            patchStyle({
-              paddingPercent,
-            })
-          }
-        />
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[8px] font-black text-black/70">
+                    Ô số {idx + 1}
+                  </span>
+                  {imgUrl && (
+                    <button
+                      type="button"
+                      onClick={() => updateSlotImage(idx, '')}
+                      className="text-[8px] font-bold text-red-500 hover:underline"
+                    >
+                      Xóa ảnh
+                    </button>
+                  )}
+                </div>
 
-        <NumberInput
-          label="Khoảng chú thích"
-          value={
-            style.captionAreaPercent ??
-            22
-          }
-          min={12}
-          max={45}
-          step={1}
-          suffix="%"
-          onChange={(
-            captionAreaPercent
-          ) =>
-            patchStyle({
-              captionAreaPercent,
-            })
-          }
-        />
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={imgUrl}
+                    placeholder="Dán link ảnh ô này..."
+                    onChange={(e) => updateSlotImage(idx, e.target.value)}
+                    className="w-full rounded-[4px] border border-black/10 bg-[#fafafa] px-1.5 py-0.5 font-mono text-[8px] text-black/80"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSlotForPicker(idx);
+                      onOpenAssetLibrary();
+                    }}
+                    className="shrink-0 rounded-[4px] bg-[#cf5068] px-1.5 py-0.5 text-[8px] font-bold text-white shadow-xs hover:bg-[#b83e57]"
+                  >
+                    Chọn
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
 
-        <NumberInput
-          label="Cỡ chữ chú thích"
-          value={
-            style.captionFontSize ||
-            16
-          }
-          min={8}
-          max={80}
-          step={1}
-          suffix="px"
-          onChange={(
-            captionFontSize
-          ) =>
-            patchStyle({
-              captionFontSize,
-            })
-          }
-        />
-
-        <NumberInput
-          label="Bo góc ngoài"
-          value={
-            style.outerRadius ||
-            4
-          }
-          min={0}
-          max={80}
-          step={1}
-          suffix="px"
-          onChange={(
-            outerRadius
-          ) =>
-            patchStyle({
-              outerRadius,
-            })
-          }
-        />
+        <div className="mt-2">
+          <AssetPickerButton
+            label="Mở kho thư viện ảnh chung"
+            onClick={onOpenAssetLibrary}
+          />
+        </div>
       </div>
 
-      <TextInput
-        label="Bóng đổ"
-        value={
-          style.boxShadow ||
-          ''
-        }
-        placeholder="0 18px 38px rgba(...)"
-        onChange={(
-          boxShadow
-        ) =>
-          patchStyle({
-            boxShadow:
-              boxShadow ||
-              undefined,
-          })
-        }
-      />
+      {/* 3. Hiệu ứng Đổ bóng Polaroid / Photobooth */}
+      <div className="mt-2 rounded-[10px] border border-black/8 bg-[#faf9f8] p-2.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[9px] font-black uppercase tracking-wider text-black/60">
+            Hiệu ứng Đổ bóng (Realistic Shadows)
+          </span>
+        </div>
+
+        <TextInput
+          label="Mã bóng đổ CSS"
+          value={style.boxShadow || ''}
+          placeholder="0 20px 48px rgba(0,0,0,0.22)"
+          onChange={(boxShadow) => patchStyle({ boxShadow: boxShadow || undefined })}
+        />
+
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          {PHOTOBOOTH_SHADOW_PRESETS.map((p) => {
+            const isCurrent = (style.boxShadow || '') === p.value;
+            return (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => patchStyle({ boxShadow: p.value || undefined })}
+                className={`rounded-[6px] px-2 py-1 text-left text-[8px] font-bold transition ${
+                  isCurrent
+                    ? 'bg-[#b83e57] text-white shadow-xs'
+                    : 'border border-black/10 bg-white text-black/60 hover:bg-black/5'
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4. Màu nền khung & Bảng màu Photobooth chuẩn */}
+      <div className="mt-2 rounded-[10px] border border-black/8 bg-[#faf9f8] p-2.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[9px] font-black uppercase tracking-wider text-black/60">
+            Màu khung & Chú thích
+          </span>
+        </div>
+
+        {/* Quick Theme Palettes */}
+        <div className="mb-2 flex flex-wrap gap-1">
+          {PHOTO_FRAME_THEMES.map((theme) => (
+            <button
+              key={theme.value}
+              type="button"
+              title={theme.label}
+              onClick={() =>
+                patchStyle({
+                  background: theme.value,
+                  captionColor: theme.text,
+                })
+              }
+              className="flex items-center gap-1 rounded-[5px] border border-black/10 bg-white px-1.5 py-0.5 text-[8px] font-bold text-black/70 hover:bg-black/5"
+            >
+              <span
+                className="h-3 w-3 rounded-full border border-black/20"
+                style={{ backgroundColor: theme.value }}
+              />
+              {theme.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <ColorInput
+            label="Màu nền khung"
+            value={style.background || '#7e192a'}
+            onChange={(background) => patchStyle({ background })}
+          />
+
+          <ColorInput
+            label="Màu chữ chú thích"
+            value={style.captionColor || '#ffffff'}
+            onChange={(captionColor) => patchStyle({ captionColor })}
+          />
+        </div>
+      </div>
+
+      {/* 5. Chú thích dưới dải ảnh */}
+      <div className="mt-2 rounded-[10px] border border-black/8 bg-[#faf9f8] p-2.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[9px] font-black uppercase tracking-wider text-black/60">
+            Nội dung Chú thích dưới ảnh
+          </span>
+        </div>
+
+        <TextInput
+          label="Nội dung chú thích"
+          value={caption}
+          placeholder="VD: OUR MEMORIES · 2026"
+          onChange={(caption) =>
+            onChange(
+              (current) =>
+                ({
+                  ...current,
+                  ...(device === 'mobile'
+                    ? { mobileCaption: caption }
+                    : { caption }),
+                }) as SceneElement
+            )
+          }
+        />
+
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <NumberInput
+            label="Cỡ chữ chú thích"
+            value={style.captionFontSize || 16}
+            min={8}
+            max={80}
+            step={1}
+            suffix="px"
+            onChange={(captionFontSize) => patchStyle({ captionFontSize })}
+          />
+
+          <SelectInput
+            label="Căn lề chữ"
+            value={style.captionAlign || 'center'}
+            options={[
+              { value: 'center', label: 'Chính giữa' },
+              { value: 'left', label: 'Căn trái' },
+              { value: 'right', label: 'Căn phải' },
+            ]}
+            onChange={(captionAlign) => patchStyle({ captionAlign: captionAlign as any })}
+          />
+
+          <NumberInput
+            label="Khoảng chú thích"
+            value={style.captionAreaPercent ?? 20}
+            min={8}
+            max={45}
+            step={1}
+            suffix="%"
+            onChange={(captionAreaPercent) => patchStyle({ captionAreaPercent })}
+          />
+
+          <SelectInput
+            label="Độ đậm chữ"
+            value={String(style.captionFontWeight || 600)}
+            options={[
+              { value: '400', label: 'Bình thường (400)' },
+              { value: '600', label: 'Đậm vừa (600)' },
+              { value: '700', label: 'Đậm (700)' },
+              { value: '800', label: 'Rất đậm (800)' },
+            ]}
+            onChange={(w) => patchStyle({ captionFontWeight: Number(w) })}
+          />
+        </div>
+      </div>
+
+      {/* 6. Tùy chỉnh chi tiết Bo góc & Viền từng ô ảnh */}
+      <div className="mt-2 rounded-[10px] border border-black/8 bg-[#faf9f8] p-2.5">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[9px] font-black uppercase tracking-wider text-black/60">
+            Tùy chỉnh Bo góc & Viền ô ảnh
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <SelectInput
+            label="Cách đặt ảnh"
+            value={style.imageFit || 'cover'}
+            options={[
+              { value: 'cover', label: 'Phủ kín ô (Cover)' },
+              { value: 'contain', label: 'Hiện trọn ảnh (Contain)' },
+            ]}
+            onChange={(imageFit) => patchStyle({ imageFit })}
+          />
+
+          <NumberInput
+            label="Khoảng cách ô ảnh"
+            value={style.gapPercent ?? 4}
+            min={0}
+            max={15}
+            step={0.5}
+            suffix="%"
+            onChange={(gapPercent) => patchStyle({ gapPercent })}
+          />
+
+          <NumberInput
+            label="Lề khung ngoài"
+            value={style.paddingPercent ?? 6}
+            min={0}
+            max={20}
+            step={0.5}
+            suffix="%"
+            onChange={(paddingPercent) => patchStyle({ paddingPercent })}
+          />
+
+          <NumberInput
+            label="Bo góc ngoài dải"
+            value={style.outerRadius ?? 6}
+            min={0}
+            max={80}
+            step={1}
+            suffix="px"
+            onChange={(outerRadius) => patchStyle({ outerRadius })}
+          />
+
+          <NumberInput
+            label="Bo góc từng ô ảnh"
+            value={style.innerRadius ?? 3}
+            min={0}
+            max={50}
+            step={1}
+            suffix="px"
+            onChange={(innerRadius) => patchStyle({ innerRadius })}
+          />
+
+          <NumberInput
+            label="Độ dày viền từng ô"
+            value={style.innerBorderWidth ?? 0}
+            min={0}
+            max={20}
+            step={1}
+            suffix="px"
+            onChange={(innerBorderWidth) => patchStyle({ innerBorderWidth })}
+          />
+        </div>
+
+        {Boolean(style.innerBorderWidth && style.innerBorderWidth > 0) && (
+          <div className="mt-2">
+            <ColorInput
+              label="Màu viền từng ô ảnh"
+              value={style.innerBorderColor || '#ffffff'}
+              onChange={(innerBorderColor) => patchStyle({ innerBorderColor })}
+            />
+          </div>
+        )}
+      </div>
     </>
   );
 };
