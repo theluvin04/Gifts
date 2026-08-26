@@ -1008,6 +1008,9 @@ React.FC<{
             element={
               element
             }
+            device={
+              device
+            }
             onChange={
               onChange
             }
@@ -2599,6 +2602,9 @@ React.FC<{
       }
     >;
 
+  device:
+    DeviceMode;
+
   onChange: (
     updater: (
       element:
@@ -2611,13 +2617,29 @@ React.FC<{
     () => void;
 }> = ({
   element,
+  device,
   onChange,
   onOpenAssetLibrary,
 }) => {
   const style =
     resolvePhotoFrameStyle(
-      element.frameStyle
+      device === 'mobile'
+        ? {
+            ...element.frameStyle,
+            ...element.mobileFrameStyle,
+          }
+        : element.frameStyle
     );
+
+  const source =
+    device === 'mobile'
+      ? element.mobileSrc || element.src
+      : element.src;
+
+  const caption =
+    device === 'mobile'
+      ? element.mobileCaption ?? element.caption ?? ''
+      : element.caption || '';
 
   const patchStyle = (
     next:
@@ -2629,16 +2651,21 @@ React.FC<{
     onChange(
       (current) => ({
         ...current,
-        frameStyle: {
-          ...(
-            current.type ===
-            'photo-frame'
-              ? current
-                  .frameStyle
-              : {}
-          ),
-          ...next,
-        },
+        ...(current.type !== 'photo-frame'
+          ? {}
+          : device === 'mobile'
+            ? {
+                mobileFrameStyle: {
+                  ...current.mobileFrameStyle,
+                  ...next,
+                },
+              }
+            : {
+                frameStyle: {
+                  ...current.frameStyle,
+                  ...next,
+                },
+              }),
       } as
         SceneElement)
     );
@@ -2647,7 +2674,7 @@ React.FC<{
     <>
       <AssetPickerButton
         label={
-          element.src
+          source
             ? 'Thay ảnh trong khung'
             : 'Chọn ảnh cho khung'
         }
@@ -2656,11 +2683,50 @@ React.FC<{
         }
       />
 
-      {element.src && (
+      <button
+        type="button"
+        onClick={() => {
+          const preset =
+            getPhotoFramePreset(
+              style.preset
+            );
+
+          onChange(
+            (current) => {
+              if (
+                current.type !== 'photo-frame'
+              ) {
+                return current;
+              }
+
+              return device === 'mobile'
+                ? {
+                    ...current,
+                    mobileFrame: {
+                      ...current.mobileFrame,
+                      ...preset.mobile,
+                    },
+                  }
+                : {
+                    ...current,
+                    frame: {
+                      ...current.frame,
+                      ...preset.desktop,
+                    },
+                  };
+            }
+          );
+        }}
+        className="mt-2 w-full rounded-[9px] border border-[#cf5068]/20 bg-[#fff5f7] px-3 py-2 text-[9px] font-black text-[#a73551] transition hover:bg-[#f9e9ed]"
+      >
+        Chuẩn hóa kích thước {device === 'mobile' ? 'Mobile' : 'PC'}
+      </button>
+
+      {source && (
         <div className="overflow-hidden rounded-[9px] border border-black/7 bg-[#f4f1ee] p-2">
           <img
             src={
-              element.src
+              source
             }
             alt=""
             className="aspect-square w-full rounded-[6px] object-cover"
@@ -2671,8 +2737,7 @@ React.FC<{
       <TextInput
         label="Chú thích dưới ảnh"
         value={
-          element.caption ||
-          ''
+          caption
         }
         placeholder="Có thể để trống"
         onChange={(
@@ -2681,7 +2746,9 @@ React.FC<{
           onChange(
             (current) => ({
               ...current,
-              caption,
+              ...(device === 'mobile'
+                ? { mobileCaption: caption }
+                : { caption }),
             } as
               SceneElement)
           )
@@ -2730,18 +2797,25 @@ React.FC<{
 
                         return {
                           ...current,
-                          frame: {
-                            ...current.frame,
-                            ...selected.desktop,
-                          },
-                          mobileFrame: {
-                            ...current
-                              .mobileFrame,
-                            ...selected.mobile,
-                          },
-                          frameStyle: {
-                            ...selected.style,
-                          },
+                          ...(device === 'mobile'
+                            ? {
+                                mobileFrame: {
+                                  ...current.mobileFrame,
+                                  ...selected.mobile,
+                                },
+                                mobileFrameStyle: {
+                                  ...selected.style,
+                                },
+                              }
+                            : {
+                                frame: {
+                                  ...current.frame,
+                                  ...selected.desktop,
+                                },
+                                frameStyle: {
+                                  ...selected.style,
+                                },
+                              }),
                         };
                       }
                     )

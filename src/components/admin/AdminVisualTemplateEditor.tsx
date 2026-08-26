@@ -1438,13 +1438,6 @@ React.FC<Props> = ({
                 ? {
                     ...element,
                     groupId,
-                    ...(device ===
-                    'desktop'
-                      ? {
-                          mobileFrame:
-                            undefined,
-                        }
-                      : {}),
                   }
                 : element
           ),

@@ -1832,7 +1832,12 @@ React.FC<{
         : element.src;
     const style =
       resolvePhotoFrameStyle(
-        element.frameStyle
+        device === 'mobile'
+          ? {
+              ...element.frameStyle,
+              ...element.mobileFrameStyle,
+            }
+          : element.frameStyle
       );
 
     const padding =
@@ -1958,8 +1963,9 @@ React.FC<{
               'hidden',
           }}
         >
-          {element.caption ||
-            ''}
+          {device === 'mobile'
+            ? element.mobileCaption ?? element.caption ?? ''
+            : element.caption || ''}
         </div>
       </div>
     );

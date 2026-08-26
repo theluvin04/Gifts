@@ -286,9 +286,13 @@ React.FC<
         const style =
           element.imageStyle ||
           {};
+        const source =
+          mobile
+            ? element.mobileSrc || element.src
+            : element.src;
 
         if (
-          !element.src
+          !source
         ) {
           return null;
         }
@@ -296,7 +300,7 @@ React.FC<
         return (
           <img
             src={
-              element.src
+              source
             }
             alt={
               element.alt ||
@@ -333,9 +337,18 @@ React.FC<
         element.type ===
         'photo-frame'
       ) {
+        const source =
+          mobile
+            ? element.mobileSrc || element.src
+            : element.src;
         const style =
           resolvePhotoFrameStyle(
-            element.frameStyle
+            mobile
+              ? {
+                  ...element.frameStyle,
+                  ...element.mobileFrameStyle,
+                }
+              : element.frameStyle
           );
 
         const padding =
@@ -396,10 +409,10 @@ React.FC<
                   '#eeeae5',
               }}
             >
-              {element.src ? (
+              {source ? (
                 <img
                   src={
-                    element.src
+                    source
                   }
                   alt={
                     element.alt ||
@@ -460,8 +473,9 @@ React.FC<
                   'hidden',
               }}
             >
-              {element.caption ||
-                ''}
+              {mobile
+                ? element.mobileCaption ?? element.caption ?? ''
+                : element.caption || ''}
             </div>
           </div>
         );

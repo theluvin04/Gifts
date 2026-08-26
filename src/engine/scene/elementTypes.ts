@@ -246,6 +246,14 @@ interface BaseSceneElement {
   visible?:
     boolean;
 
+  /** Device-specific visibility. Falls back to `visible` for older templates. */
+  desktopVisible?:
+    boolean;
+
+  /** Device-specific visibility. Falls back to `visible` for older templates. */
+  mobileVisible?:
+    boolean;
+
   locked?: boolean;
 
   className?: string;
@@ -277,6 +285,8 @@ extends BaseSceneElement {
     'decor';
 
   src: string;
+
+  mobileSrc?: string;
 
   alt?: string;
 
@@ -313,12 +323,19 @@ extends BaseSceneElement {
 
   src: string;
 
+  mobileSrc?: string;
+
   alt?: string;
 
   caption?: string;
 
+  mobileCaption?: string;
+
   frameStyle?:
     ScenePhotoFrameStyle;
+
+  mobileFrameStyle?:
+    Partial<ScenePhotoFrameStyle>;
 }
 
 export interface SceneCustomElement

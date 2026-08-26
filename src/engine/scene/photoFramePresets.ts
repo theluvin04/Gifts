@@ -41,7 +41,7 @@ PhotoFramePresetDefinition[] = [
     },
     mobile: {
       width: 52,
-      height: 34,
+      height: 25,
     },
     style: {
       preset:
@@ -77,7 +77,7 @@ PhotoFramePresetDefinition[] = [
     },
     mobile: {
       width: 58,
-      height: 31,
+      height: 24,
     },
     style: {
       preset:
@@ -113,7 +113,7 @@ PhotoFramePresetDefinition[] = [
     },
     mobile: {
       width: 72,
-      height: 25,
+      height: 19.5,
     },
     style: {
       preset:
@@ -149,7 +149,7 @@ PhotoFramePresetDefinition[] = [
     },
     mobile: {
       width: 40,
-      height: 25,
+      height: 20,
     },
     style: {
       preset:
@@ -185,7 +185,7 @@ PhotoFramePresetDefinition[] = [
     },
     mobile: {
       width: 54,
-      height: 33,
+      height: 24.5,
     },
     style: {
       preset:
@@ -221,7 +221,7 @@ PhotoFramePresetDefinition[] = [
     },
     mobile: {
       width: 54,
-      height: 33,
+      height: 24.5,
     },
     style: {
       preset:
@@ -257,7 +257,7 @@ PhotoFramePresetDefinition[] = [
     },
     mobile: {
       width: 54,
-      height: 34,
+      height: 25.5,
     },
     style: {
       preset:
@@ -295,7 +295,7 @@ PhotoFramePresetDefinition[] = [
     },
     mobile: {
       width: 58,
-      height: 30,
+      height: 22.5,
     },
     style: {
       preset:

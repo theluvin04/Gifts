@@ -12,6 +12,10 @@ import type {
   SceneTransitionPreset,
 } from '../engine';
 
+import {
+  getPhotoFramePreset,
+} from '../engine';
+
 export interface TemplateVisualEditorConfig {
   enabled: boolean;
 
@@ -563,7 +567,7 @@ export const createPolaroidElement =
 
     mobileFrame: {
       width: 52,
-      height: 34,
+      height: 25,
     },
 
     frameStyle: {
@@ -1217,6 +1221,16 @@ const normalizeElement = (
       data.visible !==
       false,
 
+    desktopVisible:
+      typeof data.desktopVisible === 'boolean'
+        ? data.desktopVisible
+        : undefined,
+
+    mobileVisible:
+      typeof data.mobileVisible === 'boolean'
+        ? data.mobileVisible
+        : undefined,
+
     locked:
       data.locked ===
       true,
@@ -1303,6 +1317,13 @@ const normalizeElement = (
           2000
         ),
 
+      mobileSrc:
+        safeString(
+          data.mobileSrc,
+          '',
+          2000
+        ) || undefined,
+
       alt:
         safeString(
           data.alt,
@@ -1326,8 +1347,45 @@ const normalizeElement = (
     type ===
     'photo-frame'
   ) {
+    const photoPreset =
+      getPhotoFramePreset(
+        data.frameStyle?.preset
+      );
+
+    const legacyMobileHeights:
+      Record<string, number> = {
+        polaroid: 34,
+        'polaroid-square': 31,
+        'polaroid-wide': 25,
+        'polaroid-mini': 25,
+        'polaroid-rounded': 33,
+        'polaroid-black': 33,
+        'polaroid-vintage': 34,
+        'polaroid-clean': 30,
+      };
+
+    const legacyHeight =
+      legacyMobileHeights[
+        photoPreset.value
+      ];
+
+    const mobileFrame =
+      base.mobileFrame &&
+      base.mobileFrame.width ===
+        photoPreset.mobile.width &&
+      base.mobileFrame.height ===
+        legacyHeight
+        ? {
+            ...base.mobileFrame,
+            height:
+              photoPreset.mobile.height,
+          }
+        : base.mobileFrame;
+
     return {
       ...base,
+
+      mobileFrame,
 
       type:
         'photo-frame',
@@ -1338,6 +1396,13 @@ const normalizeElement = (
           '',
           2000
         ),
+
+      mobileSrc:
+        safeString(
+          data.mobileSrc,
+          '',
+          2000
+        ) || undefined,
 
       alt:
         safeString(
@@ -1352,6 +1417,15 @@ const normalizeElement = (
           '',
           500
         ),
+
+      mobileCaption:
+        typeof data.mobileCaption === 'string'
+          ? safeString(
+              data.mobileCaption,
+              '',
+              500
+            )
+          : undefined,
 
       frameStyle:
         data.frameStyle &&
@@ -1373,6 +1447,14 @@ const normalizeElement = (
               captionAreaPercent:
                 22,
             },
+
+      mobileFrameStyle:
+        data.mobileFrameStyle &&
+        typeof data.mobileFrameStyle === 'object'
+          ? {
+              ...data.mobileFrameStyle,
+            }
+          : undefined,
     };
   }
 
