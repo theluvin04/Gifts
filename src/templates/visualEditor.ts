@@ -617,6 +617,9 @@ export const createYouTubeElement =
     name:
       `Video YouTube ${index}`,
 
+    ariaLabel:
+      `[customer:youtube] Video YouTube ${index}`,
+
     data: {
       youtubeUrl: '',
     },

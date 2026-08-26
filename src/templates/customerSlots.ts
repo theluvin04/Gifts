@@ -2,7 +2,7 @@ import type { SceneElement } from '../engine';
 
 export type CustomerSlotKind = 'none' | 'image' | 'text' | 'youtube';
 
-const SLOT_PREFIX = /^\[customer:(image|text|youtube)\]\s*/i;
+const SLOT_PREFIX = /^\[customer:(none|image|text|youtube)\]\s*/i;
 
 export const getCustomerSlot = (element: SceneElement): {
   kind: CustomerSlotKind;
@@ -12,9 +12,23 @@ export const getCustomerSlot = (element: SceneElement): {
   const match = aria.match(SLOT_PREFIX);
 
   if (!match) {
+    if (element.type === 'custom' && element.slot === 'youtube') {
+      return {
+        kind: 'youtube',
+        label: element.name || 'Video YouTube',
+      };
+    }
+
     return {
       kind: 'none',
       label: '',
+    };
+  }
+
+  if (match[1].toLowerCase() === 'none') {
+    return {
+      kind: 'none',
+      label: aria.replace(SLOT_PREFIX, '').trim(),
     };
   }
 
@@ -105,6 +119,14 @@ export const encodeCustomerSlot = (
 ): SceneElement => {
   if (kind === 'none') {
     const nextAria = (element.ariaLabel || '').replace(SLOT_PREFIX, '').trim();
+
+    if (element.type === 'custom' && element.slot === 'youtube') {
+      return {
+        ...element,
+        ariaLabel: `[customer:none] ${nextAria || element.name || 'Video YouTube'}`,
+      };
+    }
+
     return {
       ...element,
       ariaLabel: nextAria || undefined,
