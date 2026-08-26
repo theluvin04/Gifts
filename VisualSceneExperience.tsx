@@ -90,9 +90,6 @@ interface VisualSceneExperienceProps {
   mobileOverride?:
     boolean;
 
-  viewportContained?:
-    boolean;
-
   onSceneChange?: (
     sceneId: string
   ) => void;
@@ -106,7 +103,6 @@ React.FC<
   initialSceneId,
   className = '',
   mobileOverride,
-  viewportContained = false,
   onSceneChange,
 }) => {
   const rootRef =
@@ -213,24 +209,22 @@ React.FC<
     const root = rootRef.current;
     if (!root || !currentScene) return;
 
-    if (viewportContained) {
-      let parent = root.parentElement;
+    let parent = root.parentElement;
 
-      while (parent) {
-        const overflowY =
-          window.getComputedStyle(parent).overflowY;
+    while (parent) {
+      const overflowY =
+        window.getComputedStyle(parent).overflowY;
 
-        if (overflowY === 'auto' || overflowY === 'scroll') {
-          parent.scrollTop = 0;
-          return;
-        }
-
-        parent = parent.parentElement;
+      if (overflowY === 'auto' || overflowY === 'scroll') {
+        parent.scrollTop = 0;
+        return;
       }
+
+      parent = parent.parentElement;
     }
 
     window.scrollTo({top: 0, left: 0, behavior: 'auto'});
-  }, [currentScene?.id, viewportContained]);
+  }, [currentScene?.id]);
 
   if (
     !currentScene
@@ -364,9 +358,6 @@ React.FC<
             }}
             mobileOverride={
               mobileOverride
-            }
-            viewportContained={
-              viewportContained
             }
           />
         </SceneTransition>
